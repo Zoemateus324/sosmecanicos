@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="600" viewBox="0 0 800 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Corpo do carro -->
+  <path d="M200 300 C200 250 300 200 400 200 C500 200 600 250 600 300 L600 400 L200 400 Z" fill="#FCD34D"/>
+  
+  <!-- Janelas -->
+  <path d="M300 250 L350 220 L450 220 L500 250 L500 300 L300 300 Z" fill="#1F2937"/>
+  
+  <!-- Rodas -->
+  <circle cx="300" cy="400" r="50" fill="#1F2937"/>
+  <circle cx="500" cy="400" r="50" fill="#1F2937"/>
+  
+  <!-- Detalhes -->
+  <rect x="250" y="350" width="300" height="10" fill="#1F2937"/>
+  <rect x="550" y="300" width="20" height="50" fill="#1F2937"/>
+  <rect x="230" y="300" width="20" height="50" fill="#1F2937"/>
+</svg> 
