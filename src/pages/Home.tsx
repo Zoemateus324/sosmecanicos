@@ -8,8 +8,11 @@ function Home() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Implementar a busca por VIN
-    console.log('Buscando VIN:', vinNumber);
+    console.log('Buscando veículo para assistência:', vinNumber);
+  };
+
+  const handleEmergency = () => {
+    console.log('Solicitando ajuda emergencial para:', vinNumber || 'Localização atual');
   };
 
   return (
@@ -19,10 +22,10 @@ function Home() {
         <div className="grid md:grid-cols-2 gap-12 items-center py-16">
           <div>
             <h1 className="text-4xl font-bold text-gray-900 mb-6">
-              Pesquise um Veículo pelo Número VIN
+              SOS Mecânicos: Seu Suporte na Estrada
             </h1>
             <p className="text-xl text-gray-600 mb-8">
-              Validamos seu VIN com nossa base de dados e fornecemos um relatório completo do histórico do veículo.
+              Informe o VIN ou placa para assistência imediata ou consulte o histórico do seu veículo.
             </p>
             <form onSubmit={handleSearch} className="space-y-4">
               <div className="flex gap-4">
@@ -30,7 +33,7 @@ function Home() {
                   type="text"
                   value={vinNumber}
                   onChange={(e) => setVinNumber(e.target.value)}
-                  placeholder="Digite o número VIN ou número do registro"
+                  placeholder="Digite o VIN ou placa do veículo"
                   className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                 />
                 <button
@@ -41,11 +44,17 @@ function Home() {
                 </button>
               </div>
             </form>
+            <button
+              onClick={handleEmergency}
+              className="mt-4 px-8 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Socorro Imediato
+            </button>
           </div>
           <div className="relative">
             <img
-              src="/images/car-hero.svg"
-              alt="Ilustração de um carro"
+              src="/images/mechanic-emergency.svg" // Sugestão de imagem de um mecânico em ação
+              alt="Mecânico prestando socorro"
               className="w-full h-auto rounded-lg shadow-lg"
             />
           </div>
@@ -55,43 +64,43 @@ function Home() {
       {/* Features Section */}
       <div className="py-16">
         <h2 className="text-3xl font-bold text-center mb-12">
-          O relatório mais completo garantido
+          Por que Escolher o SOS Mecânicos?
         </h2>
         <div className="grid md:grid-cols-4 gap-8">
           <div className="text-center">
             <div className="w-16 h-16 bg-yellow-400 rounded-lg flex items-center justify-center mx-auto mb-4">
               <FileCheck className="w-8 h-8 text-gray-900" />
             </div>
-            <h3 className="font-semibold mb-2">Verificação de Título</h3>
+            <h3 className="font-semibold mb-2">Diagnóstico Preciso</h3>
             <p className="text-gray-600">
-              Verificamos o histórico completo do título e propriedade do veículo.
+              Identificação rápida de falhas com base em dados do veículo.
             </p>
           </div>
           <div className="text-center">
             <div className="w-16 h-16 bg-yellow-400 rounded-lg flex items-center justify-center mx-auto mb-4">
               <Shield className="w-8 h-8 text-gray-900" />
             </div>
-            <h3 className="font-semibold mb-2">Lista de Problemas</h3>
+            <h3 className="font-semibold mb-2">Atendimento 24/7</h3>
             <p className="text-gray-600">
-              Identificamos possíveis problemas e recalls do fabricante.
+              Estamos sempre prontos para te ajudar, dia ou noite.
             </p>
           </div>
           <div className="text-center">
             <div className="w-16 h-16 bg-yellow-400 rounded-lg flex items-center justify-center mx-auto mb-4">
               <Wrench className="w-8 h-8 text-gray-900" />
             </div>
-            <h3 className="font-semibold mb-2">Histórico de Acidentes</h3>
+            <h3 className="font-semibold mb-2">Reparos Emergenciais</h3>
             <p className="text-gray-600">
-              Revelamos o histórico completo de acidentes e danos.
+              Soluções rápidas para você voltar à estrada.
             </p>
           </div>
           <div className="text-center">
             <div className="w-16 h-16 bg-yellow-400 rounded-lg flex items-center justify-center mx-auto mb-4">
               <Clock className="w-8 h-8 text-gray-900" />
             </div>
-            <h3 className="font-semibold mb-2">Histórico de Serviços</h3>
+            <h3 className="font-semibold mb-2">Histórico Acessível</h3>
             <p className="text-gray-600">
-              Detalhamos todos os serviços e manutenções registrados.
+              Consulte manutenções passadas a qualquer momento.
             </p>
           </div>
         </div>
@@ -100,9 +109,9 @@ function Home() {
       {/* Report Preview Section */}
       <div className="py-16 bg-gray-50 rounded-2xl">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Nosso Relatório Verifica</h2>
+          <h2 className="text-3xl font-bold mb-4">Como o SOS Mecânicos Ajuda Você</h2>
           <p className="text-xl text-gray-600">
-            Fornecemos informações detalhadas sobre cada aspecto do veículo
+            Soluções completas para emergências e manutenção
           </p>
         </div>
         <div className="relative max-w-4xl mx-auto">
@@ -113,8 +122,8 @@ function Home() {
                   <span className="font-semibold">01</span>
                 </div>
                 <div>
-                  <h4 className="font-semibold">Acidentes Anteriores</h4>
-                  <p className="text-gray-600">Histórico completo de colisões</p>
+                  <h4 className="font-semibold">Assistência Rápida</h4>
+                  <p className="text-gray-600">Socorro em minutos</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
@@ -122,8 +131,8 @@ function Home() {
                   <span className="font-semibold">02</span>
                 </div>
                 <div>
-                  <h4 className="font-semibold">Histórico de Serviços</h4>
-                  <p className="text-gray-600">Registros de manutenção</p>
+                  <h4 className="font-semibold">Registro de Serviços</h4>
+                  <p className="text-gray-600">Histórico sempre disponível</p>
                 </div>
               </div>
             </div>
@@ -133,8 +142,8 @@ function Home() {
                   <span className="font-semibold">03</span>
                 </div>
                 <div>
-                  <h4 className="font-semibold">Recalls e Problemas</h4>
-                  <p className="text-gray-600">Alertas do fabricante</p>
+                  <h4 className="font-semibold">Análise de Problemas</h4>
+                  <p className="text-gray-600">Diagnósticos confiáveis</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
@@ -142,8 +151,8 @@ function Home() {
                   <span className="font-semibold">04</span>
                 </div>
                 <div>
-                  <h4 className="font-semibold">Avaliação e Documentação</h4>
-                  <p className="text-gray-600">Status da documentação</p>
+                  <h4 className="font-semibold">Acompanhamento</h4>
+                  <p className="text-gray-600">Status do veículo em tempo real</p>
                 </div>
               </div>
             </div>
@@ -154,11 +163,10 @@ function Home() {
       {/* CTA Section */}
       <div className="py-16 text-center">
         <h2 className="text-3xl font-bold mb-6">
-          Comece a usar nosso sistema hoje
+          Junte-se ao SOS Mecânicos Hoje
         </h2>
         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-          Registre-se gratuitamente e tenha acesso a todas as funcionalidades do nosso sistema
-          de gerenciamento de veículos.
+          Tenha paz de espírito com assistência rápida e confiável para seu veículo.
         </p>
         <div className="flex justify-center gap-4">
           <Link
