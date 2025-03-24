@@ -14,6 +14,7 @@ import AddVehicle from './pages/client/AddVehicle';
 import RequestService from './pages/client/RequestService';
 import VehicleDetails from './pages/client/VehicleDetails';
 import EditVehicle from './pages/client/EditVehicle';
+import ScheduleService from './pages/client/ScheduleService';
 
 type UserType = 'client' | 'mechanic' | 'insurance' | 'tow' | null;
 
@@ -76,6 +77,7 @@ function App() {
               <Route path="vehicles/add" element={<AddVehicle />} />
               <Route path="vehicles/:id" element={<VehicleDetails />} />
               <Route path="vehicles/:id/edit" element={<EditVehicle />} />
+              <Route path="vehicles/:id/schedule-service" element={<ScheduleService />} />
               <Route path="request-service" element={<RequestService />} />
             </Routes>
           </PrivateRoute>
