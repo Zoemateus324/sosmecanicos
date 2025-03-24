@@ -44,10 +44,8 @@ function AddVehicle() {
         brand: formData.get('brand')?.toString() || '',
         color: formData.get('color')?.toString() || '',
         mileage: parseInt(formData.get('mileage') as string) || 0,
-        fuel_type: formData.get('fuel_type')?.toString() || '',
-        notes: formData.get('notes')?.toString() || '',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        fuel_type: formData.get('fuel_type')?.toString() || null,
+        notes: formData.get('notes')?.toString() || null
       };
 
       // Validações
@@ -71,18 +69,7 @@ function AddVehicle() {
 
       const { data, error: insertError } = await supabase
         .from('vehicles')
-        .insert([{
-          user_id: vehicleData.user_id,
-          vehicle_type: vehicleData.vehicle_type,
-          model: vehicleData.model,
-          year: vehicleData.year,
-          plate: vehicleData.plate,
-          brand: vehicleData.brand,
-          color: vehicleData.color,
-          mileage: vehicleData.mileage,
-          fuel_type: vehicleData.fuel_type,
-          notes: vehicleData.notes
-        }])
+        .insert([vehicleData])
         .select()
         .single();
 
