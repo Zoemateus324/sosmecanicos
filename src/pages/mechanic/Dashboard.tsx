@@ -204,13 +204,12 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:user_id(
+          client:profiles!inner(
             id,
-            email,
-            user_metadata->full_name,
-            user_metadata->phone
+            full_name,
+            phone
           ),
-          vehicle:vehicles(
+          vehicle:vehicles!inner(
             id,
             model,
             plate,
@@ -230,11 +229,8 @@ export default function MechanicDashboard() {
           location: { latitude: number; longitude: number; address: string };
           client: { 
             id: string; 
-            email: string;
-            user_metadata: {
-              full_name: string;
-              phone: string;
-            };
+            full_name: string;
+            phone: string;
           };
           vehicle: { 
             id: string; 
@@ -301,8 +297,8 @@ export default function MechanicDashboard() {
       const formattedRequests = validRequests.map(request => {
         const clientData = {
           id: request.user_id,
-          full_name: request.client?.user_metadata?.full_name || 'Cliente',
-          phone: request.client?.user_metadata?.phone || 'Não informado'
+          full_name: request.client?.full_name || 'Cliente',
+          phone: request.client?.phone || 'Não informado'
         };
 
         const vehicleData = {
