@@ -407,30 +407,26 @@ export default function MechanicDashboard() {
         mechanicId: user?.id
       });
 
-      // Criar proposta de serviço
-      const { data: proposalData, error: proposalError } = await supabase
-        .from('service_proposals')
-        .insert({
-          request_id: requestId,
-          mechanic_id: user?.id,
-          price: quote,
-          description: description,
-          status: 'pending'
-        })
-        .select();
+      // Verificar se o perfil do mecânico existe
+      const { data: mechanicProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
 
-      if (proposalError) {
-        console.error('Erro ao criar proposta:', proposalError);
-        throw proposalError;
+      if (profileError) {
+        console.error('Erro ao buscar perfil do mecânico:', profileError);
+        throw profileError;
       }
-
-      console.log('Proposta criada com sucesso:', proposalData);
 
       // Atualizar status da solicitação
       const { data: requestData, error: requestError } = await supabase
         .from('service_requests')
         .update({
-          status: 'quoted'
+          mechanic_id: user?.id,
+          status: 'quoted',
+          price: quote,
+          mechanic_notes: description
         })
         .eq('id', requestId)
         .select();
