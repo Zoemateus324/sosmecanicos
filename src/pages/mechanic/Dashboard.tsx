@@ -204,12 +204,12 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:profiles!service_requests_user_id_fkey(
+          client:user_id(
             id,
             full_name,
             phone
           ),
-          vehicle:vehicles!service_requests_vehicle_id_fkey(
+          vehicle:vehicles(
             id,
             model,
             plate,
