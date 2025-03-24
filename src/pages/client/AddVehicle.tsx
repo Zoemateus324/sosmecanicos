@@ -1,287 +1,281 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Loader2 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { Layout } from '../../components/Layout';
+import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 
-const AddVehicle: React.FC = () => {
+const vehicleTypes = [
+  { id: 'carro', label: 'Carro' },
+  { id: 'moto', label: 'Moto' },
+  { id: 'caminhao', label: 'Caminhão' },
+  { id: 'van', label: 'Van' }
+];
+
+function AddVehicle() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    model: '',
-    brand: '',
-    year: '',
-    plate: '',
-    mileage: '',
-    color: '',
-    vehicle_type: '',
-    fuel_type: '',
-    notes: ''
-  });
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (field: string, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const vehicleData = {
+      user_id: user?.id,
+      vehicle_type: formData.get('type'),
+      model: formData.get('model'),
+      year: parseInt(formData.get('year') as string),
+      plate: (formData.get('plate') as string).toUpperCase(),
+      brand: formData.get('brand'),
+      color: formData.get('color'),
+      mileage: parseInt(formData.get('mileage') as string) || 0,
+      fuel_type: formData.get('fuel_type'),
+      notes: formData.get('notes'),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
 
     try {
-      // Simulação de envio para o backend
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Validações
+      if (!vehicleData.vehicle_type || !vehicleData.plate || !vehicleData.model || !vehicleData.year) {
+        throw new Error('Por favor, preencha todos os campos obrigatórios');
+      }
 
-      // Limpa o formulário
-      setFormData({
-        model: '',
-        brand: '',
-        year: '',
-        plate: '',
-        mileage: '',
-        color: '',
-        vehicle_type: '',
-        fuel_type: '',
-        notes: ''
-      });
+      if (!vehicleData.user_id) {
+        throw new Error('Usuário não autenticado');
+      }
 
-      // Redireciona para a página de dashboard
+      // Validação da placa (formatos: Antigo ABC1234/ABC-1234 e Mercosul ABC1D23/ABC0D23)
+      const plateRegex = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$|^[A-Z]{3}[-]?[0-9]{4}$/;
+      if (!plateRegex.test(vehicleData.plate)) {
+        throw new Error('Placa inválida. Use o formato antigo (ABC1234/ABC-1234) ou Mercosul (ABC1D23)');
+      }
+
+      // Validação do ano
+      const currentYear = new Date().getFullYear();
+      if (vehicleData.year < 1900 || vehicleData.year > currentYear + 1) {
+        throw new Error('Ano inválido');
+      }
+
+      console.log('Cadastrando veículo...', vehicleData);
+
+      const { data, error: insertError } = await supabase
+        .from('vehicles')
+        .insert([vehicleData])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Erro ao cadastrar veículo:', insertError);
+        if (insertError.code === '23505') {
+          throw new Error('Já existe um veículo cadastrado com esta placa');
+        }
+        throw new Error('Erro ao cadastrar veículo');
+      }
+
+      console.log('Veículo cadastrado com sucesso:', data);
       navigate('/client/dashboard');
+      
     } catch (err) {
-      setError('Erro ao adicionar veículo. Por favor, tente mais tarde.');
-    } finally {
+      console.error('Erro:', err);
+      setError(err instanceof Error ? err.message : 'Erro ao cadastrar veículo');
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div className="flex items-center gap-3">
+    <Layout>
+      <div className="max-w-2xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div className="mb-8 flex items-center gap-4">
           <button
             onClick={() => navigate('/client/dashboard')}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ArrowLeft className="h-5 w-5 text-gray-600" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Adicionar Veículo</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Adicionar Veículo
+          </h1>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">Informações do Veículo</h2>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="model" className="block text-sm font-medium text-gray-700 mb-2">
-                    Modelo
-                  </label>
-                  <input
-                    type="text"
-                    id="model"
-                    value={formData.model}
-                    onChange={(e) => handleChange('model', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg text-base focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                    required
-                  />
-                </div>
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          {error && (
+            <div className="mb-6 bg-red-50 border border-red-200 text-red-600 rounded-lg p-4 flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5" />
+              <span>{error}</span>
+            </div>
+          )}
 
-                <div>
-                  <label htmlFor="brand" className="block text-sm font-medium text-gray-700 mb-2">
-                    Marca
-                  </label>
-                  <input
-                    type="text"
-                    id="brand"
-                    value={formData.brand}
-                    onChange={(e) => handleChange('brand', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg text-base focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div>
-                  <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-2">
-                    Ano
-                  </label>
-                  <input
-                    type="number"
-                    id="year"
-                    value={formData.year}
-                    onChange={(e) => handleChange('year', parseInt(e.target.value))}
-                    min={1900}
-                    max={new Date().getFullYear() + 1}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg text-base focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="plate" className="block text-sm font-medium text-gray-700 mb-2">
-                    Placa
-                  </label>
-                  <input
-                    type="text"
-                    id="plate"
-                    value={formData.plate}
-                    onChange={(e) => handleChange('plate', e.target.value.toUpperCase())}
-                    maxLength={7}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg text-base focus:ring-2 focus:ring-yellow-400 focus:border-transparent uppercase"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="mileage" className="block text-sm font-medium text-gray-700 mb-2">
-                    Quilometragem
-                  </label>
-                  <input
-                    type="number"
-                    id="mileage"
-                    value={formData.mileage}
-                    onChange={(e) => handleChange('mileage', parseInt(e.target.value))}
-                    min={0}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg text-base focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div>
-                  <label htmlFor="color" className="block text-sm font-medium text-gray-700 mb-2">
-                    Cor
-                  </label>
-                  <input
-                    type="text"
-                    id="color"
-                    value={formData.color}
-                    onChange={(e) => handleChange('color', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg text-base focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-2">
-                    Tipo
-                  </label>
-                  <select
-                    id="type"
-                    value={formData.vehicle_type}
-                    onChange={(e) => handleChange('vehicle_type', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg text-base bg-white focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                    required
-                  >
-                    <option value="">Selecione um tipo</option>
-                    <option value="car">Carro</option>
-                    <option value="motorcycle">Moto</option>
-                    <option value="truck">Caminhão</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="fuel" className="block text-sm font-medium text-gray-700 mb-2">
-                    Combustível
-                  </label>
-                  <select
-                    id="fuel"
-                    value={formData.fuel_type}
-                    onChange={(e) => handleChange('fuel_type', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg text-base bg-white focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                    required
-                  >
-                    <option value="">Selecione o combustível</option>
-                    <option value="gasoline">Gasolina</option>
-                    <option value="ethanol">Etanol</option>
-                    <option value="flex">Flex</option>
-                    <option value="diesel">Diesel</option>
-                    <option value="electric">Elétrico</option>
-                  </select>
-                </div>
-              </div>
-
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div>
-                <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
-                  Observações
+                <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo de Veículo *
                 </label>
-                <textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => handleChange('notes', e.target.value)}
-                  rows={4}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg text-base focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none"
-                  placeholder="Adicione observações importantes sobre o veículo..."
-                ></textarea>
-              </div>
-
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <p className="text-red-600">{error}</p>
-                </div>
-              )}
-
-              <div className="flex flex-col sm:flex-row justify-end gap-4">
-                <button
-                  type="button"
-                  onClick={() => navigate('/client/dashboard')}
-                  className="w-full sm:w-auto px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+                <select
+                  id="type"
+                  name="type"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-yellow-400 text-gray-900 font-semibold rounded-lg hover:bg-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-5 w-5" />
-                      Adicionar Veículo
-                    </>
-                  )}
-                </button>
+                  <option value="">Selecione um tipo</option>
+                  {vehicleTypes.map(type => (
+                    <option key={type.id} value={type.id}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </form>
-          </div>
-        </div>
 
-        <div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 sticky top-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">Dicas</h2>
-            <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Placa do Veículo</h3>
-                <p className="text-sm text-gray-600">
-                  Digite a placa sem traços ou espaços. Exemplo: ABC1234
-                </p>
+                <label htmlFor="plate" className="block text-sm font-medium text-gray-700 mb-1">
+                  Placa *
+                </label>
+                <input
+                  type="text"
+                  id="plate"
+                  name="plate"
+                  required
+                  placeholder="ABC1234"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent uppercase"
+                />
               </div>
+
               <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Quilometragem</h3>
-                <p className="text-sm text-gray-600">
-                  Informe a quilometragem atual do veículo em números inteiros.
-                </p>
+                <label htmlFor="brand" className="block text-sm font-medium text-gray-700 mb-1">
+                  Marca
+                </label>
+                <input
+                  type="text"
+                  id="brand"
+                  name="brand"
+                  placeholder="Ex: Volkswagen"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                />
               </div>
+
               <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Observações</h3>
-                <p className="text-sm text-gray-600">
-                  Adicione informações importantes como modificações, acessórios ou histórico relevante.
-                </p>
+                <label htmlFor="model" className="block text-sm font-medium text-gray-700 mb-1">
+                  Modelo *
+                </label>
+                <input
+                  type="text"
+                  id="model"
+                  name="model"
+                  required
+                  placeholder="Ex: Gol"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-1">
+                  Ano *
+                </label>
+                <input
+                  type="number"
+                  id="year"
+                  name="year"
+                  required
+                  min="1900"
+                  max={new Date().getFullYear() + 1}
+                  placeholder={new Date().getFullYear().toString()}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="color" className="block text-sm font-medium text-gray-700 mb-1">
+                  Cor
+                </label>
+                <input
+                  type="text"
+                  id="color"
+                  name="color"
+                  placeholder="Ex: Prata"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="mileage" className="block text-sm font-medium text-gray-700 mb-1">
+                  Quilometragem
+                </label>
+                <input
+                  type="number"
+                  id="mileage"
+                  name="mileage"
+                  min="0"
+                  placeholder="Ex: 50000"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="fuel_type" className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo de Combustível
+                </label>
+                <select
+                  id="fuel_type"
+                  name="fuel_type"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                >
+                  <option value="">Selecione</option>
+                  <option value="gasolina">Gasolina</option>
+                  <option value="etanol">Etanol</option>
+                  <option value="flex">Flex</option>
+                  <option value="diesel">Diesel</option>
+                  <option value="gnv">GNV</option>
+                  <option value="eletrico">Elétrico</option>
+                </select>
               </div>
             </div>
-          </div>
+
+            <div>
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+                Observações
+              </label>
+              <textarea
+                id="notes"
+                name="notes"
+                rows={3}
+                placeholder="Informações adicionais sobre o veículo"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => navigate('/client/dashboard')}
+                className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-yellow-400 hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <span className="flex items-center">
+                    <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5" />
+                    Salvando...
+                  </span>
+                ) : (
+                  'Salvar Veículo'
+                )}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
-    </div>
+    </Layout>
   );
-};
+}
 
 export default AddVehicle; 

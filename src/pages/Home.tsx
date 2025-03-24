@@ -1,182 +1,137 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Shield, FileCheck, Wrench, Clock } from 'lucide-react';
+import React from 'react';
 import { Layout } from '../components/Layout';
+import { MapPin, Wrench, Clock, Shield, Car, ThumbsUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-function Home() {
-  const [vinNumber, setVinNumber] = useState('');
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Implementar a busca por VIN
-    console.log('Buscando VIN:', vinNumber);
-  };
+export default function Home() {
+  const navigate = useNavigate();
 
   return (
     <Layout>
       {/* Hero Section */}
-      <div className="relative">
-        <div className="grid md:grid-cols-2 gap-12 items-center py-16">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-6">
-              Pesquise um Veículo pelo Número VIN
-            </h1>
-            <p className="text-xl text-gray-600 mb-8">
-              Validamos seu VIN com nossa base de dados e fornecemos um relatório completo do histórico do veículo.
-            </p>
-            <form onSubmit={handleSearch} className="space-y-4">
-              <div className="flex gap-4">
-                <input
-                  type="text"
-                  value={vinNumber}
-                  onChange={(e) => setVinNumber(e.target.value)}
-                  placeholder="Digite o número VIN ou número do registro"
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                />
-                <button
-                  type="submit"
-                  className="px-8 py-3 bg-yellow-400 text-gray-900 font-semibold rounded-lg hover:bg-yellow-500 transition-colors"
+      <section className="bg-gradient-to-b from-yellow-50 to-white">
+        <div className="container mx-auto px-4 py-16 md:py-24">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div>
+              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+                Assistência Mecânica onde você estiver
+              </h1>
+              <p className="text-lg text-gray-600 mb-8">
+                Seu veículo quebrou? Não se preocupe! O SOS Mecânicos conecta você aos melhores profissionais próximos da sua localização, seja na cidade ou na estrada.
+              </p>
+              <div className="space-x-4">
+                <button 
+                  onClick={() => navigate('/register')}
+                  className="bg-yellow-400 text-gray-900 px-8 py-3 rounded-lg font-semibold hover:bg-yellow-500 transition-colors"
                 >
-                  Buscar
+                  Cadastre-se Agora
+                </button>
+                <button 
+                  onClick={() => navigate('/login')}
+                  className="bg-white text-gray-900 px-8 py-3 rounded-lg font-semibold border border-gray-300 hover:border-yellow-400 transition-colors"
+                >
+                  Fazer Login
                 </button>
               </div>
-            </form>
-          </div>
-          <div className="relative">
-            <img
-              src="/images/car-hero.svg"
-              alt="Ilustração de um carro"
-              className="w-full h-auto rounded-lg shadow-lg"
-            />
+            </div>
+            <div className="relative">
+              <img 
+                src="/images/car-hero.svg" 
+                alt="Ilustração de assistência mecânica"
+                className="w-full max-w-lg mx-auto"
+              />
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Features Section */}
-      <div className="py-16">
-        <h2 className="text-3xl font-bold text-center mb-12">
-          O relatório mais completo garantido
-        </h2>
-        <div className="grid md:grid-cols-4 gap-8">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-yellow-400 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <FileCheck className="w-8 h-8 text-gray-900" />
+      {/* Como Funciona */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+            Como o SOS Mecânicos funciona?
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center p-6">
+              <div className="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MapPin className="w-8 h-8 text-yellow-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Localize</h3>
+              <p className="text-gray-600">
+                Compartilhe sua localização e encontre mecânicos próximos a você
+              </p>
             </div>
-            <h3 className="font-semibold mb-2">Verificação de Título</h3>
-            <p className="text-gray-600">
-              Verificamos o histórico completo do título e propriedade do veículo.
-            </p>
-          </div>
-          <div className="text-center">
-            <div className="w-16 h-16 bg-yellow-400 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-8 h-8 text-gray-900" />
+            <div className="text-center p-6">
+              <div className="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Wrench className="w-8 h-8 text-yellow-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Solicite</h3>
+              <p className="text-gray-600">
+                Descreva o problema e escolha um profissional qualificado
+              </p>
             </div>
-            <h3 className="font-semibold mb-2">Lista de Problemas</h3>
-            <p className="text-gray-600">
-              Identificamos possíveis problemas e recalls do fabricante.
-            </p>
-          </div>
-          <div className="text-center">
-            <div className="w-16 h-16 bg-yellow-400 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <Wrench className="w-8 h-8 text-gray-900" />
+            <div className="text-center p-6">
+              <div className="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Car className="w-8 h-8 text-yellow-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Resolva</h3>
+              <p className="text-gray-600">
+                Receba assistência profissional onde você estiver
+              </p>
             </div>
-            <h3 className="font-semibold mb-2">Histórico de Acidentes</h3>
-            <p className="text-gray-600">
-              Revelamos o histórico completo de acidentes e danos.
-            </p>
-          </div>
-          <div className="text-center">
-            <div className="w-16 h-16 bg-yellow-400 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <Clock className="w-8 h-8 text-gray-900" />
-            </div>
-            <h3 className="font-semibold mb-2">Histórico de Serviços</h3>
-            <p className="text-gray-600">
-              Detalhamos todos os serviços e manutenções registrados.
-            </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Report Preview Section */}
-      <div className="py-16 bg-gray-50 rounded-2xl">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Nosso Relatório Verifica</h2>
-          <p className="text-xl text-gray-600">
-            Fornecemos informações detalhadas sobre cada aspecto do veículo
+      {/* Benefícios */}
+      <section className="py-16 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+            Por que escolher o SOS Mecânicos?
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <Clock className="w-8 h-8 text-yellow-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-3">Atendimento 24/7</h3>
+              <p className="text-gray-600">
+                Assistência disponível 24 horas por dia, 7 dias por semana
+              </p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <Shield className="w-8 h-8 text-yellow-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-3">Profissionais Verificados</h3>
+              <p className="text-gray-600">
+                Mecânicos qualificados e avaliados pela comunidade
+              </p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <ThumbsUp className="w-8 h-8 text-yellow-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-3">Preços Justos</h3>
+              <p className="text-gray-600">
+                Orçamentos transparentes e competitivos
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Final */}
+      <section className="py-16 bg-yellow-400">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6">
+            Precisa de um mecânico agora?
+          </h2>
+          <p className="text-lg text-gray-800 mb-8 max-w-2xl mx-auto">
+            Não fique parado na estrada. Encontre ajuda profissional em minutos com o SOS Mecânicos.
           </p>
-        </div>
-        <div className="relative max-w-4xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
-                <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center">
-                  <span className="font-semibold">01</span>
-                </div>
-                <div>
-                  <h4 className="font-semibold">Acidentes Anteriores</h4>
-                  <p className="text-gray-600">Histórico completo de colisões</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
-                <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center">
-                  <span className="font-semibold">02</span>
-                </div>
-                <div>
-                  <h4 className="font-semibold">Histórico de Serviços</h4>
-                  <p className="text-gray-600">Registros de manutenção</p>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
-                <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center">
-                  <span className="font-semibold">03</span>
-                </div>
-                <div>
-                  <h4 className="font-semibold">Recalls e Problemas</h4>
-                  <p className="text-gray-600">Alertas do fabricante</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
-                <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center">
-                  <span className="font-semibold">04</span>
-                </div>
-                <div>
-                  <h4 className="font-semibold">Avaliação e Documentação</h4>
-                  <p className="text-gray-600">Status da documentação</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* CTA Section */}
-      <div className="py-16 text-center">
-        <h2 className="text-3xl font-bold mb-6">
-          Comece a usar nosso sistema hoje
-        </h2>
-        <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-          Registre-se gratuitamente e tenha acesso a todas as funcionalidades do nosso sistema
-          de gerenciamento de veículos.
-        </p>
-        <div className="flex justify-center gap-4">
-          <Link
-            to="/register"
-            className="px-8 py-3 bg-yellow-400 text-gray-900 font-semibold rounded-lg hover:bg-yellow-500 transition-colors"
+          <button 
+            onClick={() => navigate('/register')}
+            className="bg-gray-900 text-white px-8 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
           >
-            Criar conta
-          </Link>
-          <Link
-            to="/login"
-            className="px-8 py-3 bg-white text-gray-900 font-semibold rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-          >
-            Fazer login
-          </Link>
+            Começar Agora
+          </button>
         </div>
-      </div>
+      </section>
     </Layout>
   );
 }
-
-export default Home;

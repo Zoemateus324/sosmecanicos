@@ -3,22 +3,28 @@ import { Layout } from '../../components/Layout';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import { Wrench, MapPin, Clock, AlertCircle, CheckCircle2, DollarSign } from 'lucide-react';
+import { Truck, MapPin, Clock, AlertCircle, CheckCircle2, DollarSign } from 'lucide-react';
 
-interface ServiceRequest {
+interface TowRequest {
   id: string;
-  user_id: string;
+  client_id: string;
   vehicle_id: string;
   description: string;
   status: 'pending' | 'accepted' | 'in_progress' | 'completed';
   created_at: string;
-  location: {
+  pickup_location: {
     latitude: number;
     longitude: number;
     address: string;
   };
-  user: {
+  delivery_location: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
+  client: {
     full_name: string;
+    phone: string;
   };
   vehicle: {
     model: string;
@@ -27,21 +33,23 @@ interface ServiceRequest {
   };
 }
 
-interface ServiceStats {
-  completed: number;
-  rating: number;
-  earnings: number;
+interface TowStats {
+  completed_services: number;
+  active_services: number;
+  total_earnings: number;
+  average_rating: number;
 }
 
-export default function MechanicDashboard() {
+export default function TowDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [nearbyRequests, setNearbyRequests] = useState<ServiceRequest[]>([]);
-  const [activeServices, setActiveServices] = useState<ServiceRequest[]>([]);
-  const [stats, setStats] = useState<ServiceStats>({
-    completed: 0,
-    rating: 0,
-    earnings: 0
+  const [requests, setRequests] = useState<TowRequest[]>([]);
+  const [activeServices, setActiveServices] = useState<TowRequest[]>([]);
+  const [stats, setStats] = useState<TowStats>({
+    completed_services: 0,
+    active_services: 0,
+    total_earnings: 0,
+    average_rating: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -51,22 +59,29 @@ export default function MechanicDashboard() {
 
   const fetchData = async () => {
     try {
-      // Buscar solicitações próximas (5km de raio)
-      const { data: nearbyData, error: nearbyError } = await supabase
-        .from('service_requests')
-        .select('*, user:profiles(*), vehicle:vehicles(*)')
+      // Buscar solicitações próximas
+      const { data: requestsData, error: requestsError } = await supabase
+        .from('tow_requests')
+        .select(`
+          *,
+          client:profiles(*),
+          vehicle:vehicles(*)
+        `)
         .eq('status', 'pending')
-        // Aqui você implementaria a lógica de geolocalização
-        .limit(5);
+        .order('created_at', { ascending: false });
 
-      if (nearbyError) throw nearbyError;
-      setNearbyRequests(nearbyData || []);
+      if (requestsError) throw requestsError;
+      setRequests(requestsData || []);
 
-      // Buscar serviços ativos do mecânico
+      // Buscar serviços ativos
       const { data: activeData, error: activeError } = await supabase
-        .from('service_requests')
-        .select('*, user:profiles(*), vehicle:vehicles(*)')
-        .eq('mechanic_id', user?.id)
+        .from('tow_requests')
+        .select(`
+          *,
+          client:profiles(*),
+          vehicle:vehicles(*)
+        `)
+        .eq('tow_company_id', user?.id)
         .in('status', ['accepted', 'in_progress'])
         .order('created_at', { ascending: false });
 
@@ -75,17 +90,18 @@ export default function MechanicDashboard() {
 
       // Buscar estatísticas
       const { data: statsData, error: statsError } = await supabase
-        .from('mechanic_stats')
+        .from('tow_company_stats')
         .select('*')
-        .eq('mechanic_id', user?.id)
+        .eq('company_id', user?.id)
         .single();
 
       if (statsError) throw statsError;
       if (statsData) {
         setStats({
-          completed: statsData.completed_services || 0,
-          rating: statsData.average_rating || 0,
-          earnings: statsData.total_earnings || 0
+          completed_services: statsData.completed_services || 0,
+          active_services: statsData.active_services || 0,
+          total_earnings: statsData.total_earnings || 0,
+          average_rating: statsData.average_rating || 0
         });
       }
     } catch (error) {
@@ -98,15 +114,15 @@ export default function MechanicDashboard() {
   const handleAcceptRequest = async (requestId: string) => {
     try {
       const { error } = await supabase
-        .from('service_requests')
+        .from('tow_requests')
         .update({
-          mechanic_id: user?.id,
+          tow_company_id: user?.id,
           status: 'accepted'
         })
         .eq('id', requestId);
 
       if (error) throw error;
-      fetchData(); // Recarrega os dados
+      fetchData();
     } catch (error) {
       console.error('Erro ao aceitar solicitação:', error);
     }
@@ -126,7 +142,7 @@ export default function MechanicDashboard() {
     const texts = {
       pending: 'Aguardando aceitação',
       accepted: 'Aceito - A caminho',
-      in_progress: 'Em atendimento',
+      in_progress: 'Em andamento',
       completed: 'Concluído'
     };
     return texts[status as keyof typeof texts] || 'Desconhecido';
@@ -148,15 +164,24 @@ export default function MechanicDashboard() {
         {/* Header com Estatísticas */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">
-            Olá, {user?.user_metadata?.full_name || 'Mecânico'}
+            Painel do Guincho
           </h1>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-center space-x-3">
                 <CheckCircle2 className="w-8 h-8 text-green-500" />
                 <div>
                   <p className="text-sm text-gray-500">Serviços Concluídos</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.completed_services}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="flex items-center space-x-3">
+                <Clock className="w-8 h-8 text-blue-500" />
+                <div>
+                  <p className="text-sm text-gray-500">Serviços Ativos</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.active_services}</p>
                 </div>
               </div>
             </div>
@@ -164,20 +189,20 @@ export default function MechanicDashboard() {
               <div className="flex items-center space-x-3">
                 <DollarSign className="w-8 h-8 text-yellow-500" />
                 <div>
-                  <p className="text-sm text-gray-500">Ganhos Totais</p>
+                  <p className="text-sm text-gray-500">Faturamento Total</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    R$ {stats.earnings.toFixed(2)}
+                    R$ {stats.total_earnings.toFixed(2)}
                   </p>
                 </div>
               </div>
             </div>
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-center space-x-3">
-                <AlertCircle className="w-8 h-8 text-blue-500" />
+                <AlertCircle className="w-8 h-8 text-purple-500" />
                 <div>
                   <p className="text-sm text-gray-500">Avaliação Média</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {stats.rating.toFixed(1)}
+                    {stats.average_rating.toFixed(1)}
                   </p>
                 </div>
               </div>
@@ -189,15 +214,15 @@ export default function MechanicDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Solicitações Próximas */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-xl font-semibold mb-4">Solicitações Próximas</h2>
-            {nearbyRequests.length === 0 ? (
+            <h2 className="text-xl font-semibold mb-4">Solicitações Disponíveis</h2>
+            {requests.length === 0 ? (
               <div className="text-center py-8">
-                <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500">Nenhuma solicitação próxima no momento</p>
+                <Truck className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-500">Nenhuma solicitação disponível no momento</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {nearbyRequests.map((request) => (
+                {requests.map((request) => (
                   <div key={request.id} className="border border-gray-100 rounded-lg p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div>
@@ -211,10 +236,21 @@ export default function MechanicDashboard() {
                         Aceitar Serviço
                       </button>
                     </div>
-                    <p className="text-gray-600 mb-3">{request.description}</p>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <MapPin className="w-4 h-4 mr-1" />
-                      {request.location.address}
+                    <div className="space-y-2">
+                      <div className="flex items-start space-x-2">
+                        <MapPin className="w-4 h-4 text-gray-400 mt-1" />
+                        <div>
+                          <p className="text-sm font-medium">Coleta:</p>
+                          <p className="text-sm text-gray-600">{request.pickup_location.address}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <MapPin className="w-4 h-4 text-gray-400 mt-1" />
+                        <div>
+                          <p className="text-sm font-medium">Entrega:</p>
+                          <p className="text-sm text-gray-600">{request.delivery_location.address}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -224,11 +260,11 @@ export default function MechanicDashboard() {
 
           {/* Serviços Ativos */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold mb-4">Serviços Ativos</h2>
+            <h2 className="text-xl font-semibold mb-4">Serviços em Andamento</h2>
             {activeServices.length === 0 ? (
               <div className="text-center py-8">
-                <Wrench className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500">Nenhum serviço ativo no momento</p>
+                <Clock className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-500">Nenhum serviço em andamento</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -239,19 +275,31 @@ export default function MechanicDashboard() {
                         <span className={`inline-block px-3 py-1 rounded-full text-sm ${getStatusColor(service.status)}`}>
                           {getStatusText(service.status)}
                         </span>
+                        <h3 className="font-medium mt-2">{service.vehicle.model}</h3>
                       </div>
                       <p className="text-sm text-gray-500">
                         {new Date(service.created_at).toLocaleDateString()}
                       </p>
                     </div>
-                    <div className="mb-3">
-                      <h3 className="font-medium">{service.vehicle.model}</h3>
-                      <p className="text-sm text-gray-500">Cliente: {service.user.full_name}</p>
+                    <div className="space-y-2">
+                      <div className="flex items-start space-x-2">
+                        <MapPin className="w-4 h-4 text-gray-400 mt-1" />
+                        <div>
+                          <p className="text-sm font-medium">Coleta:</p>
+                          <p className="text-sm text-gray-600">{service.pickup_location.address}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <MapPin className="w-4 h-4 text-gray-400 mt-1" />
+                        <div>
+                          <p className="text-sm font-medium">Entrega:</p>
+                          <p className="text-sm text-gray-600">{service.delivery_location.address}</p>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-gray-600 mb-3">{service.description}</p>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <MapPin className="w-4 h-4 mr-1" />
-                      {service.location.address}
+                    <div className="mt-3">
+                      <p className="text-sm text-gray-500">Cliente: {service.client.full_name}</p>
+                      <p className="text-sm text-gray-500">Telefone: {service.client.phone}</p>
                     </div>
                   </div>
                 ))}
@@ -267,22 +315,22 @@ export default function MechanicDashboard() {
             <div className="flex items-start space-x-3">
               <Clock className="w-6 h-6 text-yellow-600 flex-shrink-0" />
               <div>
-                <h3 className="font-medium mb-1">Responda Rapidamente</h3>
-                <p className="text-sm text-gray-600">Quanto mais rápido aceitar, maiores as chances de realizar o serviço</p>
+                <h3 className="font-medium mb-1">Tempo de Resposta</h3>
+                <p className="text-sm text-gray-600">Responda às solicitações em até 15 minutos</p>
               </div>
             </div>
             <div className="flex items-start space-x-3">
               <MapPin className="w-6 h-6 text-yellow-600 flex-shrink-0" />
               <div>
-                <h3 className="font-medium mb-1">Mantenha-se Próximo</h3>
-                <p className="text-sm text-gray-600">Fique nas áreas com maior demanda de serviços</p>
+                <h3 className="font-medium mb-1">Localização Precisa</h3>
+                <p className="text-sm text-gray-600">Confirme os endereços de coleta e entrega</p>
               </div>
             </div>
             <div className="flex items-start space-x-3">
               <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0" />
               <div>
-                <h3 className="font-medium mb-1">Comunique-se Bem</h3>
-                <p className="text-sm text-gray-600">Mantenha o cliente informado sobre seu progresso</p>
+                <h3 className="font-medium mb-1">Comunicação</h3>
+                <p className="text-sm text-gray-600">Mantenha o cliente informado sobre o status do serviço</p>
               </div>
             </div>
           </div>
@@ -290,4 +338,4 @@ export default function MechanicDashboard() {
       </div>
     </Layout>
   );
-}
+} 

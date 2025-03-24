@@ -3,14 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = 'https://ugiatrkqtfiidnpxbluk.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWF0cmtxdGZpaWRucHhibHVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NTMzODIsImV4cCI6MjA1ODIyOTM4Mn0.xo98jkIkqAHL9Xh_kPY4EdMnJ44cSFw98Xsih3p9lL4';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase URL and Anon Key são obrigatórios');
-}
-
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
   }
-});
+}); 
