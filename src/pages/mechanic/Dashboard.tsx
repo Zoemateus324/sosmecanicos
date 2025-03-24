@@ -63,7 +63,7 @@ export default function MechanicDashboard() {
         return;
       }
 
-      // Buscar solicitações próximas (5km de raio)
+      // Buscar solicitações próximas
       const { data: nearbyData, error: nearbyError } = await supabase
         .from('service_requests')
         .select(`
@@ -81,10 +81,15 @@ export default function MechanicDashboard() {
           )
         `)
         .eq('status', 'pending')
-        // Aqui você implementaria a lógica de geolocalização
-        .limit(5);
+        .is('mechanic_id', null) // Apenas solicitações sem mecânico atribuído
+        .order('created_at', { ascending: false }); // Ordenar por data de criação, mais recentes primeiro
 
-      if (nearbyError) throw nearbyError;
+      if (nearbyError) {
+        console.error('Erro ao buscar solicitações:', nearbyError);
+        throw nearbyError;
+      }
+      
+      console.log('Solicitações encontradas:', nearbyData);
       
       // Filtra solicitações com veículos válidos
       const validRequests = (nearbyData || []).filter((request): request is ServiceRequest => {
@@ -96,6 +101,8 @@ export default function MechanicDashboard() {
           request.vehicle.plate
         );
       });
+
+      console.log('Solicitações válidas:', validRequests);
 
       setNearbyRequests(validRequests);
 
