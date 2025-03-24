@@ -3,7 +3,7 @@ import { Layout } from '../../components/Layout';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import { Wrench, MapPin, Clock, AlertCircle, CheckCircle2, DollarSign } from 'lucide-react';
+import { Wrench, MapPin, Clock, AlertCircle, CheckCircle2, DollarSign, X } from 'lucide-react';
 
 interface ServiceRequest {
   id: string;
@@ -35,12 +35,97 @@ interface ServiceStats {
   earnings: number;
 }
 
+interface QuoteModalProps {
+  request: ServiceRequest;
+  onClose: () => void;
+  onSubmit: (requestId: string, quote: number, description: string) => Promise<void>;
+}
+
+const QuoteModal: React.FC<QuoteModalProps> = ({ request, onClose, onSubmit }) => {
+  const [quote, setQuote] = useState('');
+  const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quote || !description) return;
+
+    setLoading(true);
+    try {
+      await onSubmit(request.id, Number(quote), description);
+      onClose();
+    } catch (error) {
+      console.error('Erro ao enviar orçamento:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Enviar Orçamento</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        
+        <div className="mb-4">
+          <h3 className="font-medium">Detalhes do Serviço</h3>
+          <p className="text-sm text-gray-600 mt-1">Veículo: {request.vehicle.model} - {request.vehicle.plate}</p>
+          <p className="text-sm text-gray-600">Problema: {request.description}</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Valor do Orçamento (R$)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={quote}
+              onChange={(e) => setQuote(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Descrição do Serviço
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+              rows={3}
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-yellow-400 text-gray-900 py-2 rounded-lg font-medium hover:bg-yellow-500 transition-colors disabled:opacity-50"
+          >
+            {loading ? 'Enviando...' : 'Enviar Orçamento'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 export default function MechanicDashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading, isAuthenticated } = useAuth();
   const [nearbyRequests, setNearbyRequests] = useState<ServiceRequest[]>([]);
   const [activeServices, setActiveServices] = useState<ServiceRequest[]>([]);
   const [mechanicLocation, setMechanicLocation] = useState<{latitude: number; longitude: number} | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [stats, setStats] = useState<ServiceStats>({
     completed: 0,
     rating: 0,
@@ -118,12 +203,12 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:user_id(
+          client:profiles!user_id(
             id,
             full_name,
             phone
           ),
-          vehicle:vehicle_id(
+          vehicle:vehicles!vehicle_id(
             model,
             plate,
             year
@@ -150,7 +235,11 @@ export default function MechanicDashboard() {
           request.description &&
           request.location &&
           request.location.latitude &&
-          request.location.longitude
+          request.location.longitude &&
+          request.vehicle &&
+          request.vehicle[0] &&
+          request.vehicle[0].model &&
+          request.vehicle[0].plate
         );
 
         if (!isValid) {
@@ -160,7 +249,10 @@ export default function MechanicDashboard() {
             hasDescription: Boolean(request?.description),
             hasLocation: Boolean(request?.location),
             hasLatitude: Boolean(request?.location?.latitude),
-            hasLongitude: Boolean(request?.location?.longitude)
+            hasLongitude: Boolean(request?.location?.longitude),
+            hasVehicle: Boolean(request?.vehicle?.[0]),
+            hasVehicleModel: Boolean(request?.vehicle?.[0]?.model),
+            hasVehiclePlate: Boolean(request?.vehicle?.[0]?.plate)
           });
           return false;
         }
@@ -197,9 +289,9 @@ export default function MechanicDashboard() {
           phone: 'Não informado'
         },
         vehicle: request.vehicle?.[0] || {
-          model: 'Veículo',
-          plate: 'Não informado',
-          year: 'Não informado'
+          model: 'Veículo não informado',
+          plate: 'Placa não informada',
+          year: 'Ano não informado'
         }
       }));
 
@@ -257,6 +349,37 @@ export default function MechanicDashboard() {
       console.error('Erro ao carregar dados:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmitQuote = async (requestId: string, quote: number, description: string) => {
+    try {
+      // Criar orçamento
+      const { error: quoteError } = await supabase
+        .from('service_quotes')
+        .insert({
+          request_id: requestId,
+          mechanic_id: user?.id,
+          amount: quote,
+          description: description,
+          status: 'pending'
+        });
+
+      if (quoteError) throw quoteError;
+
+      // Atualizar status da solicitação
+      const { error: updateError } = await supabase
+        .from('service_requests')
+        .update({ status: 'quoted' })
+        .eq('id', requestId);
+
+      if (updateError) throw updateError;
+
+      // Recarregar dados
+      fetchData(mechanicLocation?.latitude ?? null, mechanicLocation?.longitude ?? null);
+    } catch (error) {
+      console.error('Erro ao enviar orçamento:', error);
+      throw error;
     }
   };
 
@@ -362,7 +485,7 @@ export default function MechanicDashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                {nearbyRequests.map((request) => request.vehicle && (
+                {nearbyRequests.map((request) => (
                   <div key={request.id} className="border border-gray-100 rounded-lg p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div>
@@ -370,10 +493,10 @@ export default function MechanicDashboard() {
                         <p className="text-sm text-gray-500">Placa: {request.vehicle.plate}</p>
                       </div>
                       <button
-                        onClick={() => handleAcceptRequest(request.id)}
+                        onClick={() => setSelectedRequest(request)}
                         className="bg-yellow-400 text-gray-900 px-4 py-2 rounded-lg text-sm font-medium hover:bg-yellow-500 transition-colors"
                       >
-                        Aceitar Serviço
+                        Enviar Orçamento
                       </button>
                     </div>
                     <p className="text-gray-600 mb-3">{request.description}</p>
@@ -451,6 +574,15 @@ export default function MechanicDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Modal de Orçamento */}
+        {selectedRequest && (
+          <QuoteModal
+            request={selectedRequest}
+            onClose={() => setSelectedRequest(null)}
+            onSubmit={handleSubmitQuote}
+          />
+        )}
       </div>
     </Layout>
   );
