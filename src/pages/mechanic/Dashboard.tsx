@@ -204,12 +204,13 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:profiles!inner(
+          client:user_id(
             id,
-            full_name,
-            phone
+            email,
+            user_metadata->full_name,
+            user_metadata->phone
           ),
-          vehicle:vehicles!inner(
+          vehicle:vehicles(
             id,
             model,
             plate,
@@ -227,8 +228,20 @@ export default function MechanicDashboard() {
           status: string;
           created_at: string;
           location: { latitude: number; longitude: number; address: string };
-          client: { id: string; full_name: string; phone: string };
-          vehicle: { id: string; model: string; plate: string; year: string };
+          client: { 
+            id: string; 
+            email: string;
+            user_metadata: {
+              full_name: string;
+              phone: string;
+            };
+          };
+          vehicle: { 
+            id: string; 
+            model: string; 
+            plate: string; 
+            year: string;
+          };
         }[]>();
 
       if (nearbyError) {
@@ -288,15 +301,15 @@ export default function MechanicDashboard() {
       const formattedRequests = validRequests.map(request => {
         const clientData = {
           id: request.user_id,
-          full_name: request.client.full_name || 'Cliente',
-          phone: request.client.phone || 'Não informado'
+          full_name: request.client?.user_metadata?.full_name || 'Cliente',
+          phone: request.client?.user_metadata?.phone || 'Não informado'
         };
 
         const vehicleData = {
           id: request.vehicle_id,
-          model: request.vehicle.model || 'Veículo não informado',
-          plate: request.vehicle.plate || 'Placa não informada',
-          year: request.vehicle.year || 'Ano não informado'
+          model: request.vehicle?.model || 'Veículo não informado',
+          plate: request.vehicle?.plate || 'Placa não informada',
+          year: request.vehicle?.year || 'Ano não informado'
         };
 
         const formattedRequest: ServiceRequest = {
