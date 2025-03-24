@@ -10,7 +10,8 @@ CREATE TABLE public.service_requests (
     status TEXT CHECK (status IN ('pending', 'accepted', 'in_progress', 'completed', 'cancelled')) NOT NULL DEFAULT 'pending',
     location JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 
 -- Create indexes

@@ -54,7 +54,20 @@ export default function MechanicDashboard() {
       // Buscar solicitações próximas (5km de raio)
       const { data: nearbyData, error: nearbyError } = await supabase
         .from('service_requests')
-        .select('*, user:profiles(*), vehicle:vehicles(*)')
+        .select(`
+          *,
+          user:profiles!user_id(
+            id,
+            full_name,
+            phone
+          ),
+          vehicle:vehicles!vehicle_id(
+            id,
+            model,
+            plate,
+            year
+          )
+        `)
         .eq('status', 'pending')
         // Aqui você implementaria a lógica de geolocalização
         .limit(5);
