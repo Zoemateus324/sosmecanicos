@@ -16,7 +16,7 @@ interface Vehicle {
 
 function RequestService() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -24,9 +24,16 @@ function RequestService() {
   const [loadingLocation, setLoadingLocation] = useState(false);
 
   useEffect(() => {
-    fetchVehicles();
-    getCurrentLocation();
-  }, []);
+    if (!isAuthenticated && !authLoading) {
+      navigate('/login');
+      return;
+    }
+
+    if (isAuthenticated) {
+      fetchVehicles();
+      getCurrentLocation();
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const fetchVehicles = async () => {
     try {
@@ -136,6 +143,20 @@ function RequestService() {
       setLoading(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <Layout>
