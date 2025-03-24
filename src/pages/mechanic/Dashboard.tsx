@@ -44,6 +44,19 @@ interface QuoteModalProps {
   onSubmit: (requestId: string, quote: number, description: string) => Promise<void>;
 }
 
+interface SupabaseProfile {
+  id: string;
+  full_name: string;
+  phone: string;
+}
+
+interface SupabaseVehicle {
+  id: string;
+  model: string;
+  plate: string;
+  year: string;
+}
+
 interface SupabaseServiceRequest {
   id: string;
   user_id: string;
@@ -56,17 +69,8 @@ interface SupabaseServiceRequest {
     longitude: number;
     address: string;
   };
-  client: {
-    id: string;
-    full_name: string;
-    phone: string;
-  };
-  vehicle: {
-    id: string;
-    model: string;
-    plate: string;
-    year: string;
-  };
+  client: SupabaseProfile[];
+  vehicle: SupabaseVehicle[];
 }
 
 const QuoteModal: React.FC<QuoteModalProps> = ({ request, onClose, onSubmit }) => {
@@ -231,7 +235,7 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:user_id(
+          client:profiles!inner(
             id,
             full_name,
             phone
@@ -245,7 +249,8 @@ export default function MechanicDashboard() {
         `)
         .eq('status', 'pending')
         .is('mechanic_id', null)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .returns<SupabaseServiceRequest[]>();
 
       if (nearbyError) {
         console.error('Erro ao buscar solicitações:', nearbyError);
@@ -263,8 +268,7 @@ export default function MechanicDashboard() {
           request.id &&
           request.description &&
           request.location &&
-          request.client &&
-          request.client.full_name
+          request.client?.[0]?.full_name
         );
 
         if (!isValid) {
@@ -273,8 +277,8 @@ export default function MechanicDashboard() {
             hasId: Boolean(request?.id),
             hasDescription: Boolean(request?.description),
             hasLocation: Boolean(request?.location),
-            hasClient: Boolean(request?.client),
-            hasClientName: Boolean(request?.client?.full_name)
+            hasClient: Boolean(request?.client?.[0]),
+            hasClientName: Boolean(request?.client?.[0]?.full_name)
           });
           return false;
         }
@@ -311,8 +315,8 @@ export default function MechanicDashboard() {
         location: request.location,
         client: {
           id: request.user_id,
-          full_name: request.client?.full_name || 'Cliente',
-          phone: request.client?.phone || 'Não informado'
+          full_name: request.client?.[0]?.full_name || 'Cliente',
+          phone: request.client?.[0]?.phone || 'Não informado'
         },
         vehicle: {
           id: request.vehicle_id,
