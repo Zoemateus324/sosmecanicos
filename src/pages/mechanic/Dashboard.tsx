@@ -35,7 +35,7 @@ interface ServiceStats {
 
 export default function MechanicDashboard() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading, isAuthenticated } = useAuth();
   const [nearbyRequests, setNearbyRequests] = useState<ServiceRequest[]>([]);
   const [activeServices, setActiveServices] = useState<ServiceRequest[]>([]);
   const [stats, setStats] = useState<ServiceStats>({
@@ -46,8 +46,15 @@ export default function MechanicDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (!isAuthenticated && !authLoading) {
+      navigate('/login');
+      return;
+    }
+
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const fetchData = async () => {
     try {
