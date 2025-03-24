@@ -260,7 +260,7 @@ function RequestService() {
                   <option value="">Selecione um veículo</option>
                   {vehicles.map(vehicle => vehicle && (
                     <option key={vehicle.id} value={vehicle.id}>
-                      {vehicle.brand} {vehicle.model} - {vehicle.plate} ({vehicle.year})
+                      {vehicle.model} - Placa: {vehicle.plate}
                     </option>
                   ))}
                 </select>
