@@ -51,6 +51,11 @@ export default function MechanicDashboard() {
 
   const fetchData = async () => {
     try {
+      if (!user?.id) {
+        console.error('Usuário não autenticado');
+        return;
+      }
+
       // Buscar solicitações próximas (5km de raio)
       const { data: nearbyData, error: nearbyError } = await supabase
         .from('service_requests')
@@ -76,16 +81,22 @@ export default function MechanicDashboard() {
       setNearbyRequests(nearbyData || []);
 
       // Buscar serviços ativos do mecânico
-      const { data: activeData, error: activeError } = await supabase
+      const query = supabase
         .from('service_requests')
         .select(`
           *,
           client:profiles!user_id(*),
           vehicle:vehicles!vehicle_id(*)
         `)
-        .eq('mechanic_id', user?.id)
         .in('status', ['accepted', 'in_progress'])
         .order('created_at', { ascending: false });
+
+      // Adicionar filtro de mechanic_id apenas se o usuário estiver autenticado
+      if (user?.id) {
+        query.eq('mechanic_id', user.id);
+      }
+
+      const { data: activeData, error: activeError } = await query;
 
       if (activeError) throw activeError;
       setActiveServices(activeData || []);
@@ -94,7 +105,7 @@ export default function MechanicDashboard() {
       const { data: statsData, error: statsError } = await supabase
         .from('mechanic_stats')
         .select('*')
-        .eq('mechanic_id', user?.id)
+        .eq('mechanic_id', user.id)
         .single();
 
       if (statsError) throw statsError;
