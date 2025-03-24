@@ -17,11 +17,16 @@ interface ServiceRequest {
     longitude: number;
     address: string;
   };
-  profiles: {
+  client: {
     id: string;
     full_name: string;
     phone: string;
   };
+  mechanic: {
+    id: string;
+    full_name: string;
+    phone: string;
+  } | null;
   vehicle: {
     model: string;
     plate: string;
@@ -70,7 +75,12 @@ export default function MechanicDashboard() {
         .from('service_requests')
         .select(`
           *,
-          profiles(
+          client:profiles!service_requests_user_id_fkey(
+            id,
+            full_name,
+            phone
+          ),
+          mechanic:profiles!service_requests_mechanic_id_fkey(
             id,
             full_name,
             phone
@@ -117,7 +127,8 @@ export default function MechanicDashboard() {
         .from('service_requests')
         .select(`
           *,
-          profiles(*),
+          client:profiles!service_requests_user_id_fkey(*),
+          mechanic:profiles!service_requests_mechanic_id_fkey(*),
           vehicle:vehicles(*)
         `)
         .in('status', ['accepted', 'in_progress'])
