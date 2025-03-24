@@ -206,12 +206,12 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:profiles!user_id(
+          client:profiles!inner(
             id,
             full_name,
             phone
           ),
-          vehicle:vehicles(
+          vehicle:vehicles!inner(
             id,
             model,
             plate,
@@ -237,7 +237,10 @@ export default function MechanicDashboard() {
           request &&
           request.id &&
           request.description &&
-          request.location
+          request.location &&
+          request.vehicle &&
+          request.vehicle.model &&
+          request.vehicle.plate
         );
 
         if (!isValid) {
@@ -245,7 +248,10 @@ export default function MechanicDashboard() {
             hasRequest: Boolean(request),
             hasId: Boolean(request?.id),
             hasDescription: Boolean(request?.description),
-            hasLocation: Boolean(request?.location)
+            hasLocation: Boolean(request?.location),
+            hasVehicle: Boolean(request?.vehicle),
+            hasVehicleModel: Boolean(request?.vehicle?.model),
+            hasVehiclePlate: Boolean(request?.vehicle?.plate)
           });
           return false;
         }
@@ -272,32 +278,26 @@ export default function MechanicDashboard() {
       });
 
       // Mapear os dados para o formato correto
-      const formattedRequests = validRequests.map(request => {
-        const clientData = {
-          id: request.user_id,
-          full_name: request.client?.[0]?.full_name || 'Cliente',
-          phone: request.client?.[0]?.phone || 'Não informado'
-        };
-
-        const vehicleData = {
-          id: request.vehicle_id,
-          model: request.vehicle?.[0]?.model || 'Veículo não informado',
-          plate: request.vehicle?.[0]?.plate || 'Placa não informada',
-          year: request.vehicle?.[0]?.year || 'Ano não informado'
-        };
-
-        return {
-          id: request.id,
-          user_id: request.user_id,
-          vehicle_id: request.vehicle_id,
-          description: request.description,
-          status: request.status as ServiceRequest['status'],
-          created_at: request.created_at,
-          location: request.location,
-          client: clientData,
-          vehicle: vehicleData
-        };
-      });
+      const formattedRequests = validRequests.map(request => ({
+        id: request.id,
+        user_id: request.user_id,
+        vehicle_id: request.vehicle_id,
+        description: request.description,
+        status: request.status as ServiceRequest['status'],
+        created_at: request.created_at,
+        location: request.location,
+        client: {
+          id: request.client.id,
+          full_name: request.client.full_name,
+          phone: request.client.phone
+        },
+        vehicle: {
+          id: request.vehicle.id,
+          model: request.vehicle.model,
+          plate: request.vehicle.plate,
+          year: request.vehicle.year
+        }
+      }));
 
       console.log('Solicitações formatadas:', formattedRequests);
       setNearbyRequests(formattedRequests);
