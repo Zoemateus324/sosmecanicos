@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { MapPin, Phone, Mail, Star, Wrench, Clock } from 'lucide-react';
+import { MapPin, Phone, Mail, Star, Wrench, Clock, Save, Edit2 } from 'lucide-react';
 
 interface Profile {
   id: string;
@@ -27,6 +27,15 @@ export default function Profile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [stats, setStats] = useState<MechanicStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedProfile, setEditedProfile] = useState<{
+    phone: string;
+    address: string;
+  }>({
+    phone: '',
+    address: ''
+  });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated && !authLoading) {
@@ -47,6 +56,10 @@ export default function Profile() {
 
         if (profileError) throw profileError;
         setProfile(profileData);
+        setEditedProfile({
+          phone: profileData.phone || '',
+          address: profileData.address || ''
+        });
 
         // Se for mecânico, buscar estatísticas
         if (profileData.user_type === 'mechanic') {
@@ -70,6 +83,35 @@ export default function Profile() {
       fetchProfile();
     }
   }, [isAuthenticated, authLoading, navigate, user?.id]);
+
+  const handleSave = async () => {
+    if (!user?.id) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          phone: editedProfile.phone,
+          address: editedProfile.address
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setProfile(prev => prev ? {
+        ...prev,
+        phone: editedProfile.phone,
+        address: editedProfile.address
+      } : null);
+      
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Erro ao salvar perfil:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -103,19 +145,59 @@ export default function Profile() {
 
           {/* Informações de Contato */}
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Informações de Contato</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Informações de Contato</h2>
+              {!isEditing ? (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  <span>Editar</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center space-x-2 text-yellow-600 hover:text-yellow-700 disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{saving ? 'Salvando...' : 'Salvar'}</span>
+                </button>
+              )}
+            </div>
             <div className="space-y-4">
               <div className="flex items-center space-x-3">
                 <Mail className="w-5 h-5 text-gray-400" />
-                <span>{profile?.email}</span>
+                <span className="text-gray-600">{profile?.email}</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Phone className="w-5 h-5 text-gray-400" />
-                <span>{profile?.phone || 'Não informado'}</span>
+                {isEditing ? (
+                  <input
+                    type="tel"
+                    value={editedProfile.phone}
+                    onChange={(e) => setEditedProfile(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="Seu telefone"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  />
+                ) : (
+                  <span>{profile?.phone || 'Não informado'}</span>
+                )}
               </div>
               <div className="flex items-center space-x-3">
                 <MapPin className="w-5 h-5 text-gray-400" />
-                <span>{profile?.address || 'Não informado'}</span>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedProfile.address}
+                    onChange={(e) => setEditedProfile(prev => ({ ...prev, address: e.target.value }))}
+                    placeholder="Seu endereço"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  />
+                ) : (
+                  <span>{profile?.address || 'Não informado'}</span>
+                )}
               </div>
             </div>
           </div>
