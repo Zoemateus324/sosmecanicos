@@ -592,10 +592,10 @@ export default function MechanicDashboard() {
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="font-medium text-gray-900">
-                          {request.vehicle.model}
+                          {request.client.full_name}
                         </h3>
                         <p className="text-sm text-gray-500">
-                          Placa: {request.vehicle.plate}
+                          {request.description}
                         </p>
                       </div>
                       <button
@@ -605,8 +605,6 @@ export default function MechanicDashboard() {
                         Enviar Orçamento
                       </button>
                     </div>
-
-                    <p className="text-gray-600 mb-4">{request.description}</p>
 
                     <div className="flex items-center justify-between text-sm text-gray-500">
                       <div className="flex items-center space-x-2">
