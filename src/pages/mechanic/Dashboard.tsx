@@ -24,7 +24,7 @@ interface ServiceRequest {
     model: string;
     plate: string;
     year: string;
-  };
+  } | null;
 }
 
 interface ServiceStats {
@@ -85,7 +85,19 @@ export default function MechanicDashboard() {
         .limit(5);
 
       if (nearbyError) throw nearbyError;
-      setNearbyRequests(nearbyData || []);
+      
+      // Filtra solicitações com veículos válidos
+      const validRequests = (nearbyData || []).filter((request): request is ServiceRequest => {
+        return Boolean(
+          request &&
+          request.id &&
+          request.vehicle &&
+          request.vehicle.model &&
+          request.vehicle.plate
+        );
+      });
+
+      setNearbyRequests(validRequests);
 
       // Buscar serviços ativos do mecânico
       const query = supabase
@@ -106,7 +118,19 @@ export default function MechanicDashboard() {
       const { data: activeData, error: activeError } = await query;
 
       if (activeError) throw activeError;
-      setActiveServices(activeData || []);
+
+      // Filtra serviços ativos com veículos válidos
+      const validActiveServices = (activeData || []).filter((service): service is ServiceRequest => {
+        return Boolean(
+          service &&
+          service.id &&
+          service.vehicle &&
+          service.vehicle.model &&
+          service.vehicle.plate
+        );
+      });
+
+      setActiveServices(validActiveServices);
 
       // Buscar estatísticas
       const { data: statsData, error: statsError } = await supabase
@@ -224,7 +248,7 @@ export default function MechanicDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Solicitações Próximas */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-xl font-semibold mb-4">Solicitações Próximas</h2>
+            <h2 className="text-xl font-semibold mb-4">Solicitações Próximas</h2>
             {nearbyRequests.length === 0 ? (
               <div className="text-center py-8">
                 <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-3" />
@@ -232,7 +256,7 @@ export default function MechanicDashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                {nearbyRequests.map((request) => (
+                {nearbyRequests.map((request) => request.vehicle && (
                   <div key={request.id} className="border border-gray-100 rounded-lg p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div>
@@ -248,8 +272,16 @@ export default function MechanicDashboard() {
                     </div>
                     <p className="text-gray-600 mb-3">{request.description}</p>
                     <div className="flex items-center text-sm text-gray-500">
-                      <MapPin className="w-4 h-4 mr-1" />
-                      {request.location.address}
+                      <Clock className="w-4 h-4 mr-1" />
+                      <span>
+                        {new Date(request.created_at).toLocaleDateString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -267,27 +299,18 @@ export default function MechanicDashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                {activeServices.map((service) => (
+                {activeServices.map((service) => service.vehicle && (
                   <div key={service.id} className="border border-gray-100 rounded-lg p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <span className={`inline-block px-3 py-1 rounded-full text-sm ${getStatusColor(service.status)}`}>
-                          {getStatusText(service.status)}
-                        </span>
+                        <h3 className="font-medium">{service.vehicle.model}</h3>
+                        <p className="text-sm text-gray-500">Placa: {service.vehicle.plate}</p>
                       </div>
-                      <p className="text-sm text-gray-500">
-                        {new Date(service.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="mb-3">
-                      <h3 className="font-medium">{service.vehicle.model}</h3>
-                      <p className="text-sm text-gray-500">Cliente: {service.user.full_name}</p>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(service.status)}`}>
+                        {getStatusText(service.status)}
+                      </span>
                     </div>
                     <p className="text-gray-600 mb-3">{service.description}</p>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <MapPin className="w-4 h-4 mr-1" />
-                      {service.location.address}
-                    </div>
                   </div>
                 ))}
               </div>
