@@ -78,7 +78,11 @@ export default function MechanicDashboard() {
       // Buscar serviços ativos do mecânico
       const { data: activeData, error: activeError } = await supabase
         .from('service_requests')
-        .select('*, user:profiles(*), vehicle:vehicles(*)')
+        .select(`
+          *,
+          client:profiles!user_id(*),
+          vehicle:vehicles!vehicle_id(*)
+        `)
         .eq('mechanic_id', user?.id)
         .in('status', ['accepted', 'in_progress'])
         .order('created_at', { ascending: false });
