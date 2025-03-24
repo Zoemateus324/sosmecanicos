@@ -40,6 +40,7 @@ export default function MechanicDashboard() {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
   const [nearbyRequests, setNearbyRequests] = useState<ServiceRequest[]>([]);
   const [activeServices, setActiveServices] = useState<ServiceRequest[]>([]);
+  const [mechanicLocation, setMechanicLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [stats, setStats] = useState<ServiceStats>({
     completed: 0,
     rating: 0,
@@ -54,11 +55,37 @@ export default function MechanicDashboard() {
     }
 
     if (isAuthenticated) {
-      fetchData();
+      // Obter localização do mecânico antes de buscar os dados
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setMechanicLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          });
+          fetchData(position.coords.latitude, position.coords.longitude);
+        },
+        (error) => {
+          console.error('Erro ao obter localização:', error);
+          fetchData(null, null);
+        }
+      );
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  const fetchData = async () => {
+  // Função para calcular distância entre dois pontos usando a fórmula de Haversine
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // Raio da Terra em km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Distância em km
+  };
+
+  const fetchData = async (mechanicLat: number | null, mechanicLng: number | null) => {
     try {
       if (!user?.id) {
         console.error('Usuário não autenticado');
@@ -93,19 +120,41 @@ export default function MechanicDashboard() {
       
       console.log('Solicitações encontradas:', nearbyData);
       
-      // Filtra solicitações com veículos válidos
+      // Filtra solicitações com veículos válidos e dentro do raio de 30km
       const validRequests = (nearbyData || []).filter((request): request is ServiceRequest => {
         const isValid = Boolean(
           request &&
           request.id &&
           request.vehicle &&
           request.vehicle.model &&
-          request.vehicle.plate
+          request.vehicle.plate &&
+          request.location
         );
+
         if (!isValid) {
           console.log('Solicitação inválida:', request);
+          return false;
         }
-        return isValid;
+
+        // Se não temos a localização do mecânico, não podemos filtrar por distância
+        if (!mechanicLat || !mechanicLng) {
+          return true;
+        }
+
+        // Calcular distância entre mecânico e solicitação
+        const distance = calculateDistance(
+          mechanicLat,
+          mechanicLng,
+          request.location.latitude,
+          request.location.longitude
+        );
+
+        const isNearby = distance <= 30; // 30km de raio
+        if (!isNearby) {
+          console.log(`Solicitação fora do raio de 30km (${distance.toFixed(2)}km):`, request.id);
+        }
+
+        return isNearby;
       });
 
       console.log('Solicitações válidas:', validRequests);
@@ -178,7 +227,7 @@ export default function MechanicDashboard() {
         .eq('id', requestId);
 
       if (error) throw error;
-      fetchData(); // Recarrega os dados
+      fetchData(mechanicLocation?.latitude ?? null, mechanicLocation?.longitude ?? null); // Recarrega os dados
     } catch (error) {
       console.error('Erro ao aceitar solicitação:', error);
     }
