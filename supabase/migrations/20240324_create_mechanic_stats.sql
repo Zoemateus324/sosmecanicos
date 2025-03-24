@@ -1,7 +1,7 @@
 -- Create mechanic_stats table
 CREATE TABLE IF NOT EXISTS public.mechanic_stats (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    mechanic_id UUID REFERENCES auth.users(id) NOT NULL,
+    mechanic_id UUID REFERENCES auth.users(id) NOT NULL UNIQUE,
     completed_services INTEGER DEFAULT 0,
     average_rating DECIMAL(3,2) DEFAULT 0.00,
     total_earnings DECIMAL(10,2) DEFAULT 0.00,
