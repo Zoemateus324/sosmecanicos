@@ -46,6 +46,7 @@ export function useAuth() {
 
     const setupAuth = async () => {
       try {
+        setLoading(true);
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!mounted) return;
@@ -54,7 +55,6 @@ export function useAuth() {
           setUser(null);
           setProfile(null);
           setIsAuthenticated(false);
-          setLoading(false);
           return;
         }
 
@@ -71,7 +71,6 @@ export function useAuth() {
           setProfile(null);
           setIsAuthenticated(false);
         }
-
       } catch (error) {
         console.error('Erro ao configurar autenticação:', error);
         if (mounted) {
@@ -88,26 +87,27 @@ export function useAuth() {
 
     setupAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
       
       if (session?.user) {
         setUser(session.user);
-        const userProfile = await fetchProfile(session.user.id);
-        
-        if (userProfile) {
-          setProfile(userProfile);
-          setIsAuthenticated(true);
-        } else {
-          setProfile(null);
-          setIsAuthenticated(false);
-        }
+        fetchProfile(session.user.id).then(userProfile => {
+          if (!mounted) return;
+          
+          if (userProfile) {
+            setProfile(userProfile);
+            setIsAuthenticated(true);
+          } else {
+            setProfile(null);
+            setIsAuthenticated(false);
+          }
+        });
       } else {
         setUser(null);
         setProfile(null);
         setIsAuthenticated(false);
       }
-      setLoading(false);
     });
 
     return () => {
