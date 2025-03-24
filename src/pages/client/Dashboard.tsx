@@ -7,13 +7,20 @@ import { Plus, Car, AlertCircle, MapPin, Clock, ChevronRight, Wrench, CheckCircl
 
 interface Vehicle {
   id: string;
+  user_id: string;
+  vehicle_type: 'carro' | 'moto' | 'caminhao' | 'van';
   model: string;
+  year: number;
   plate: string;
-  year: string;
-  type: string;
   brand: string;
-  vehicle_type: string;
   color?: string;
+  mileage: number;
+  fuel_type?: string;
+  notes?: string;
+  last_service_date?: string;
+  next_service_date?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface ServiceRequest {
@@ -213,20 +220,21 @@ export default function ClientDashboard() {
                       <Car className="h-6 w-6 text-gray-400" />
                       <div>
                         <h3 className="text-sm font-medium text-gray-900">
-                          {vehicle.brand} {vehicle.model}
+                          {vehicle.brand ? `${vehicle.brand} ${vehicle.model}` : vehicle.model}
                         </h3>
                         <p className="text-sm text-gray-500">
                           {vehicle.plate} • {vehicle.year}
                           {vehicle.color && ` • ${vehicle.color}`}
+                          {vehicle.mileage > 0 && ` • ${vehicle.mileage.toLocaleString()} km`}
                         </p>
                       </div>
                     </div>
                     <button
-                      onClick={() => navigate('/client/request-service')}
+                      onClick={() => navigate(`/client/vehicles/${vehicle.id}`)}
                       className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400"
                     >
                       <Wrench className="h-4 w-4 mr-1" />
-                      Solicitar Serviço
+                      Detalhes
                     </button>
                   </div>
                 ))}
