@@ -39,6 +39,11 @@ export default function ClientDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isAuthenticated && !loading) {
+      navigate('/login');
+      return;
+    }
+
     const loadData = async () => {
       if (!isAuthenticated || !user?.id) {
         return;
@@ -78,7 +83,7 @@ export default function ClientDashboard() {
     };
 
     loadData();
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, navigate]);
 
   const getStatusColor = (status: ServiceRequest['status']) => {
     switch (status) {

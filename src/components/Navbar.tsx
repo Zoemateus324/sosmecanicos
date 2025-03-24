@@ -112,7 +112,7 @@ export function Navbar() {
         <div className="flex justify-between h-16">
           <div className="flex-1 flex items-center gap-8">
             <Link to="/" className="text-xl font-bold text-gray-900">
-              AutoGest
+              SOS Mecânicos
             </Link>
             <div className="hidden md:flex items-center gap-6">
               <Link

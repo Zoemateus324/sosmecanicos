@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Layout } from '../../components/Layout';
@@ -14,39 +14,45 @@ const vehicleTypes = [
 
 function AddVehicle() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated && !authLoading) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const formData = new FormData(e.currentTarget);
-    const vehicleData = {
-      user_id: user?.id,
-      vehicle_type: formData.get('type'),
-      model: formData.get('model'),
-      year: parseInt(formData.get('year') as string),
-      plate: (formData.get('plate') as string).toUpperCase(),
-      brand: formData.get('brand'),
-      color: formData.get('color'),
-      mileage: parseInt(formData.get('mileage') as string) || 0,
-      fuel_type: formData.get('fuel_type'),
-      notes: formData.get('notes'),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
     try {
+      if (!isAuthenticated || !user?.id) {
+        throw new Error('Você precisa estar logado para cadastrar um veículo');
+      }
+
+      const formData = new FormData(e.currentTarget);
+      const vehicleData = {
+        user_id: user.id,
+        vehicle_type: formData.get('type'),
+        model: formData.get('model'),
+        year: parseInt(formData.get('year') as string),
+        plate: (formData.get('plate') as string).toUpperCase(),
+        brand: formData.get('brand'),
+        color: formData.get('color'),
+        mileage: parseInt(formData.get('mileage') as string) || 0,
+        fuel_type: formData.get('fuel_type'),
+        notes: formData.get('notes'),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
       // Validações
       if (!vehicleData.vehicle_type || !vehicleData.plate || !vehicleData.model || !vehicleData.year) {
         throw new Error('Por favor, preencha todos os campos obrigatórios');
-      }
-
-      if (!vehicleData.user_id) {
-        throw new Error('Usuário não autenticado');
       }
 
       // Validação da placa (formatos: Antigo ABC1234/ABC-1234 e Mercosul ABC1D23/ABC0D23)
@@ -74,7 +80,7 @@ function AddVehicle() {
         if (insertError.code === '23505') {
           throw new Error('Já existe um veículo cadastrado com esta placa');
         }
-        throw new Error('Erro ao cadastrar veículo');
+        throw new Error(insertError.message || 'Erro ao cadastrar veículo');
       }
 
       console.log('Veículo cadastrado com sucesso:', data);
@@ -83,9 +89,20 @@ function AddVehicle() {
     } catch (err) {
       console.error('Erro:', err);
       setError(err instanceof Error ? err.message : 'Erro ao cadastrar veículo');
+    } finally {
       setLoading(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

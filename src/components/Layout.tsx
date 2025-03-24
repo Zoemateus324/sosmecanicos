@@ -45,13 +45,13 @@ export function Layout({ children }: LayoutProps) {
               <h3 className="text-lg font-semibold mb-4">Contato</h3>
               <ul className="space-y-2 text-gray-600">
                 <li>contato@exemplo.com</li>
-                <li>(00) 0000-0000</li>
+                <li>(11) 95150-5824</li>
                 <li>Seg - Sex: 8h às 18h</li>
               </ul>
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-gray-200 text-center text-gray-600">
-            <p>&copy; 2024 Seu Sistema. Todos os direitos reservados.</p>
+            <p>&copy; 2025 SOS Mecânicos. Todos os direitos reservados.</p>
           </div>
         </div>
       </footer>
