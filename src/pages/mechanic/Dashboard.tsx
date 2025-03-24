@@ -68,12 +68,12 @@ export default function MechanicDashboard() {
         .from('service_requests')
         .select(`
           *,
-          user:profiles!user_id(
+          user:profiles(
             id,
             full_name,
             phone
           ),
-          vehicle:vehicles!vehicle_id(
+          vehicle:vehicles(
             id,
             model,
             plate,
@@ -81,8 +81,8 @@ export default function MechanicDashboard() {
           )
         `)
         .eq('status', 'pending')
-        .is('mechanic_id', null) // Apenas solicitações sem mecânico atribuído
-        .order('created_at', { ascending: false }); // Ordenar por data de criação, mais recentes primeiro
+        .is('mechanic_id', null)
+        .order('created_at', { ascending: false });
 
       if (nearbyError) {
         console.error('Erro ao buscar solicitações:', nearbyError);
@@ -93,13 +93,17 @@ export default function MechanicDashboard() {
       
       // Filtra solicitações com veículos válidos
       const validRequests = (nearbyData || []).filter((request): request is ServiceRequest => {
-        return Boolean(
+        const isValid = Boolean(
           request &&
           request.id &&
           request.vehicle &&
           request.vehicle.model &&
           request.vehicle.plate
         );
+        if (!isValid) {
+          console.log('Solicitação inválida:', request);
+        }
+        return isValid;
       });
 
       console.log('Solicitações válidas:', validRequests);
@@ -111,8 +115,8 @@ export default function MechanicDashboard() {
         .from('service_requests')
         .select(`
           *,
-          client:profiles!user_id(*),
-          vehicle:vehicles!vehicle_id(*)
+          user:profiles(*),
+          vehicle:vehicles(*)
         `)
         .in('status', ['accepted', 'in_progress'])
         .order('created_at', { ascending: false });
