@@ -26,7 +26,7 @@ interface ServiceRequest {
     model: string;
     plate: string;
     year: string;
-  } | null;
+  };
 }
 
 interface ServiceStats {
@@ -54,21 +54,36 @@ export default function MechanicDashboard() {
       return;
     }
 
+    const requestLocation = () => {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            console.log('Localização obtida:', position.coords);
+            setMechanicLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            });
+            fetchData(position.coords.latitude, position.coords.longitude);
+          },
+          (error) => {
+            console.error('Erro ao obter localização:', error);
+            // Mesmo sem localização, ainda busca as solicitações
+            fetchData(null, null);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+          }
+        );
+      } else {
+        console.error('Geolocalização não suportada');
+        fetchData(null, null);
+      }
+    };
+
     if (isAuthenticated) {
-      // Obter localização do mecânico antes de buscar os dados
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setMechanicLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          });
-          fetchData(position.coords.latitude, position.coords.longitude);
-        },
-        (error) => {
-          console.error('Erro ao obter localização:', error);
-          fetchData(null, null);
-        }
-      );
+      requestLocation();
     }
   }, [isAuthenticated, authLoading, navigate]);
 
@@ -96,14 +111,19 @@ export default function MechanicDashboard() {
       const { data: nearbyData, error: nearbyError } = await supabase
         .from('service_requests')
         .select(`
-          *,
+          id,
+          user_id,
+          vehicle_id,
+          description,
+          status,
+          created_at,
+          location,
           client:profiles!user_id(
             id,
             full_name,
             phone
           ),
           vehicle:vehicles!vehicle_id(
-            id,
             model,
             plate,
             year
@@ -120,31 +140,33 @@ export default function MechanicDashboard() {
       
       console.log('Solicitações encontradas:', nearbyData);
       
-      // Filtra solicitações com veículos válidos e dentro do raio de 30km
-      const validRequests = (nearbyData || []).filter((request): request is ServiceRequest => {
+      // Filtra solicitações válidas
+      const validRequests = (nearbyData || []).filter((request: any): request is ServiceRequest => {
         console.log('Validando solicitação:', request);
         
         const isValid = Boolean(
           request &&
           request.id &&
-          request.vehicle &&
-          request.vehicle.model &&
-          request.vehicle.plate &&
           request.location &&
           request.location.latitude &&
-          request.location.longitude
+          request.location.longitude &&
+          request.client &&
+          request.client.full_name &&
+          request.vehicle &&
+          request.vehicle.model
         );
 
         if (!isValid) {
           console.log('Solicitação inválida. Campos:', {
             hasRequest: Boolean(request),
             hasId: Boolean(request?.id),
-            hasVehicle: Boolean(request?.vehicle),
-            hasModel: Boolean(request?.vehicle?.model),
-            hasPlate: Boolean(request?.vehicle?.plate),
             hasLocation: Boolean(request?.location),
             hasLatitude: Boolean(request?.location?.latitude),
-            hasLongitude: Boolean(request?.location?.longitude)
+            hasLongitude: Boolean(request?.location?.longitude),
+            hasClient: Boolean(request?.client),
+            hasClientName: Boolean(request?.client?.full_name),
+            hasVehicle: Boolean(request?.vehicle),
+            hasVehicleModel: Boolean(request?.vehicle?.model)
           });
           return false;
         }
