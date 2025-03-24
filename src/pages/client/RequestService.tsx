@@ -14,6 +14,40 @@ interface Vehicle {
   year: number;
 }
 
+interface ServiceType {
+  id: string;
+  name: string;
+  description: string;
+}
+
+const defaultServiceTypes: ServiceType[] = [
+  {
+    id: 'revisao',
+    name: 'Revisão Periódica',
+    description: 'Checagem completa do veículo incluindo óleo, filtros, freios e suspensão'
+  },
+  {
+    id: 'oleo',
+    name: 'Troca de Óleo',
+    description: 'Troca de óleo do motor e filtro de óleo'
+  },
+  {
+    id: 'freios',
+    name: 'Manutenção dos Freios',
+    description: 'Verificação e/ou troca de pastilhas, discos e fluido de freio'
+  },
+  {
+    id: 'alinhamento',
+    name: 'Alinhamento e Balanceamento',
+    description: 'Alinhamento das rodas e balanceamento dos pneus'
+  },
+  {
+    id: 'emergencia',
+    name: 'Serviço de Emergência',
+    description: 'Atendimento emergencial para problemas mecânicos'
+  }
+];
+
 function RequestService() {
   const navigate = useNavigate();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -93,10 +127,15 @@ function RequestService() {
       const formData = new FormData(e.currentTarget);
       const vehicleId = formData.get('vehicle_id') as string;
       const description = formData.get('description') as string;
+      const serviceType = formData.get('service_type') as string;
 
       // Validações
       if (!vehicleId) {
         throw new Error('Por favor, selecione um veículo');
+      }
+
+      if (!serviceType) {
+        throw new Error('Por favor, selecione o tipo de serviço');
       }
 
       if (!description.trim()) {
@@ -110,6 +149,7 @@ function RequestService() {
       const serviceRequest = {
         user_id: user.id,
         vehicle_id: vehicleId,
+        service_type: serviceType,
         description: description.trim(),
         status: 'pending',
         location: {
@@ -209,6 +249,25 @@ function RequestService() {
                   {vehicles.map(vehicle => (
                     <option key={vehicle.id} value={vehicle.id}>
                       {vehicle.brand} {vehicle.model} - {vehicle.plate} ({vehicle.year})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="service_type" className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo de Serviço *
+                </label>
+                <select
+                  id="service_type"
+                  name="service_type"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                >
+                  <option value="">Selecione o tipo de serviço</option>
+                  {defaultServiceTypes.map(type => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
                     </option>
                   ))}
                 </select>
