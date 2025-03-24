@@ -235,7 +235,7 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:profiles!inner(
+          client:profiles!service_requests_user_id_fkey(
             id,
             full_name,
             phone
@@ -340,7 +340,7 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:user_id(
+          client:profiles!service_requests_user_id_fkey(
             id,
             full_name,
             phone
@@ -354,27 +354,7 @@ export default function MechanicDashboard() {
         `)
         .in('status', ['accepted', 'in_progress'])
         .eq('mechanic_id', user?.id)
-        .order('created_at', { ascending: false })
-        .returns<{
-          id: string;
-          user_id: string;
-          vehicle_id: string;
-          description: string;
-          status: string;
-          created_at: string;
-          location: { latitude: number; longitude: number; address: string };
-          client: { 
-            id: string; 
-            full_name: string;
-            phone: string;
-          };
-          vehicle: { 
-            id: string; 
-            model: string; 
-            plate: string; 
-            year: string;
-          };
-        }[]>();
+        .order('created_at', { ascending: false });
 
       if (activeError) throw activeError;
 
