@@ -102,7 +102,7 @@ export default function MechanicDashboard() {
             full_name,
             phone
           ),
-          vehicle:vehicles(
+          vehicle:vehicles!vehicle_id(
             id,
             model,
             plate,
@@ -122,17 +122,30 @@ export default function MechanicDashboard() {
       
       // Filtra solicitações com veículos válidos e dentro do raio de 30km
       const validRequests = (nearbyData || []).filter((request): request is ServiceRequest => {
+        console.log('Validando solicitação:', request);
+        
         const isValid = Boolean(
           request &&
           request.id &&
           request.vehicle &&
           request.vehicle.model &&
           request.vehicle.plate &&
-          request.location
+          request.location &&
+          request.location.latitude &&
+          request.location.longitude
         );
 
         if (!isValid) {
-          console.log('Solicitação inválida:', request);
+          console.log('Solicitação inválida. Campos:', {
+            hasRequest: Boolean(request),
+            hasId: Boolean(request?.id),
+            hasVehicle: Boolean(request?.vehicle),
+            hasModel: Boolean(request?.vehicle?.model),
+            hasPlate: Boolean(request?.vehicle?.plate),
+            hasLocation: Boolean(request?.location),
+            hasLatitude: Boolean(request?.location?.latitude),
+            hasLongitude: Boolean(request?.location?.longitude)
+          });
           return false;
         }
 
