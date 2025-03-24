@@ -17,24 +17,29 @@ interface Vehicle {
   mileage: number;
   fuel_type?: string;
   notes?: string;
-  last_service_date?: string;
-  next_service_date?: string;
   created_at: string;
   updated_at: string;
 }
 
 interface ServiceRequest {
   id: string;
-  vehicle_id: string;
-  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
+  user_id: string;
   description: string;
+  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
   created_at: string;
-  location: {
+  location?: {
     latitude: number;
     longitude: number;
     address: string;
   };
-  vehicle: Vehicle;
+  vehicle: {
+    id: string;
+    model: string;
+    plate: string;
+    year: number;
+    brand: string;
+    vehicle_type: string;
+  };
 }
 
 export default function ClientDashboard() {
@@ -69,8 +74,20 @@ export default function ClientDashboard() {
           supabase
             .from('service_requests')
             .select(`
-              *,
-              vehicle:vehicles (*)
+              id,
+              user_id,
+              description,
+              status,
+              created_at,
+              location,
+              vehicle:vehicles!inner (
+                id,
+                model,
+                plate,
+                year,
+                brand,
+                vehicle_type
+              )
             `)
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
@@ -80,7 +97,7 @@ export default function ClientDashboard() {
         if (serviceRequestsResponse.error) throw serviceRequestsResponse.error;
 
         setVehicles(vehiclesResponse.data || []);
-        setServiceRequests(serviceRequestsResponse.data || []);
+        setServiceRequests(serviceRequestsResponse.data as ServiceRequest[] || []);
       } catch (err) {
         console.error('Erro ao carregar dados:', err);
         setError('Não foi possível carregar seus dados. Por favor, tente novamente.');
