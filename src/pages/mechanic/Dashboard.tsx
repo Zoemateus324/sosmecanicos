@@ -204,7 +204,7 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:user_id(
+          client:profiles(
             id,
             full_name,
             phone
@@ -218,18 +218,7 @@ export default function MechanicDashboard() {
         `)
         .eq('status', 'pending')
         .is('mechanic_id', null)
-        .order('created_at', { ascending: false })
-        .returns<{
-          id: string;
-          user_id: string;
-          vehicle_id: string;
-          description: string;
-          status: string;
-          created_at: string;
-          location: { latitude: number; longitude: number; address: string };
-          client: { id: string; full_name: string; phone: string };
-          vehicle: { id: string; model: string; plate: string; year: string };
-        }[]>();
+        .order('created_at', { ascending: false });
 
       if (nearbyError) {
         console.error('Erro ao buscar solicitações:', nearbyError);
@@ -246,23 +235,15 @@ export default function MechanicDashboard() {
           request &&
           request.id &&
           request.description &&
-          request.location &&
-          request.location.latitude &&
-          request.location.longitude &&
-          request.client &&
-          request.vehicle
+          request.location
         );
 
         if (!isValid) {
-          console.log('Solicitação inválida. Campos:', {
+          console.log('Solicitação inválida. Campos básicos:', {
             hasRequest: Boolean(request),
             hasId: Boolean(request?.id),
             hasDescription: Boolean(request?.description),
-            hasLocation: Boolean(request?.location),
-            hasLatitude: Boolean(request?.location?.latitude),
-            hasLongitude: Boolean(request?.location?.longitude),
-            hasClient: Boolean(request?.client),
-            hasVehicle: Boolean(request?.vehicle)
+            hasLocation: Boolean(request?.location)
           });
           return false;
         }
@@ -291,16 +272,16 @@ export default function MechanicDashboard() {
       // Mapear os dados para o formato correto
       const formattedRequests = validRequests.map(request => {
         const clientData = {
-          id: request.client?.id || request.user_id,
-          full_name: request.client?.full_name || 'Cliente',
-          phone: request.client?.phone || 'Não informado'
+          id: request.user_id,
+          full_name: request.client?.[0]?.full_name || 'Cliente',
+          phone: request.client?.[0]?.phone || 'Não informado'
         };
 
         const vehicleData = {
-          id: request.vehicle?.id || request.vehicle_id,
-          model: request.vehicle?.model || 'Veículo não informado',
-          plate: request.vehicle?.plate || 'Placa não informada',
-          year: request.vehicle?.year || 'Ano não informado'
+          id: request.vehicle_id,
+          model: request.vehicle?.[0]?.model || 'Veículo não informado',
+          plate: request.vehicle?.[0]?.plate || 'Placa não informada',
+          year: request.vehicle?.[0]?.year || 'Ano não informado'
         };
 
         const formattedRequest: ServiceRequest = {
@@ -315,6 +296,7 @@ export default function MechanicDashboard() {
           vehicle: vehicleData
         };
 
+        console.log('Solicitação formatada:', formattedRequest);
         return formattedRequest;
       });
 
