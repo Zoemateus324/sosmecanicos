@@ -118,12 +118,12 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:profiles!user_id(
+          client:user_id(
             id,
             full_name,
             phone
           ),
-          vehicle:vehicles!vehicle_id(
+          vehicle:vehicle_id(
             model,
             plate,
             year
@@ -147,26 +147,20 @@ export default function MechanicDashboard() {
         const isValid = Boolean(
           request &&
           request.id &&
+          request.description &&
           request.location &&
           request.location.latitude &&
-          request.location.longitude &&
-          request.client &&
-          request.client.full_name &&
-          request.vehicle &&
-          request.vehicle.model
+          request.location.longitude
         );
 
         if (!isValid) {
           console.log('Solicitação inválida. Campos:', {
             hasRequest: Boolean(request),
             hasId: Boolean(request?.id),
+            hasDescription: Boolean(request?.description),
             hasLocation: Boolean(request?.location),
             hasLatitude: Boolean(request?.location?.latitude),
-            hasLongitude: Boolean(request?.location?.longitude),
-            hasClient: Boolean(request?.client),
-            hasClientName: Boolean(request?.client?.full_name),
-            hasVehicle: Boolean(request?.vehicle),
-            hasVehicleModel: Boolean(request?.vehicle?.model)
+            hasLongitude: Boolean(request?.location?.longitude)
           });
           return false;
         }
@@ -194,7 +188,22 @@ export default function MechanicDashboard() {
 
       console.log('Solicitações válidas:', validRequests);
 
-      setNearbyRequests(validRequests);
+      // Mapear os dados para o formato correto
+      const formattedRequests = validRequests.map(request => ({
+        ...request,
+        client: request.client?.[0] || {
+          id: request.user_id,
+          full_name: 'Cliente',
+          phone: 'Não informado'
+        },
+        vehicle: request.vehicle?.[0] || {
+          model: 'Veículo',
+          plate: 'Não informado',
+          year: 'Não informado'
+        }
+      }));
+
+      setNearbyRequests(formattedRequests);
 
       // Buscar serviços ativos do mecânico
       const query = supabase
