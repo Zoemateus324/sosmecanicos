@@ -231,12 +231,12 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:profiles!inner(
+          client:profiles(
             id,
             full_name,
             phone
           ),
-          vehicle:vehicles!inner(
+          vehicle:vehicles(
             id,
             model,
             plate,
@@ -245,8 +245,7 @@ export default function MechanicDashboard() {
         `)
         .eq('status', 'pending')
         .is('mechanic_id', null)
-        .order('created_at', { ascending: false })
-        .returns<SupabaseServiceRequest[]>();
+        .order('created_at', { ascending: false });
 
       if (nearbyError) {
         console.error('Erro ao buscar solicitações:', nearbyError);
@@ -256,7 +255,7 @@ export default function MechanicDashboard() {
       console.log('Solicitações encontradas:', nearbyData);
       
       // Filtra solicitações válidas
-      const validRequests = (nearbyData || []).filter((request): request is SupabaseServiceRequest => {
+      const validRequests = (nearbyData || []).filter((request) => {
         console.log('Validando solicitação:', request);
         
         const isValid = Boolean(
@@ -265,8 +264,9 @@ export default function MechanicDashboard() {
           request.description &&
           request.location &&
           request.vehicle &&
-          request.vehicle.model &&
-          request.vehicle.plate
+          request.vehicle[0] &&
+          request.vehicle[0].model &&
+          request.vehicle[0].plate
         );
 
         if (!isValid) {
@@ -276,8 +276,9 @@ export default function MechanicDashboard() {
             hasDescription: Boolean(request?.description),
             hasLocation: Boolean(request?.location),
             hasVehicle: Boolean(request?.vehicle),
-            hasVehicleModel: Boolean(request?.vehicle?.model),
-            hasVehiclePlate: Boolean(request?.vehicle?.plate)
+            hasVehicleData: Boolean(request?.vehicle?.[0]),
+            hasVehicleModel: Boolean(request?.vehicle?.[0]?.model),
+            hasVehiclePlate: Boolean(request?.vehicle?.[0]?.plate)
           });
           return false;
         }
@@ -312,8 +313,17 @@ export default function MechanicDashboard() {
         status: request.status as ServiceRequest['status'],
         created_at: request.created_at,
         location: request.location,
-        client: request.client,
-        vehicle: request.vehicle
+        client: {
+          id: request.client?.[0]?.id || request.user_id,
+          full_name: request.client?.[0]?.full_name || 'Cliente',
+          phone: request.client?.[0]?.phone || 'Não informado'
+        },
+        vehicle: {
+          id: request.vehicle_id,
+          model: request.vehicle?.[0]?.model || 'Veículo não informado',
+          plate: request.vehicle?.[0]?.plate || 'Placa não informada',
+          year: request.vehicle?.[0]?.year || 'Ano não informado'
+        }
       }));
 
       console.log('Solicitações formatadas:', formattedRequests);
