@@ -405,8 +405,8 @@ export default function MechanicDashboard() {
         .from('service_requests')
         .update({
           mechanic_id: user?.id,
-          budget: quote,
-          description: description,
+          price: quote,
+          mechanic_notes: description,
           status: 'quoted'
         })
         .eq('id', requestId);
