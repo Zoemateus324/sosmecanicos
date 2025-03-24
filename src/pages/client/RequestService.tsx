@@ -105,7 +105,10 @@ function RequestService() {
         vehicle_id: vehicleId,
         description: description.trim(),
         status: 'pending',
-        location: `POINT(${location.longitude} ${location.latitude})`,
+        location: {
+          latitude: location.latitude,
+          longitude: location.longitude
+        },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
