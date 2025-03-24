@@ -22,11 +22,6 @@ interface ServiceRequest {
     full_name: string;
     phone: string;
   };
-  mechanic: {
-    id: string;
-    full_name: string;
-    phone: string;
-  } | null;
   vehicle: {
     model: string;
     plate: string;
@@ -75,12 +70,7 @@ export default function MechanicDashboard() {
         .from('service_requests')
         .select(`
           *,
-          client:profiles(
-            id,
-            full_name,
-            phone
-          ),
-          mechanic:profiles(
+          client:profiles!user_id(
             id,
             full_name,
             phone
@@ -127,8 +117,7 @@ export default function MechanicDashboard() {
         .from('service_requests')
         .select(`
           *,
-          client:profiles(*),
-          mechanic:profiles(*),
+          client:profiles!user_id(*),
           vehicle:vehicles(*)
         `)
         .in('status', ['accepted', 'in_progress'])
