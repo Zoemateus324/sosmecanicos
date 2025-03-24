@@ -10,16 +10,16 @@ export interface Profile {
   user_type: UserType;
   full_name?: string;
   phone?: string;
+  address?: string;
   created_at: string;
   updated_at: string;
 }
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
-  const [userType, setUserType] = useState<UserType>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [profile, setProfile] = useState<Profile | null>(null);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -41,74 +41,34 @@ export function useAuth() {
     }
   };
 
-  const createProfile = async (userId: string, email: string) => {
-    try {
-      const newProfile = {
-        id: userId,
-        email,
-        user_type: 'client' as UserType,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert([newProfile])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Erro ao criar perfil:', error);
-        return null;
-      }
-
-      return data as Profile;
-    } catch (error) {
-      console.error('Erro ao criar perfil:', error);
-      return null;
-    }
-  };
-
   useEffect(() => {
     let mounted = true;
 
     const setupAuth = async () => {
       try {
-        // 1. Verifica a sessão atual
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!mounted) return;
 
         if (!session?.user) {
           setUser(null);
-          setUserType(null);
           setProfile(null);
           setIsAuthenticated(false);
           setLoading(false);
           return;
         }
 
-        // 2. Atualiza o usuário
         setUser(session.user);
-
-        // 3. Busca o perfil
-        let userProfile = await fetchProfile(session.user.id);
-
-        // 4. Se não existe perfil, cria um novo
-        if (!userProfile) {
-          userProfile = await createProfile(session.user.id, session.user.email!);
-        }
-
+        
+        const userProfile = await fetchProfile(session.user.id);
+        
         if (!mounted) return;
 
-        // 5. Atualiza o estado com o perfil
         if (userProfile) {
           setProfile(userProfile);
-          setUserType(userProfile.user_type);
           setIsAuthenticated(true);
         } else {
           setProfile(null);
-          setUserType(null);
           setIsAuthenticated(false);
         }
 
@@ -116,7 +76,6 @@ export function useAuth() {
         console.error('Erro ao configurar autenticação:', error);
         if (mounted) {
           setUser(null);
-          setUserType(null);
           setProfile(null);
           setIsAuthenticated(false);
         }
@@ -129,20 +88,26 @@ export function useAuth() {
 
     setupAuth();
 
-    // Configura o listener de mudança de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
       
       if (session?.user) {
         setUser(session.user);
-        setupAuth();
+        const userProfile = await fetchProfile(session.user.id);
+        
+        if (userProfile) {
+          setProfile(userProfile);
+          setIsAuthenticated(true);
+        } else {
+          setProfile(null);
+          setIsAuthenticated(false);
+        }
       } else {
         setUser(null);
-        setUserType(null);
         setProfile(null);
         setIsAuthenticated(false);
-        setLoading(false);
       }
+      setLoading(false);
     });
 
     return () => {
@@ -153,9 +118,9 @@ export function useAuth() {
 
   return {
     user,
-    userType,
+    profile,
     loading,
     isAuthenticated,
-    profile
+    userType: profile?.user_type || null
   };
 } 
