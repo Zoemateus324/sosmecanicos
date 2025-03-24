@@ -12,6 +12,8 @@ import InsuranceDashboard from './pages/insurance/Dashboard';
 import TowDashboard from './pages/tow/Dashboard';
 import AddVehicle from './pages/client/AddVehicle';
 import RequestService from './pages/client/RequestService';
+import VehicleDetails from './pages/client/VehicleDetails';
+import EditVehicle from './pages/client/EditVehicle';
 
 type UserType = 'client' | 'mechanic' | 'insurance' | 'tow' | null;
 
@@ -72,6 +74,8 @@ function App() {
             <Routes>
               <Route path="dashboard" element={<ClientDashboard />} />
               <Route path="vehicles/add" element={<AddVehicle />} />
+              <Route path="vehicles/:id" element={<VehicleDetails />} />
+              <Route path="vehicles/:id/edit" element={<EditVehicle />} />
               <Route path="request-service" element={<RequestService />} />
             </Routes>
           </PrivateRoute>
