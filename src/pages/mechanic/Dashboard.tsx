@@ -44,6 +44,31 @@ interface QuoteModalProps {
   onSubmit: (requestId: string, quote: number, description: string) => Promise<void>;
 }
 
+interface SupabaseServiceRequest {
+  id: string;
+  user_id: string;
+  vehicle_id: string;
+  description: string;
+  status: string;
+  created_at: string;
+  location: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
+  client: {
+    id: string;
+    full_name: string;
+    phone: string;
+  };
+  vehicle: {
+    id: string;
+    model: string;
+    plate: string;
+    year: string;
+  };
+}
+
 const QuoteModal: React.FC<QuoteModalProps> = ({ request, onClose, onSubmit }) => {
   const [quote, setQuote] = useState('');
   const [description, setDescription] = useState('');
@@ -220,7 +245,8 @@ export default function MechanicDashboard() {
         `)
         .eq('status', 'pending')
         .is('mechanic_id', null)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .returns<SupabaseServiceRequest[]>();
 
       if (nearbyError) {
         console.error('Erro ao buscar solicitações:', nearbyError);
@@ -230,7 +256,7 @@ export default function MechanicDashboard() {
       console.log('Solicitações encontradas:', nearbyData);
       
       // Filtra solicitações válidas
-      const validRequests = (nearbyData || []).filter((request) => {
+      const validRequests = (nearbyData || []).filter((request): request is SupabaseServiceRequest => {
         console.log('Validando solicitação:', request);
         
         const isValid = Boolean(
@@ -286,17 +312,8 @@ export default function MechanicDashboard() {
         status: request.status as ServiceRequest['status'],
         created_at: request.created_at,
         location: request.location,
-        client: {
-          id: request.client.id,
-          full_name: request.client.full_name,
-          phone: request.client.phone
-        },
-        vehicle: {
-          id: request.vehicle.id,
-          model: request.vehicle.model,
-          plate: request.vehicle.plate,
-          year: request.vehicle.year
-        }
+        client: request.client,
+        vehicle: request.vehicle
       }));
 
       console.log('Solicitações formatadas:', formattedRequests);
