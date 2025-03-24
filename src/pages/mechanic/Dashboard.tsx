@@ -231,7 +231,7 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:profiles(
+          client:user_id(
             id,
             full_name,
             phone
@@ -263,10 +263,8 @@ export default function MechanicDashboard() {
           request.id &&
           request.description &&
           request.location &&
-          request.vehicle &&
-          request.vehicle[0] &&
-          request.vehicle[0].model &&
-          request.vehicle[0].plate
+          request.client &&
+          request.client.full_name
         );
 
         if (!isValid) {
@@ -275,10 +273,8 @@ export default function MechanicDashboard() {
             hasId: Boolean(request?.id),
             hasDescription: Boolean(request?.description),
             hasLocation: Boolean(request?.location),
-            hasVehicle: Boolean(request?.vehicle),
-            hasVehicleData: Boolean(request?.vehicle?.[0]),
-            hasVehicleModel: Boolean(request?.vehicle?.[0]?.model),
-            hasVehiclePlate: Boolean(request?.vehicle?.[0]?.plate)
+            hasClient: Boolean(request?.client),
+            hasClientName: Boolean(request?.client?.full_name)
           });
           return false;
         }
@@ -314,9 +310,9 @@ export default function MechanicDashboard() {
         created_at: request.created_at,
         location: request.location,
         client: {
-          id: request.client?.[0]?.id || request.user_id,
-          full_name: request.client?.[0]?.full_name || 'Cliente',
-          phone: request.client?.[0]?.phone || 'Não informado'
+          id: request.user_id,
+          full_name: request.client?.full_name || 'Cliente',
+          phone: request.client?.phone || 'Não informado'
         },
         vehicle: {
           id: request.vehicle_id,
