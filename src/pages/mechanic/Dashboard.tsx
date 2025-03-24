@@ -204,7 +204,7 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:profiles!inner(
+          client:user_id(
             id,
             full_name,
             phone
@@ -328,27 +328,37 @@ export default function MechanicDashboard() {
       setNearbyRequests(formattedRequests);
 
       // Buscar serviços ativos do mecânico
-      const query = supabase
+      const { data: activeData, error: activeError } = await supabase
         .from('service_requests')
         .select(`
-          *,
-          client:profiles!user_id(*),
-          vehicle:vehicles(*)
+          id,
+          user_id,
+          vehicle_id,
+          description,
+          status,
+          created_at,
+          location,
+          client:user_id(
+            id,
+            full_name,
+            phone
+          ),
+          vehicle:vehicles(
+            id,
+            model,
+            plate,
+            year
+          )
         `)
         .in('status', ['accepted', 'in_progress'])
-        .order('created_at', { ascending: false });
-
-      // Adicionar filtro de mechanic_id apenas se o usuário estiver autenticado
-      if (user?.id) {
-        query.eq('mechanic_id', user.id);
-      }
-
-      const { data: activeData, error: activeError } = await query;
+        .eq('mechanic_id', user?.id)
+        .order('created_at', { ascending: false })
+        .returns<ServiceRequest[]>();
 
       if (activeError) throw activeError;
 
       // Filtra serviços ativos com veículos válidos
-      const validActiveServices = (activeData || []).filter((service): service is ServiceRequest => {
+      const validActiveServices = (activeData || []).filter((service) => {
         return Boolean(
           service &&
           service.id &&
