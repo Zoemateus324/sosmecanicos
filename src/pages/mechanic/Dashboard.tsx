@@ -407,24 +407,40 @@ export default function MechanicDashboard() {
         mechanicId: user?.id
       });
 
-      // Atualizar a solicitação com o orçamento
-      const { data, error: updateError } = await supabase
-        .from('service_requests')
-        .update({
+      // Criar proposta de serviço
+      const { data: proposalData, error: proposalError } = await supabase
+        .from('service_proposals')
+        .insert({
+          request_id: requestId,
           mechanic_id: user?.id,
           price: quote,
-          mechanic_notes: description,
+          description: description,
+          status: 'pending'
+        })
+        .select();
+
+      if (proposalError) {
+        console.error('Erro ao criar proposta:', proposalError);
+        throw proposalError;
+      }
+
+      console.log('Proposta criada com sucesso:', proposalData);
+
+      // Atualizar status da solicitação
+      const { data: requestData, error: requestError } = await supabase
+        .from('service_requests')
+        .update({
           status: 'quoted'
         })
         .eq('id', requestId)
         .select();
 
-      if (updateError) {
-        console.error('Erro ao atualizar solicitação:', updateError);
-        throw updateError;
+      if (requestError) {
+        console.error('Erro ao atualizar solicitação:', requestError);
+        throw requestError;
       }
 
-      console.log('Orçamento enviado com sucesso:', data);
+      console.log('Solicitação atualizada com sucesso:', requestData);
 
       // Recarregar dados
       fetchData(mechanicLocation?.latitude ?? null, mechanicLocation?.longitude ?? null);
