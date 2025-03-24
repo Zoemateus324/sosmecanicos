@@ -206,12 +206,12 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:user_id(
+          client:profiles!user_id(
             id,
             full_name,
             phone
           ),
-          vehicle:vehicles!inner(
+          vehicle:vehicles(
             id,
             model,
             plate,
@@ -220,27 +220,7 @@ export default function MechanicDashboard() {
         `)
         .eq('status', 'pending')
         .is('mechanic_id', null)
-        .order('created_at', { ascending: false })
-        .returns<{
-          id: string;
-          user_id: string;
-          vehicle_id: string;
-          description: string;
-          status: string;
-          created_at: string;
-          location: { latitude: number; longitude: number; address: string };
-          client: { 
-            id: string; 
-            full_name: string;
-            phone: string;
-          };
-          vehicle: { 
-            id: string; 
-            model: string; 
-            plate: string; 
-            year: string;
-          };
-        }[]>();
+        .order('created_at', { ascending: false });
 
       if (nearbyError) {
         console.error('Erro ao buscar solicitações:', nearbyError);
@@ -257,9 +237,7 @@ export default function MechanicDashboard() {
           request &&
           request.id &&
           request.description &&
-          request.location &&
-          request.client &&
-          request.vehicle
+          request.location
         );
 
         if (!isValid) {
@@ -267,9 +245,7 @@ export default function MechanicDashboard() {
             hasRequest: Boolean(request),
             hasId: Boolean(request?.id),
             hasDescription: Boolean(request?.description),
-            hasLocation: Boolean(request?.location),
-            hasClient: Boolean(request?.client),
-            hasVehicle: Boolean(request?.vehicle)
+            hasLocation: Boolean(request?.location)
           });
           return false;
         }
@@ -299,15 +275,15 @@ export default function MechanicDashboard() {
       const formattedRequests = validRequests.map(request => {
         const clientData = {
           id: request.user_id,
-          full_name: request.client?.full_name || 'Cliente',
-          phone: request.client?.phone || 'Não informado'
+          full_name: request.client?.[0]?.full_name || 'Cliente',
+          phone: request.client?.[0]?.phone || 'Não informado'
         };
 
         const vehicleData = {
           id: request.vehicle_id,
-          model: request.vehicle?.model || 'Veículo não informado',
-          plate: request.vehicle?.plate || 'Placa não informada',
-          year: request.vehicle?.year || 'Ano não informado'
+          model: request.vehicle?.[0]?.model || 'Veículo não informado',
+          plate: request.vehicle?.[0]?.plate || 'Placa não informada',
+          year: request.vehicle?.[0]?.year || 'Ano não informado'
         };
 
         return {
