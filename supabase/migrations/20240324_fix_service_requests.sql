@@ -48,7 +48,7 @@ END;
 $$ language 'plpgsql';
 
 -- Create trigger
-CREATE TRIGGER set_service_requests_updated_at
+CREATE TRIGGER set_updated_at
     BEFORE UPDATE ON public.service_requests
     FOR EACH ROW
     EXECUTE FUNCTION update_service_requests_updated_at(); 

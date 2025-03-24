@@ -74,13 +74,8 @@ export default function ClientDashboard() {
           supabase
             .from('service_requests')
             .select(`
-              id,
-              user_id,
-              description,
-              status,
-              created_at,
-              location,
-              vehicle:vehicles!inner (
+              *,
+              vehicle:vehicles(
                 id,
                 model,
                 plate,
