@@ -75,12 +75,12 @@ export default function MechanicDashboard() {
         .from('service_requests')
         .select(`
           *,
-          client:profiles!service_requests_user_id_fkey(
+          client:profiles(
             id,
             full_name,
             phone
           ),
-          mechanic:profiles!service_requests_mechanic_id_fkey(
+          mechanic:profiles(
             id,
             full_name,
             phone
@@ -127,8 +127,8 @@ export default function MechanicDashboard() {
         .from('service_requests')
         .select(`
           *,
-          client:profiles!service_requests_user_id_fkey(*),
-          mechanic:profiles!service_requests_mechanic_id_fkey(*),
+          client:profiles(*),
+          mechanic:profiles(*),
           vehicle:vehicles(*)
         `)
         .in('status', ['accepted', 'in_progress'])
