@@ -561,31 +561,52 @@ export default function MechanicDashboard() {
             ) : (
               <div className="space-y-4">
                 {nearbyRequests.map((request) => (
-                  <div key={request.id} className="border border-gray-100 rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-3">
+                  <div key={request.id} className="bg-white rounded-xl shadow-sm p-6">
+                    <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h3 className="font-medium">{request.vehicle.model}</h3>
-                        <p className="text-sm text-gray-500">Placa: {request.vehicle.plate}</p>
+                        <h3 className="font-medium text-gray-900">
+                          {request.vehicle.model}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          Placa: {request.vehicle.plate}
+                        </p>
                       </div>
                       <button
                         onClick={() => setSelectedRequest(request)}
-                        className="bg-yellow-400 text-gray-900 px-4 py-2 rounded-lg text-sm font-medium hover:bg-yellow-500 transition-colors"
+                        className="px-4 py-2 bg-yellow-400 text-gray-900 rounded-lg font-medium hover:bg-yellow-500 transition-colors"
                       >
                         Enviar Orçamento
                       </button>
                     </div>
-                    <p className="text-gray-600 mb-3">{request.description}</p>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Clock className="w-4 h-4 mr-1" />
-                      <span>
-                        {new Date(request.created_at).toLocaleDateString('pt-BR', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
+
+                    <p className="text-gray-600 mb-4">{request.description}</p>
+
+                    <div className="flex items-center justify-between text-sm text-gray-500">
+                      <div className="flex items-center space-x-2">
+                        <Clock className="w-4 h-4" />
+                        <span>
+                          {new Date(request.created_at).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="w-4 h-4" />
+                        <span>
+                          {mechanicLocation && request.location
+                            ? `${calculateDistance(
+                                mechanicLocation.latitude,
+                                mechanicLocation.longitude,
+                                request.location.latitude,
+                                request.location.longitude
+                              ).toFixed(1)} km`
+                            : 'Distância indisponível'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
