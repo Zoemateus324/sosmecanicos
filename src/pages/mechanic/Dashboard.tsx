@@ -10,7 +10,7 @@ interface ServiceRequest {
   user_id: string;
   vehicle_id: string;
   description: string;
-  status: 'pending' | 'accepted' | 'in_progress' | 'completed';
+  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'quoted';
   created_at: string;
   location: {
     latitude: number;
@@ -28,6 +28,8 @@ interface ServiceRequest {
     plate: string;
     year: string;
   };
+  mechanic_id?: string;
+  budget?: number;
 }
 
 interface ServiceStats {
@@ -308,7 +310,7 @@ export default function MechanicDashboard() {
           year: request.vehicle?.year || 'Ano não informado'
         };
 
-        const formattedRequest: ServiceRequest = {
+        return {
           id: request.id,
           user_id: request.user_id,
           vehicle_id: request.vehicle_id,
@@ -319,9 +321,6 @@ export default function MechanicDashboard() {
           client: clientData,
           vehicle: vehicleData
         };
-
-        console.log('Solicitação formatada:', formattedRequest);
-        return formattedRequest;
       });
 
       console.log('Solicitações formatadas:', formattedRequests);
@@ -353,21 +352,52 @@ export default function MechanicDashboard() {
         .in('status', ['accepted', 'in_progress'])
         .eq('mechanic_id', user?.id)
         .order('created_at', { ascending: false })
-        .returns<ServiceRequest[]>();
+        .returns<{
+          id: string;
+          user_id: string;
+          vehicle_id: string;
+          description: string;
+          status: string;
+          created_at: string;
+          location: { latitude: number; longitude: number; address: string };
+          client: { 
+            id: string; 
+            full_name: string;
+            phone: string;
+          };
+          vehicle: { 
+            id: string; 
+            model: string; 
+            plate: string; 
+            year: string;
+          };
+        }[]>();
 
       if (activeError) throw activeError;
 
-      // Filtra serviços ativos com veículos válidos
-      const validActiveServices = (activeData || []).filter((service) => {
-        return Boolean(
-          service &&
-          service.id &&
-          service.vehicle &&
-          service.vehicle.model &&
-          service.vehicle.plate
-        );
-      });
+      // Filtra e formata serviços ativos
+      const validActiveServices = (activeData || []).map(service => ({
+        id: service.id,
+        user_id: service.user_id,
+        vehicle_id: service.vehicle_id,
+        description: service.description,
+        status: service.status as ServiceRequest['status'],
+        created_at: service.created_at,
+        location: service.location,
+        client: {
+          id: service.user_id,
+          full_name: service.client?.full_name || 'Cliente',
+          phone: service.client?.phone || 'Não informado'
+        },
+        vehicle: {
+          id: service.vehicle_id,
+          model: service.vehicle?.model || 'Veículo não informado',
+          plate: service.vehicle?.plate || 'Placa não informada',
+          year: service.vehicle?.year || 'Ano não informado'
+        }
+      }));
 
+      console.log('Serviços ativos formatados:', validActiveServices);
       setActiveServices(validActiveServices);
 
       // Buscar estatísticas
