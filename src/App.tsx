@@ -15,6 +15,7 @@ import RequestService from './pages/client/RequestService';
 import VehicleDetails from './pages/client/VehicleDetails';
 import EditVehicle from './pages/client/EditVehicle';
 import ScheduleService from './pages/client/ScheduleService';
+import Profile from './pages/Profile';
 
 type UserType = 'client' | 'mechanic' | 'insurance' | 'tow' | null;
 
@@ -66,6 +67,7 @@ function App() {
       } />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/profile" element={<Profile />} />
 
       {/* Rotas do cliente */}
       <Route

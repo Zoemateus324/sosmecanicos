@@ -429,7 +429,8 @@ export default function MechanicDashboard() {
           mechanic_notes: description
         })
         .eq('id', requestId)
-        .select();
+        .select('*, client:profiles!user_id(*), vehicle:vehicles(*)')
+        .single();
 
       if (requestError) {
         console.error('Erro ao atualizar solicitação:', requestError);
@@ -498,9 +499,20 @@ export default function MechanicDashboard() {
       <div className="container mx-auto px-4 py-8">
         {/* Header com Estatísticas */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">
-            Olá, {user?.user_metadata?.full_name || 'Mecânico'}
-          </h1>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Olá, {user?.user_metadata?.full_name || 'Mecânico'}
+            </h1>
+            <button
+              onClick={() => navigate('/profile')}
+              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+            >
+              <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                {user?.user_metadata?.full_name?.[0]?.toUpperCase() || 'M'}
+              </div>
+              <span className="text-sm">Ver perfil</span>
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-center space-x-3">
