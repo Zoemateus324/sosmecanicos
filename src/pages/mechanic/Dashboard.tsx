@@ -23,6 +23,7 @@ interface ServiceRequest {
     phone: string;
   };
   vehicle: {
+    id: string;
     model: string;
     plate: string;
     year: string;
@@ -203,12 +204,13 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:profiles!user_id(
+          client:profiles!service_requests_user_id_fkey(
             id,
             full_name,
             phone
           ),
-          vehicle:vehicles!vehicle_id(
+          vehicle:vehicles!service_requests_vehicle_id_fkey(
+            id,
             model,
             plate,
             year
@@ -216,7 +218,18 @@ export default function MechanicDashboard() {
         `)
         .eq('status', 'pending')
         .is('mechanic_id', null)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .returns<{
+          id: string;
+          user_id: string;
+          vehicle_id: string;
+          description: string;
+          status: string;
+          created_at: string;
+          location: { latitude: number; longitude: number; address: string };
+          client: { id: string; full_name: string; phone: string };
+          vehicle: { id: string; model: string; plate: string; year: string };
+        }[]>();
 
       if (nearbyError) {
         console.error('Erro ao buscar solicitações:', nearbyError);
@@ -226,7 +239,7 @@ export default function MechanicDashboard() {
       console.log('Solicitações encontradas:', nearbyData);
       
       // Filtra solicitações válidas
-      const validRequests = (nearbyData || []).filter((request: any): request is ServiceRequest => {
+      const validRequests = (nearbyData || []).filter((request) => {
         console.log('Validando solicitação:', request);
         
         const isValid = Boolean(
@@ -235,7 +248,9 @@ export default function MechanicDashboard() {
           request.description &&
           request.location &&
           request.location.latitude &&
-          request.location.longitude
+          request.location.longitude &&
+          request.client &&
+          request.vehicle
         );
 
         if (!isValid) {
@@ -245,7 +260,9 @@ export default function MechanicDashboard() {
             hasDescription: Boolean(request?.description),
             hasLocation: Boolean(request?.location),
             hasLatitude: Boolean(request?.location?.latitude),
-            hasLongitude: Boolean(request?.location?.longitude)
+            hasLongitude: Boolean(request?.location?.longitude),
+            hasClient: Boolean(request?.client),
+            hasVehicle: Boolean(request?.vehicle)
           });
           return false;
         }
@@ -271,22 +288,35 @@ export default function MechanicDashboard() {
         return isNearby;
       });
 
-      console.log('Solicitações válidas:', validRequests);
-
       // Mapear os dados para o formato correto
-      const formattedRequests = validRequests.map(request => ({
-        ...request,
-        client: Array.isArray(request.client) ? request.client[0] : request.client || {
-          id: request.user_id,
-          full_name: 'Cliente',
-          phone: 'Não informado'
-        },
-        vehicle: Array.isArray(request.vehicle) ? request.vehicle[0] : request.vehicle || {
-          model: 'Veículo não informado',
-          plate: 'Placa não informada',
-          year: 'Ano não informado'
-        }
-      }));
+      const formattedRequests = validRequests.map(request => {
+        const clientData = {
+          id: request.client?.id || request.user_id,
+          full_name: request.client?.full_name || 'Cliente',
+          phone: request.client?.phone || 'Não informado'
+        };
+
+        const vehicleData = {
+          id: request.vehicle?.id || request.vehicle_id,
+          model: request.vehicle?.model || 'Veículo não informado',
+          plate: request.vehicle?.plate || 'Placa não informada',
+          year: request.vehicle?.year || 'Ano não informado'
+        };
+
+        const formattedRequest: ServiceRequest = {
+          id: request.id,
+          user_id: request.user_id,
+          vehicle_id: request.vehicle_id,
+          description: request.description,
+          status: request.status as ServiceRequest['status'],
+          created_at: request.created_at,
+          location: request.location,
+          client: clientData,
+          vehicle: vehicleData
+        };
+
+        return formattedRequest;
+      });
 
       console.log('Solicitações formatadas:', formattedRequests);
       setNearbyRequests(formattedRequests);
