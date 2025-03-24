@@ -235,11 +235,7 @@ export default function MechanicDashboard() {
           request.description &&
           request.location &&
           request.location.latitude &&
-          request.location.longitude &&
-          request.vehicle &&
-          request.vehicle[0] &&
-          request.vehicle[0].model &&
-          request.vehicle[0].plate
+          request.location.longitude
         );
 
         if (!isValid) {
@@ -249,10 +245,7 @@ export default function MechanicDashboard() {
             hasDescription: Boolean(request?.description),
             hasLocation: Boolean(request?.location),
             hasLatitude: Boolean(request?.location?.latitude),
-            hasLongitude: Boolean(request?.location?.longitude),
-            hasVehicle: Boolean(request?.vehicle?.[0]),
-            hasVehicleModel: Boolean(request?.vehicle?.[0]?.model),
-            hasVehiclePlate: Boolean(request?.vehicle?.[0]?.plate)
+            hasLongitude: Boolean(request?.location?.longitude)
           });
           return false;
         }
@@ -283,18 +276,19 @@ export default function MechanicDashboard() {
       // Mapear os dados para o formato correto
       const formattedRequests = validRequests.map(request => ({
         ...request,
-        client: request.client?.[0] || {
+        client: Array.isArray(request.client) ? request.client[0] : request.client || {
           id: request.user_id,
           full_name: 'Cliente',
           phone: 'Não informado'
         },
-        vehicle: request.vehicle?.[0] || {
+        vehicle: Array.isArray(request.vehicle) ? request.vehicle[0] : request.vehicle || {
           model: 'Veículo não informado',
           plate: 'Placa não informada',
           year: 'Ano não informado'
         }
       }));
 
+      console.log('Solicitações formatadas:', formattedRequests);
       setNearbyRequests(formattedRequests);
 
       // Buscar serviços ativos do mecânico
