@@ -348,26 +348,21 @@ export default function MechanicDashboard() {
 
   const handleSubmitQuote = async (requestId: string, quote: number, description: string) => {
     try {
-      // Criar orçamento
-      const { error: quoteError } = await supabase
-        .from('service_quotes')
-        .insert({
-          request_id: requestId,
-          mechanic_id: user?.id,
-          amount: quote,
-          description: description,
-          status: 'pending'
-        });
-
-      if (quoteError) throw quoteError;
-
-      // Atualizar status da solicitação
+      // Atualizar a solicitação com o orçamento
       const { error: updateError } = await supabase
         .from('service_requests')
-        .update({ status: 'quoted' })
+        .update({
+          mechanic_id: user?.id,
+          quote_amount: quote,
+          quote_description: description,
+          status: 'quoted'
+        })
         .eq('id', requestId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Erro ao atualizar solicitação:', updateError);
+        throw updateError;
+      }
 
       // Recarregar dados
       fetchData(mechanicLocation?.latitude ?? null, mechanicLocation?.longitude ?? null);
