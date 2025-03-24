@@ -84,7 +84,19 @@ function RequestService() {
         throw error;
       }
 
-      setVehicles(data || []);
+      // Filtra apenas veículos válidos
+      const validVehicles = (data || []).filter((vehicle): vehicle is Vehicle => {
+        return Boolean(
+          vehicle &&
+          vehicle.id &&
+          vehicle.plate &&
+          vehicle.model &&
+          vehicle.brand &&
+          vehicle.year
+        );
+      });
+
+      setVehicles(validVehicles);
     } catch (err) {
       console.error('Erro ao buscar veículos:', err);
       setError('Não foi possível carregar seus veículos');
@@ -221,7 +233,7 @@ function RequestService() {
             </div>
           )}
 
-          {vehicles.length === 0 ? (
+          {!vehicles || vehicles.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-600 mb-4">
                 Você ainda não tem veículos cadastrados
@@ -246,7 +258,7 @@ function RequestService() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                 >
                   <option value="">Selecione um veículo</option>
-                  {vehicles.map(vehicle => (
+                  {vehicles.map(vehicle => vehicle && (
                     <option key={vehicle.id} value={vehicle.id}>
                       {vehicle.brand} {vehicle.model} - {vehicle.plate} ({vehicle.year})
                     </option>
