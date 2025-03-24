@@ -41,11 +41,11 @@ function AddVehicle() {
         model: formData.get('model'),
         year: parseInt(formData.get('year') as string),
         plate: (formData.get('plate') as string).toUpperCase(),
-        brand: formData.get('brand'),
-        color: formData.get('color'),
+        brand: formData.get('brand')?.toString() || '',
+        color: formData.get('color')?.toString() || '',
         mileage: parseInt(formData.get('mileage') as string) || 0,
-        fuel_type: formData.get('fuel_type'),
-        notes: formData.get('notes'),
+        fuel_type: formData.get('fuel_type')?.toString() || '',
+        notes: formData.get('notes')?.toString() || '',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -71,7 +71,18 @@ function AddVehicle() {
 
       const { data, error: insertError } = await supabase
         .from('vehicles')
-        .insert([vehicleData])
+        .insert([{
+          user_id: vehicleData.user_id,
+          vehicle_type: vehicleData.vehicle_type,
+          model: vehicleData.model,
+          year: vehicleData.year,
+          plate: vehicleData.plate,
+          brand: vehicleData.brand,
+          color: vehicleData.color,
+          mileage: vehicleData.mileage,
+          fuel_type: vehicleData.fuel_type,
+          notes: vehicleData.notes
+        }])
         .select()
         .single();
 
@@ -128,7 +139,7 @@ function AddVehicle() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
                 <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
                   Tipo de Veículo *
@@ -137,9 +148,10 @@ function AddVehicle() {
                   id="type"
                   name="type"
                   required
+                  defaultValue=""
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                 >
-                  <option value="">Selecione um tipo</option>
+                  <option value="" disabled>Selecione um tipo</option>
                   {vehicleTypes.map(type => (
                     <option key={type.id} value={type.id}>
                       {type.label}
@@ -157,8 +169,8 @@ function AddVehicle() {
                   id="plate"
                   name="plate"
                   required
-                  placeholder="ABC1234"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent uppercase"
+                  placeholder="ABC1234 ou ABC1D23"
                 />
               </div>
 
@@ -170,8 +182,8 @@ function AddVehicle() {
                   type="text"
                   id="brand"
                   name="brand"
-                  placeholder="Ex: Volkswagen"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  placeholder="Ex: Fiat"
                 />
               </div>
 
@@ -184,8 +196,8 @@ function AddVehicle() {
                   id="model"
                   name="model"
                   required
-                  placeholder="Ex: Gol"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  placeholder="Ex: Prêmio"
                 />
               </div>
 
@@ -200,8 +212,8 @@ function AddVehicle() {
                   required
                   min="1900"
                   max={new Date().getFullYear() + 1}
-                  placeholder={new Date().getFullYear().toString()}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  placeholder="Ex: 1990"
                 />
               </div>
 
@@ -213,8 +225,8 @@ function AddVehicle() {
                   type="text"
                   id="color"
                   name="color"
-                  placeholder="Ex: Prata"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  placeholder="Ex: Vermelho"
                 />
               </div>
 
@@ -227,8 +239,8 @@ function AddVehicle() {
                   id="mileage"
                   name="mileage"
                   min="0"
-                  placeholder="Ex: 50000"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  placeholder="Ex: 28029"
                 />
               </div>
 
@@ -260,8 +272,8 @@ function AddVehicle() {
                 id="notes"
                 name="notes"
                 rows={3}
-                placeholder="Informações adicionais sobre o veículo"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                placeholder="Informações adicionais sobre o veículo"
               />
             </div>
 
