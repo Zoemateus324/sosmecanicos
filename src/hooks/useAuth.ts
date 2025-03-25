@@ -32,17 +32,25 @@ export function useAuth() {
 
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
     try {
+      console.log('Buscando perfil para userId:', userId);
+      
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, user_type, full_name, phone, address, created_at, updated_at')
+        .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Erro ao buscar perfil:', error);
         return null;
       }
 
+      if (!data) {
+        console.log('Nenhum perfil encontrado para o usuário');
+        return null;
+      }
+
+      console.log('Perfil encontrado:', data);
       return data as Profile;
     } catch (error) {
       console.error('Erro ao buscar perfil:', error);
