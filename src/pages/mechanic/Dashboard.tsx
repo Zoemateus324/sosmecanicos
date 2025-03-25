@@ -162,7 +162,7 @@ const QuoteModal: React.FC<QuoteModalProps> = ({ request, onClose, onSubmit }) =
 
 export default function MechanicDashboard() {
   const navigate = useNavigate();
-  const { user, loading: authLoading, isAuthenticated } = useAuth();
+  const { user, profile, loading: authLoading, isAuthenticated } = useAuth();
   const [nearbyRequests, setNearbyRequests] = useState<ServiceRequest[]>([]);
   const [activeServices, setActiveServices] = useState<ServiceRequest[]>([]);
   const [mechanicLocation, setMechanicLocation] = useState<{latitude: number; longitude: number} | null>(null);
@@ -180,54 +180,19 @@ export default function MechanicDashboard() {
       return;
     }
 
-    const fetchUserProfile = async () => {
-      try {
-        if (!user?.id) return;
-
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Erro ao buscar perfil:', profileError);
-          return;
-        }
-
-        if (!profileData) {
-          console.error('Perfil não encontrado');
-          return;
-        }
-
-        // Atualiza os dados do usuário no contexto de autenticação
-        if (user) {
-          user.user_metadata = {
-            ...user.user_metadata,
-            full_name: profileData.full_name,
-            phone: profileData.phone
-          };
-        }
-      } catch (error) {
-        console.error('Erro ao buscar perfil:', error);
-      }
-    };
-
     const requestLocation = () => {
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(
-          async (position) => {
+          (position) => {
             console.log('Localização obtida:', position.coords);
             setMechanicLocation({
               latitude: position.coords.latitude,
               longitude: position.coords.longitude
             });
-            await fetchUserProfile();
             fetchData(position.coords.latitude, position.coords.longitude);
           },
-          async (error) => {
+          (error) => {
             console.error('Erro ao obter localização:', error);
-            await fetchUserProfile();
             fetchData(null, null);
           },
           {
@@ -238,15 +203,14 @@ export default function MechanicDashboard() {
         );
       } else {
         console.error('Geolocalização não suportada');
-        fetchUserProfile();
         fetchData(null, null);
       }
     };
 
-    if (isAuthenticated) {
+    if (isAuthenticated && profile) {
       requestLocation();
     }
-  }, [isAuthenticated, authLoading, navigate, user]);
+  }, [isAuthenticated, authLoading, navigate, profile]);
 
   // Função para calcular distância entre dois pontos usando a fórmula de Haversine
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -594,14 +558,14 @@ export default function MechanicDashboard() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-gray-900">
-            Olá, {user?.user_metadata?.full_name || 'Mecânico'}
-          </h1>
+              Olá, {profile?.full_name || 'Mecânico'}
+            </h1>
             <button
               onClick={() => navigate('/profile')}
               className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
             >
               <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
-                {user?.user_metadata?.full_name?.[0]?.toUpperCase() || 'M'}
+                {profile?.full_name?.[0]?.toUpperCase() || 'M'}
               </div>
               <span className="text-sm">Ver perfil</span>
             </button>

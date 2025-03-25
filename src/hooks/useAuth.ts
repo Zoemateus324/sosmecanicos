@@ -17,6 +17,7 @@ export interface Profile {
 
 interface AuthState {
   user: User | null;
+  profile: Profile | null;
   loading: boolean;
   isAuthenticated: boolean;
 }
@@ -24,15 +25,16 @@ interface AuthState {
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
+    profile: null,
     loading: true,
     isAuthenticated: false,
   });
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string): Promise<Profile | null> => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, email, user_type, full_name, phone, address, created_at, updated_at')
         .eq('id', userId)
         .single();
 
@@ -49,74 +51,91 @@ export function useAuth() {
   };
 
   useEffect(() => {
-    // Verificar sessão atual
+    let mounted = true;
+
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Erro ao verificar sessão:', error);
-          setAuthState({
-            user: null,
-            loading: false,
-            isAuthenticated: false,
-          });
+          if (mounted) {
+            setAuthState({
+              user: null,
+              profile: null,
+              loading: false,
+              isAuthenticated: false,
+            });
+          }
           return;
         }
 
         if (session?.user) {
-          setAuthState({
-            user: session.user,
-            loading: false,
-            isAuthenticated: true,
-          });
+          const profile = await fetchProfile(session.user.id);
+          
+          if (mounted) {
+            setAuthState({
+              user: session.user,
+              profile,
+              loading: false,
+              isAuthenticated: true,
+            });
+          }
         } else {
+          if (mounted) {
+            setAuthState({
+              user: null,
+              profile: null,
+              loading: false,
+              isAuthenticated: false,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+        if (mounted) {
           setAuthState({
             user: null,
+            profile: null,
             loading: false,
             isAuthenticated: false,
           });
         }
-      } catch (error) {
-        console.error('Erro ao verificar autenticação:', error);
-        setAuthState({
-          user: null,
-          loading: false,
-          isAuthenticated: false,
-        });
       }
     };
 
-    // Executar verificação inicial
     checkSession();
 
-    // Configurar listener para mudanças na autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
+      if (session?.user && mounted) {
+        const profile = await fetchProfile(session.user.id);
         setAuthState({
           user: session.user,
+          profile,
           loading: false,
           isAuthenticated: true,
         });
-      } else {
+      } else if (mounted) {
         setAuthState({
           user: null,
+          profile: null,
           loading: false,
           isAuthenticated: false,
         });
       }
     });
 
-    // Cleanup
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
   return {
     user: authState.user,
+    profile: authState.profile,
     loading: authState.loading,
     isAuthenticated: authState.isAuthenticated,
-    userType: authState.user ? authState.user.user_metadata.user_type : null
+    userType: authState.profile?.user_type || null
   };
 } 
