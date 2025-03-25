@@ -174,64 +174,233 @@ export default function MechanicDashboard() {
     earnings: 0
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // Função para obter localização
+  const getLocation = () => {
+    return new Promise<{latitude: number; longitude: number} | null>((resolve) => {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            resolve({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            });
+          },
+          () => {
+            console.log('Erro ao obter localização ou permissão negada');
+            resolve(null);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+          }
+        );
+      } else {
+        console.log('Geolocalização não suportada');
+        resolve(null);
+      }
+    });
+  };
+
+  // Efeito para verificar autenticação e redirecionar se necessário
   useEffect(() => {
-    const checkAuthAndLoadData = async () => {
+    if (!authLoading && !isAuthenticated) {
+      console.log('Usuário não autenticado, redirecionando...');
+      navigate('/login');
+    }
+  }, [authLoading, isAuthenticated, navigate]);
+
+  // Efeito para obter localização
+  useEffect(() => {
+    const initializeLocation = async () => {
       try {
-        // Se ainda está carregando a autenticação, retorna
-        if (authLoading) {
-          return;
-        }
-
-        // Se não está autenticado, redireciona para login
-        if (!isAuthenticated || !user) {
-          navigate('/login');
-          return;
-        }
-
-        // Função para obter localização
-        const getLocation = () => {
-          return new Promise<{latitude: number; longitude: number} | null>((resolve) => {
-            if ("geolocation" in navigator) {
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  resolve({
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude
-                  });
-                },
-                () => {
-                  resolve(null);
-                },
-                {
-                  enableHighAccuracy: true,
-                  timeout: 5000,
-                  maximumAge: 0
-                }
-              );
-            } else {
-              resolve(null);
-            }
-          });
-        };
-
-        // Obter localização e carregar dados
         const location = await getLocation();
-        if (location) {
-          setMechanicLocation(location);
-          await fetchData(location.latitude, location.longitude);
-        } else {
-          await fetchData(null, null);
+        console.log('Localização obtida:', location);
+        setMechanicLocation(location);
+      } catch (err) {
+        console.error('Erro ao inicializar localização:', err);
+        setError('Erro ao obter localização');
+      }
+    };
+
+    if (!authLoading && isAuthenticated && user) {
+      initializeLocation();
+    }
+  }, [authLoading, isAuthenticated, user]);
+
+  // Efeito para carregar dados
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user?.id) {
+        console.log('Sem ID do usuário, não carregando dados');
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Buscar solicitações próximas
+        const { data: nearbyData, error: nearbyError } = await supabase
+          .from('service_requests')
+          .select(`
+            id,
+            user_id,
+            vehicle_id,
+            description,
+            status,
+            created_at,
+            location,
+            client:profiles!service_requests_user_id_fkey(
+              id,
+              full_name,
+              phone
+            ),
+            vehicle:vehicles(
+              id,
+              model,
+              plate,
+              year
+            )
+          `)
+          .eq('status', 'pending')
+          .is('mechanic_id', null)
+          .order('created_at', { ascending: false });
+
+        if (nearbyError) throw nearbyError;
+
+        // Mapear solicitações próximas
+        const mappedNearbyRequests = (nearbyData || [])
+          .filter(request => 
+            request.client?.[0] && 
+            request.vehicle?.[0] && 
+            request.location
+          )
+          .map(request => ({
+            id: request.id,
+            user_id: request.user_id,
+            vehicle_id: request.vehicle_id,
+            description: request.description,
+            status: request.status,
+            created_at: request.created_at,
+            location: request.location,
+            client: {
+              id: request.client[0].id,
+              full_name: request.client[0].full_name,
+              phone: request.client[0].phone
+            },
+            vehicle: {
+              id: request.vehicle[0].id,
+              model: request.vehicle[0].model,
+              plate: request.vehicle[0].plate,
+              year: request.vehicle[0].year
+            },
+            distance: mechanicLocation ? calculateDistance(
+              mechanicLocation.latitude,
+              mechanicLocation.longitude,
+              request.location.latitude,
+              request.location.longitude
+            ) : 0
+          }));
+
+        setNearbyRequests(mappedNearbyRequests);
+
+        // Buscar serviços ativos
+        const { data: activeData, error: activeError } = await supabase
+          .from('service_requests')
+          .select(`
+            id,
+            user_id,
+            vehicle_id,
+            description,
+            status,
+            created_at,
+            location,
+            client:profiles!service_requests_user_id_fkey(
+              id,
+              full_name,
+              phone
+            ),
+            vehicle:vehicles(
+              id,
+              model,
+              plate,
+              year
+            )
+          `)
+          .in('status', ['accepted', 'in_progress'])
+          .eq('mechanic_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (activeError) throw activeError;
+
+        // Mapear serviços ativos
+        const mappedActiveServices = (activeData || [])
+          .filter(request => 
+            request.client?.[0] && 
+            request.vehicle?.[0] && 
+            request.location
+          )
+          .map(request => ({
+            id: request.id,
+            user_id: request.user_id,
+            vehicle_id: request.vehicle_id,
+            description: request.description,
+            status: request.status,
+            created_at: request.created_at,
+            location: request.location,
+            client: {
+              id: request.client[0].id,
+              full_name: request.client[0].full_name,
+              phone: request.client[0].phone
+            },
+            vehicle: {
+              id: request.vehicle[0].id,
+              model: request.vehicle[0].model,
+              plate: request.vehicle[0].plate,
+              year: request.vehicle[0].year
+            },
+            distance: mechanicLocation ? calculateDistance(
+              mechanicLocation.latitude,
+              mechanicLocation.longitude,
+              request.location.latitude,
+              request.location.longitude
+            ) : 0
+          }));
+
+        setActiveServices(mappedActiveServices);
+
+        // Buscar estatísticas
+        const { data: statsData, error: statsError } = await supabase
+          .from('mechanic_stats')
+          .select('*')
+          .eq('mechanic_id', user.id)
+          .single();
+
+        if (statsError) throw statsError;
+
+        if (statsData) {
+          setStats({
+            completed: statsData.completed_services || 0,
+            rating: statsData.average_rating || 0,
+            earnings: statsData.total_earnings || 0
+          });
         }
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error);
+
+      } catch (err) {
+        console.error('Erro ao carregar dados:', err);
+        setError('Erro ao carregar dados');
       } finally {
         setLoading(false);
       }
     };
 
-    checkAuthAndLoadData();
-  }, [authLoading, isAuthenticated, user, navigate]);
+    if (!authLoading && isAuthenticated && user) {
+      loadData();
+    }
+  }, [authLoading, isAuthenticated, user, mechanicLocation]);
 
   // Função para calcular distância entre dois pontos usando a fórmula de Haversine
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -244,224 +413,6 @@ export default function MechanicDashboard() {
       Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return R * c; // Distância em km
-  };
-
-  const fetchData = async (mechanicLat: number | null, mechanicLng: number | null) => {
-    try {
-      setLoading(true);
-
-      if (!user?.id) {
-        console.error('Usuário não autenticado');
-        return;
-      }
-
-      // Buscar solicitações próximas
-      const { data: nearbyData, error: nearbyError } = await supabase
-        .from('service_requests')
-        .select(`
-          id,
-          user_id,
-          vehicle_id,
-          description,
-          status,
-          created_at,
-          location,
-          client:profiles!service_requests_user_id_fkey(
-            id,
-            full_name,
-            phone
-          ),
-          vehicle:vehicles(
-            id,
-            model,
-            plate,
-            year
-          )
-        `)
-        .eq('status', 'pending')
-        .is('mechanic_id', null)
-        .order('created_at', { ascending: false });
-
-      if (nearbyError) {
-        console.error('Erro ao buscar solicitações:', nearbyError);
-        throw nearbyError;
-      }
-      
-      console.log('Solicitações encontradas:', nearbyData);
-      
-      // Filtra solicitações válidas
-      const validRequests = (nearbyData || []).filter((request) => {
-        console.log('Validando solicitação:', request);
-        
-        const isValid = Boolean(
-          request &&
-          request.id &&
-          request.description &&
-          request.location &&
-          request.client?.[0]?.full_name
-        );
-
-        if (!isValid) {
-          console.log('Solicitação inválida. Campos:', {
-            hasRequest: Boolean(request),
-            hasId: Boolean(request?.id),
-            hasDescription: Boolean(request?.description),
-            hasLocation: Boolean(request?.location),
-            hasClient: Boolean(request?.client?.[0]),
-            hasClientName: Boolean(request?.client?.[0]?.full_name)
-          });
-          return false;
-        }
-
-        // Se não temos a localização do mecânico, não podemos filtrar por distância
-        if (!mechanicLat || !mechanicLng) {
-          return true;
-        }
-
-        // Calcular distância entre mecânico e solicitação
-        const distance = calculateDistance(
-          mechanicLat,
-          mechanicLng,
-          request.location.latitude,
-          request.location.longitude
-        );
-
-        const isNearby = distance <= 30; // 30km de raio
-        if (!isNearby) {
-          console.log(`Solicitação fora do raio de 30km (${distance.toFixed(2)}km):`, request.id);
-        }
-
-        return isNearby;
-      });
-
-      // Mapear dados para o formato esperado
-      const mappedNearbyRequests = (nearbyData || [])
-        .filter(request => 
-          request.client?.[0] && 
-          request.vehicle?.[0] && 
-          request.location
-        )
-        .map(request => ({
-          id: request.id,
-          user_id: request.user_id,
-          vehicle_id: request.vehicle_id,
-          description: request.description,
-          status: request.status,
-          created_at: request.created_at,
-          location: request.location,
-          client: {
-            id: request.client[0].id,
-            full_name: request.client[0].full_name,
-            phone: request.client[0].phone
-          },
-          vehicle: {
-            id: request.vehicle[0].id,
-            model: request.vehicle[0].model,
-            plate: request.vehicle[0].plate,
-            year: request.vehicle[0].year
-          },
-          distance: mechanicLat && mechanicLng ? calculateDistance(
-            mechanicLat,
-            mechanicLng,
-            request.location.latitude,
-            request.location.longitude
-          ) : 0
-        })) as ServiceRequest[];
-      
-      console.log('Solicitações formatadas:', mappedNearbyRequests);
-      setNearbyRequests(mappedNearbyRequests);
-
-      // Buscar serviços ativos do mecânico
-      const { data: activeData, error: activeError } = await supabase
-        .from('service_requests')
-        .select(`
-          id,
-          user_id,
-          vehicle_id,
-          description,
-          status,
-          created_at,
-          location,
-          client:profiles!user_id(
-            id,
-            full_name,
-            phone
-          ),
-          vehicle:vehicles(
-            id,
-            model,
-            plate,
-            year
-          )
-        `)
-        .in('status', ['accepted', 'in_progress'])
-        .eq('mechanic_id', user?.id)
-        .order('created_at', { ascending: false });
-
-      if (activeError) {
-        console.error('Erro ao buscar serviços ativos:', activeError);
-        throw activeError;
-      }
-
-      if (activeError) throw activeError;
-
-      // Mapear dados para o formato esperado
-      const mappedActiveRequests = (activeData || [])
-        .filter(request => 
-          request.client?.[0] && 
-          request.vehicle?.[0] && 
-          request.location
-        )
-        .map(request => ({
-          id: request.id,
-          user_id: request.user_id,
-          vehicle_id: request.vehicle_id,
-          description: request.description,
-          status: request.status,
-          created_at: request.created_at,
-          location: request.location,
-          client: {
-            id: request.client[0].id,
-            full_name: request.client[0].full_name,
-            phone: request.client[0].phone
-          },
-          vehicle: {
-            id: request.vehicle[0].id,
-            model: request.vehicle[0].model,
-            plate: request.vehicle[0].plate,
-            year: request.vehicle[0].year
-          },
-          distance: mechanicLat && mechanicLng ? calculateDistance(
-            mechanicLat,
-            mechanicLng,
-            request.location.latitude,
-            request.location.longitude
-          ) : 0
-        })) as ServiceRequest[];
-
-      console.log('Serviços ativos formatados:', mappedActiveRequests);
-      setActiveServices(mappedActiveRequests);
-
-      // Buscar estatísticas
-      const { data: statsData, error: statsError } = await supabase
-        .from('mechanic_stats')
-        .select('*')
-        .eq('mechanic_id', user.id)
-        .single();
-
-      if (statsError) throw statsError;
-      if (statsData) {
-        setStats({
-          completed: statsData.completed_services || 0,
-          rating: statsData.average_rating || 0,
-          earnings: statsData.total_earnings || 0
-        });
-      }
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleSubmitQuote = async (requestId: string, quote: number, description: string) => {
@@ -506,7 +457,7 @@ export default function MechanicDashboard() {
       console.log('Solicitação atualizada com sucesso:', requestData);
 
       // Recarregar dados
-      fetchData(mechanicLocation?.latitude ?? null, mechanicLocation?.longitude ?? null);
+      loadData();
     } catch (error) {
       console.error('Erro ao enviar orçamento:', error);
       throw error;
@@ -529,7 +480,7 @@ export default function MechanicDashboard() {
         .select('*, client:profiles(*), vehicle:vehicles(*)');
 
       if (error) throw error;
-      fetchData(mechanicLocation?.latitude ?? null, mechanicLocation?.longitude ?? null);
+      loadData();
     } catch (error) {
       console.error('Erro ao aceitar solicitação:', error);
     }
@@ -564,7 +515,7 @@ export default function MechanicDashboard() {
     return texts[status as keyof typeof texts] || 'Desconhecido';
   };
 
-  // Renderização condicional com mensagem de carregamento
+  // Renderização com tratamento de erros
   if (authLoading) {
     return (
       <Layout>
@@ -577,7 +528,24 @@ export default function MechanicDashboard() {
   }
 
   if (!isAuthenticated) {
-    return null; // Vai ser redirecionado pelo useEffect
+    return null;
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center min-h-screen">
+          <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+          <p className="text-red-500">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-yellow-400 text-gray-900 rounded-lg hover:bg-yellow-500"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </Layout>
+    );
   }
 
   if (loading) {
@@ -599,7 +567,7 @@ export default function MechanicDashboard() {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-gray-900">
               Olá, {profile?.full_name || 'Mecânico'}
-            </h1>
+          </h1>
             <button
               onClick={() => navigate('/profile')}
               className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
