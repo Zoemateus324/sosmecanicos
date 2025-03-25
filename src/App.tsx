@@ -79,17 +79,19 @@ function App() {
   return (
     <Routes>
       {/* Rotas públicas */}
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={
+        isAuthenticated && userType ? <Navigate to={`/${userType}/dashboard`} replace /> : <Home />
+      } />
       <Route path="/login" element={
-        isAuthenticated ? <Navigate to={`/${userType}/dashboard`} /> : <Login />
+        isAuthenticated ? <Navigate to={`/${userType}/dashboard`} replace /> : <Login />
       } />
       <Route path="/register" element={
-        isAuthenticated ? <Navigate to={`/${userType}/dashboard`} /> : <Register />
+        isAuthenticated ? <Navigate to={`/${userType}/dashboard`} replace /> : <Register />
       } />
 
       {/* Rota de perfil - protegida mas acessível para todos os tipos de usuário */}
       <Route path="/profile" element={
-        isAuthenticated ? <Profile /> : <Navigate to="/login" />
+        isAuthenticated ? <Profile /> : <Navigate to="/login" replace />
       } />
 
       {/* Rotas do cliente */}
@@ -146,7 +148,7 @@ function App() {
       />
 
       {/* Rota de fallback */}
-      <Route path="*" element={<Navigate to="/" />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
