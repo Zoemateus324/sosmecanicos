@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {Layout} from '../../components/Layout';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '.././hooks/useAuth';
+import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { Wrench, MapPin, Clock, AlertCircle, CheckCircle2, DollarSign, X } from 'lucide-react';
 
@@ -175,8 +175,18 @@ export default function MechanicDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated && !authLoading) {
+    // Se ainda está carregando a autenticação, não faz nada
+    if (authLoading) return;
+
+    // Se não está autenticado, redireciona para login
+    if (!isAuthenticated) {
       navigate('/login');
+      return;
+    }
+
+    // Se não tem perfil ou usuário, não continua
+    if (!profile || !user) {
+      setLoading(false);
       return;
     }
 
@@ -193,6 +203,7 @@ export default function MechanicDashboard() {
           },
           (error) => {
             console.error('Erro ao obter localização:', error);
+            // Mesmo sem localização, carrega os dados
             fetchData(null, null);
           },
           {
@@ -203,14 +214,13 @@ export default function MechanicDashboard() {
         );
       } else {
         console.error('Geolocalização não suportada');
+        // Mesmo sem geolocalização, carrega os dados
         fetchData(null, null);
       }
     };
 
-    if (isAuthenticated && profile) {
-      requestLocation();
-    }
-  }, [isAuthenticated, authLoading, navigate, profile]);
+    requestLocation();
+  }, [isAuthenticated, authLoading, navigate, profile, user]);
 
   // Função para calcular distância entre dois pontos usando a fórmula de Haversine
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -227,6 +237,8 @@ export default function MechanicDashboard() {
 
   const fetchData = async (mechanicLat: number | null, mechanicLng: number | null) => {
     try {
+      setLoading(true);
+
       if (!user?.id) {
         console.error('Usuário não autenticado');
         return;
@@ -541,11 +553,28 @@ export default function MechanicDashboard() {
     return texts[status as keyof typeof texts] || 'Desconhecido';
   };
 
+  // Renderização condicional com mensagem de carregamento
+  if (authLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
+          <span className="ml-2">Verificando autenticação...</span>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null; // Vai ser redirecionado pelo useEffect
+  }
+
   if (loading) {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
+          <span className="ml-2">Carregando dados...</span>
         </div>
       </Layout>
     );
