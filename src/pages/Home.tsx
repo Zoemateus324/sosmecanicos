@@ -31,19 +31,6 @@ export default function Home() {
               </p>
               <form onSubmit={handleSearch} className="space-y-4">
                 <div className="flex gap-4">
-                  <input
-                    type="text"
-                    value={vinNumber}
-                    onChange={(e) => setVinNumber(e.target.value)}
-                    placeholder="Digite o VIN ou placa do veículo"
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                  />
-                  <button
-                    type="submit"
-                    className="px-8 py-3 bg-yellow-400 text-gray-900 font-semibold rounded-lg hover:bg-yellow-500 transition-colors"
-                  >
-                    Buscar
-                  </button>
                 </div>
               </form>
               <div className="mt-4 space-x-4">
@@ -60,12 +47,6 @@ export default function Home() {
                   Fazer Login
                 </button>
               </div>
-              <button
-                onClick={handleEmergency}
-                className="mt-4 px-8 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Socorro Imediato
-              </button>
             </div>
             <div className="relative">
               <img 
