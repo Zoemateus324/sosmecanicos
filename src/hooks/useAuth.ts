@@ -79,6 +79,7 @@ export function useAuth() {
         }
 
         if (session?.user) {
+          console.log('Sessão encontrada para userId:', session.user.id);
           const profile = await fetchProfile(session.user.id);
           
           if (mounted) {
@@ -116,6 +117,7 @@ export function useAuth() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user && mounted) {
+        console.log('Mudança de estado de autenticação para userId:', session.user.id);
         const profile = await fetchProfile(session.user.id);
         setAuthState({
           user: session.user,
