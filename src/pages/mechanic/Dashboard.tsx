@@ -30,6 +30,7 @@ interface ServiceRequest {
   };
   mechanic_id?: string;
   budget?: number;
+  distance?: number;
 }
 
 interface ServiceStats {
@@ -175,52 +176,62 @@ export default function MechanicDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Se ainda está carregando a autenticação, não faz nada
-    if (authLoading) return;
+    const checkAuthAndLoadData = async () => {
+      try {
+        // Se ainda está carregando a autenticação, retorna
+        if (authLoading) {
+          return;
+        }
 
-    // Se não está autenticado, redireciona para login
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
+        // Se não está autenticado, redireciona para login
+        if (!isAuthenticated || !user) {
+          navigate('/login');
+          return;
+        }
 
-    // Se não tem perfil ou usuário, não continua
-    if (!profile || !user) {
-      setLoading(false);
-      return;
-    }
+        // Função para obter localização
+        const getLocation = () => {
+          return new Promise<{latitude: number; longitude: number} | null>((resolve) => {
+            if ("geolocation" in navigator) {
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  resolve({
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude
+                  });
+                },
+                () => {
+                  resolve(null);
+                },
+                {
+                  enableHighAccuracy: true,
+                  timeout: 5000,
+                  maximumAge: 0
+                }
+              );
+            } else {
+              resolve(null);
+            }
+          });
+        };
 
-    const requestLocation = () => {
-      if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            console.log('Localização obtida:', position.coords);
-            setMechanicLocation({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude
-            });
-            fetchData(position.coords.latitude, position.coords.longitude);
-          },
-          (error) => {
-            console.error('Erro ao obter localização:', error);
-            // Mesmo sem localização, carrega os dados
-            fetchData(null, null);
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 5000,
-            maximumAge: 0
-          }
-        );
-      } else {
-        console.error('Geolocalização não suportada');
-        // Mesmo sem geolocalização, carrega os dados
-        fetchData(null, null);
+        // Obter localização e carregar dados
+        const location = await getLocation();
+        if (location) {
+          setMechanicLocation(location);
+          await fetchData(location.latitude, location.longitude);
+        } else {
+          await fetchData(null, null);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    requestLocation();
-  }, [isAuthenticated, authLoading, navigate, profile, user]);
+    checkAuthAndLoadData();
+  }, [authLoading, isAuthenticated, user, navigate]);
 
   // Função para calcular distância entre dois pontos usando a fórmula de Haversine
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -326,8 +337,8 @@ export default function MechanicDashboard() {
       // Mapear dados para o formato esperado
       const mappedNearbyRequests = (nearbyData || [])
         .filter(request => 
-          request.client && 
-          request.vehicle && 
+          request.client?.[0] && 
+          request.vehicle?.[0] && 
           request.location
         )
         .map(request => ({
@@ -339,22 +350,22 @@ export default function MechanicDashboard() {
           created_at: request.created_at,
           location: request.location,
           client: {
-            id: request.client.id,
-            full_name: request.client.full_name,
-            phone: request.client.phone
+            id: request.client[0].id,
+            full_name: request.client[0].full_name,
+            phone: request.client[0].phone
           },
           vehicle: {
-            id: request.vehicle.id,
-            model: request.vehicle.model,
-            plate: request.vehicle.plate,
-            year: request.vehicle.year
+            id: request.vehicle[0].id,
+            model: request.vehicle[0].model,
+            plate: request.vehicle[0].plate,
+            year: request.vehicle[0].year
           },
-          distance: calculateDistance(
+          distance: mechanicLat && mechanicLng ? calculateDistance(
             mechanicLat,
             mechanicLng,
             request.location.latitude,
             request.location.longitude
-          )
+          ) : 0
         })) as ServiceRequest[];
       
       console.log('Solicitações formatadas:', mappedNearbyRequests);
@@ -397,8 +408,8 @@ export default function MechanicDashboard() {
       // Mapear dados para o formato esperado
       const mappedActiveRequests = (activeData || [])
         .filter(request => 
-          request.client && 
-          request.vehicle && 
+          request.client?.[0] && 
+          request.vehicle?.[0] && 
           request.location
         )
         .map(request => ({
@@ -410,22 +421,22 @@ export default function MechanicDashboard() {
           created_at: request.created_at,
           location: request.location,
           client: {
-            id: request.client.id,
-            full_name: request.client.full_name,
-            phone: request.client.phone
+            id: request.client[0].id,
+            full_name: request.client[0].full_name,
+            phone: request.client[0].phone
           },
           vehicle: {
-            id: request.vehicle.id,
-            model: request.vehicle.model,
-            plate: request.vehicle.plate,
-            year: request.vehicle.year
+            id: request.vehicle[0].id,
+            model: request.vehicle[0].model,
+            plate: request.vehicle[0].plate,
+            year: request.vehicle[0].year
           },
-          distance: calculateDistance(
+          distance: mechanicLat && mechanicLng ? calculateDistance(
             mechanicLat,
             mechanicLng,
             request.location.latitude,
             request.location.longitude
-          )
+          ) : 0
         })) as ServiceRequest[];
 
       console.log('Serviços ativos formatados:', mappedActiveRequests);
@@ -681,7 +692,7 @@ export default function MechanicDashboard() {
                       <div className="flex items-center space-x-2">
                         <MapPin className="w-4 h-4" />
                         <span>
-                          {mechanicLocation && request.location
+                          {mechanicLocation && request.location && request.distance !== undefined
                             ? `${request.distance.toFixed(1)} km`
                             : 'Distância indisponível'}
                         </span>
