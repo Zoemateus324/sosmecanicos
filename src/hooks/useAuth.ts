@@ -36,9 +36,9 @@ export function useAuth() {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, email, user_type, full_name, phone, address, created_at, updated_at')
         .eq('id', userId)
-        .maybeSingle();
+        .single();
 
       if (error) {
         console.error('Erro ao buscar perfil:', error);

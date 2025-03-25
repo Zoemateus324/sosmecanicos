@@ -243,8 +243,8 @@ export default function MechanicDashboard() {
         setError(null);
 
         // Buscar solicitações próximas
-        const { data: nearbyData, error: nearbyError } = await supabase
-          .from('service_requests')
+      const { data: nearbyData, error: nearbyError } = await supabase
+        .from('service_requests')
           .select(`
             id,
             user_id,
@@ -265,11 +265,11 @@ export default function MechanicDashboard() {
               year
             )
           `)
-          .eq('status', 'pending')
+        .eq('status', 'pending')
           .is('mechanic_id', null)
           .order('created_at', { ascending: false });
 
-        if (nearbyError) throw nearbyError;
+      if (nearbyError) throw nearbyError;
 
         // Mapear solicitações próximas
         const mappedNearbyRequests = (nearbyData || [])
@@ -308,8 +308,8 @@ export default function MechanicDashboard() {
         setNearbyRequests(mappedNearbyRequests);
 
         // Buscar serviços ativos
-        const { data: activeData, error: activeError } = await supabase
-          .from('service_requests')
+      const { data: activeData, error: activeError } = await supabase
+        .from('service_requests')
           .select(`
             id,
             user_id,
@@ -330,11 +330,11 @@ export default function MechanicDashboard() {
               year
             )
           `)
-          .in('status', ['accepted', 'in_progress'])
+        .in('status', ['accepted', 'in_progress'])
           .eq('mechanic_id', user.id)
-          .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
-        if (activeError) throw activeError;
+      if (activeError) throw activeError;
 
         // Mapear serviços ativos
         const mappedActiveServices = (activeData || [])
@@ -372,30 +372,30 @@ export default function MechanicDashboard() {
 
         setActiveServices(mappedActiveServices);
 
-        // Buscar estatísticas
-        const { data: statsData, error: statsError } = await supabase
-          .from('mechanic_stats')
-          .select('*')
+      // Buscar estatísticas
+      const { data: statsData, error: statsError } = await supabase
+        .from('mechanic_stats')
+        .select('*')
           .eq('mechanic_id', user.id)
-          .single();
+        .single();
 
-        if (statsError) throw statsError;
+      if (statsError) throw statsError;
 
-        if (statsData) {
-          setStats({
-            completed: statsData.completed_services || 0,
-            rating: statsData.average_rating || 0,
-            earnings: statsData.total_earnings || 0
-          });
-        }
+      if (statsData) {
+        setStats({
+          completed: statsData.completed_services || 0,
+          rating: statsData.average_rating || 0,
+          earnings: statsData.total_earnings || 0
+        });
+      }
 
       } catch (err) {
         console.error('Erro ao carregar dados:', err);
         setError('Erro ao carregar dados');
-      } finally {
-        setLoading(false);
-      }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
 
     if (!authLoading && isAuthenticated && user) {
       loadData();
