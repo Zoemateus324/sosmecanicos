@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 
@@ -15,11 +15,18 @@ export interface Profile {
   updated_at: string;
 }
 
+interface AuthState {
+  user: User | null;
+  loading: boolean;
+  isAuthenticated: boolean;
+}
+
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authState, setAuthState] = useState<AuthState>({
+    user: null,
+    loading: true,
+    isAuthenticated: false,
+  });
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -42,85 +49,74 @@ export function useAuth() {
   };
 
   useEffect(() => {
-    let mounted = true;
-
-    const setupAuth = async () => {
+    // Verificar sessão atual
+    const checkSession = async () => {
       try {
-        setLoading(true);
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (!mounted) return;
-
-        if (!session?.user) {
-          setUser(null);
-          setProfile(null);
-          setIsAuthenticated(false);
+        if (error) {
+          console.error('Erro ao verificar sessão:', error);
+          setAuthState({
+            user: null,
+            loading: false,
+            isAuthenticated: false,
+          });
           return;
         }
 
-        setUser(session.user);
-        
-        const userProfile = await fetchProfile(session.user.id);
-        
-        if (!mounted) return;
-
-        if (userProfile) {
-          setProfile(userProfile);
-          setIsAuthenticated(true);
+        if (session?.user) {
+          setAuthState({
+            user: session.user,
+            loading: false,
+            isAuthenticated: true,
+          });
         } else {
-          setProfile(null);
-          setIsAuthenticated(false);
+          setAuthState({
+            user: null,
+            loading: false,
+            isAuthenticated: false,
+          });
         }
       } catch (error) {
-        console.error('Erro ao configurar autenticação:', error);
-        if (mounted) {
-          setUser(null);
-          setProfile(null);
-          setIsAuthenticated(false);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        console.error('Erro ao verificar autenticação:', error);
+        setAuthState({
+          user: null,
+          loading: false,
+          isAuthenticated: false,
+        });
       }
     };
 
-    setupAuth();
+    // Executar verificação inicial
+    checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return;
-      
+    // Configurar listener para mudanças na autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        setUser(session.user);
-        fetchProfile(session.user.id).then(userProfile => {
-          if (!mounted) return;
-          
-          if (userProfile) {
-            setProfile(userProfile);
-            setIsAuthenticated(true);
-          } else {
-            setProfile(null);
-            setIsAuthenticated(false);
-          }
+        setAuthState({
+          user: session.user,
+          loading: false,
+          isAuthenticated: true,
         });
       } else {
-        setUser(null);
-        setProfile(null);
-        setIsAuthenticated(false);
+        setAuthState({
+          user: null,
+          loading: false,
+          isAuthenticated: false,
+        });
       }
     });
 
+    // Cleanup
     return () => {
-      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
   return {
-    user,
-    profile,
-    loading,
-    isAuthenticated,
-    userType: profile?.user_type || null
+    user: authState.user,
+    loading: authState.loading,
+    isAuthenticated: authState.isAuthenticated,
+    userType: authState.user ? authState.user.user_metadata.user_type : null
   };
 } 

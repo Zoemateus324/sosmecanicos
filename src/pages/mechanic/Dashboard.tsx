@@ -180,20 +180,54 @@ export default function MechanicDashboard() {
       return;
     }
 
+    const fetchUserProfile = async () => {
+      try {
+        if (!user?.id) return;
+
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Erro ao buscar perfil:', profileError);
+          return;
+        }
+
+        if (!profileData) {
+          console.error('Perfil não encontrado');
+          return;
+        }
+
+        // Atualiza os dados do usuário no contexto de autenticação
+        if (user) {
+          user.user_metadata = {
+            ...user.user_metadata,
+            full_name: profileData.full_name,
+            phone: profileData.phone
+          };
+        }
+      } catch (error) {
+        console.error('Erro ao buscar perfil:', error);
+      }
+    };
+
     const requestLocation = () => {
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(
-          (position) => {
+          async (position) => {
             console.log('Localização obtida:', position.coords);
             setMechanicLocation({
               latitude: position.coords.latitude,
               longitude: position.coords.longitude
             });
+            await fetchUserProfile();
             fetchData(position.coords.latitude, position.coords.longitude);
           },
-          (error) => {
+          async (error) => {
             console.error('Erro ao obter localização:', error);
-            // Mesmo sem localização, ainda busca as solicitações
+            await fetchUserProfile();
             fetchData(null, null);
           },
           {
@@ -204,6 +238,7 @@ export default function MechanicDashboard() {
         );
       } else {
         console.error('Geolocalização não suportada');
+        fetchUserProfile();
         fetchData(null, null);
       }
     };
@@ -211,7 +246,7 @@ export default function MechanicDashboard() {
     if (isAuthenticated) {
       requestLocation();
     }
-  }, [isAuthenticated, authLoading, navigate]);
+  }, [isAuthenticated, authLoading, navigate, user]);
 
   // Função para calcular distância entre dois pontos usando a fórmula de Haversine
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -244,7 +279,7 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:profiles!user_id(
+          client:profiles!service_requests_user_id_fkey(
             id,
             full_name,
             phone
