@@ -47,12 +47,6 @@ export default function Home() {
                   Fazer Login
                 </button>
               </div>
-              <button
-                onClick={handleEmergency}
-                className="mt-4 px-8 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Socorro Imediato
-              </button>
             </div>
             <div className="relative">
               <img 
