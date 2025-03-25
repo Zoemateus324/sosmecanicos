@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Layout } from '../../components/Layout';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import { Plus, Car, AlertCircle, MapPin, Clock, ChevronRight, Wrench, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Car, AlertCircle, Clock, Wrench, CheckCircle, XCircle } from 'lucide-react';
 
 interface Vehicle {
   id: string;
@@ -40,6 +40,11 @@ interface ServiceRequest {
     brand: string;
     vehicle_type: string;
   };
+  mechanic?: {
+    id: string;
+    full_name: string;
+    phone: string;
+  };
 }
 
 export default function ClientDashboard() {
@@ -75,7 +80,7 @@ export default function ClientDashboard() {
             .from('service_requests')
             .select(`
               *,
-              vehicle:vehicles(
+              vehicle:vehicles!service_requests_vehicle_id_fkey(
                 id,
                 model,
                 plate,
@@ -86,6 +91,32 @@ export default function ClientDashboard() {
             `)
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
+            .then(async (result) => {
+              if (result.error) throw result.error;
+              
+              // Para cada solicitação que tem um mechanic_id, buscar os dados do mecânico separadamente
+              const requestsWithMechanics = await Promise.all(
+                result.data.map(async (request) => {
+                  if (request.mechanic_id) {
+                    const { data: mechanicData, error: mechanicError } = await supabase
+                      .from('profiles')
+                      .select('id, full_name, phone')
+                      .eq('id', request.mechanic_id)
+                      .single();
+                    
+                    if (!mechanicError && mechanicData) {
+                      return {
+                        ...request,
+                        mechanic: mechanicData
+                      };
+                    }
+                  }
+                  return request;
+                })
+              );
+              
+              return { data: requestsWithMechanics, error: null };
+            })
         ]);
 
         if (vehiclesResponse.error) throw vehiclesResponse.error;

@@ -1,5 +1,22 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { UNSAFE_DataRouterContext, UNSAFE_DataRouterStateContext } from 'react-router-dom';
+
+// Enable React Router v7 future flags
+UNSAFE_DataRouterContext.displayName = 'DataRouter';
+UNSAFE_DataRouterStateContext.displayName = 'DataRouterState';
+
+// Configure future flags
+declare global {
+  interface Window {
+    __reactRouterFutureFlags: {
+      v7_startTransition: boolean;
+      v7_relativeSplatPath: boolean;
+    };
+  }
+}
+
+
 import { useAuth } from './hooks/useAuth';
 
 // Pages

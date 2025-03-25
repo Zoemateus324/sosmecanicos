@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Layout } from '../../components/Layout';
+import {Layout} from '../../components/Layout';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '.././hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { Wrench, MapPin, Clock, AlertCircle, CheckCircle2, DollarSign, X } from 'lucide-react';
 
@@ -64,13 +64,18 @@ interface SupabaseServiceRequest {
   description: string;
   status: string;
   created_at: string;
-  location: {
-    latitude: number;
-    longitude: number;
-    address: string;
+  location: { latitude: number; longitude: number; address: string };
+  client: { 
+    id: string; 
+    full_name: string;
+    phone: string;
   };
-  client: SupabaseProfile[];
-  vehicle: SupabaseVehicle[];
+  vehicle: { 
+    id: string; 
+    model: string; 
+    plate: string; 
+    year: string;
+  };
 }
 
 const QuoteModal: React.FC<QuoteModalProps> = ({ request, onClose, onSubmit }) => {
@@ -304,30 +309,35 @@ export default function MechanicDashboard() {
         return isNearby;
       });
 
-      // Mapear os dados para o formato correto
-      const formattedRequests = validRequests.map(request => ({
-        id: request.id,
-        user_id: request.user_id,
-        vehicle_id: request.vehicle_id,
-        description: request.description,
-        status: request.status as ServiceRequest['status'],
-        created_at: request.created_at,
-        location: request.location,
-        client: {
-          id: request.user_id,
-          full_name: request.client?.[0]?.full_name || 'Cliente',
-          phone: request.client?.[0]?.phone || 'Não informado'
-        },
-        vehicle: {
-          id: request.vehicle_id,
-          model: request.vehicle?.[0]?.model || 'Veículo não informado',
-          plate: request.vehicle?.[0]?.plate || 'Placa não informada',
-          year: request.vehicle?.[0]?.year || 'Ano não informado'
-        }
-      }));
-
-      console.log('Solicitações formatadas:', formattedRequests);
-      setNearbyRequests(formattedRequests);
+      // Mapear dados para o formato esperado
+      const mappedNearbyRequests = validRequests
+        .map(request => ({
+          id: request.id,
+          clientData: {
+            id: request.client.id,
+            full_name: request.client.full_name,
+            phone: request.client.phone
+          },
+          vehicleData: {
+            id: request.vehicle.id,
+            model: request.vehicle.model,
+            plate: request.vehicle.plate,
+            year: request.vehicle.year
+          },
+          description: request.description,
+          status: request.status,
+          created_at: request.created_at,
+          location: request.location,
+          distance: calculateDistance(
+            mechanicLat,
+            mechanicLng,
+            request.location.latitude,
+            request.location.longitude
+          )
+        }));
+      
+      console.log('Solicitações formatadas:', mappedNearbyRequests);
+      setNearbyRequests(mappedNearbyRequests);
 
       // Buscar serviços ativos do mecânico
       const { data: activeData, error: activeError } = await supabase
@@ -354,34 +364,50 @@ export default function MechanicDashboard() {
         `)
         .in('status', ['accepted', 'in_progress'])
         .eq('mechanic_id', user?.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .returns<SupabaseServiceRequest[]>();
+
+      if (activeError) {
+        console.error('Erro ao buscar serviços ativos:', activeError);
+        throw activeError;
+      }
 
       if (activeError) throw activeError;
 
-      // Filtra e formata serviços ativos
-      const validActiveServices = (activeData || []).map(service => ({
-        id: service.id,
-        user_id: service.user_id,
-        vehicle_id: service.vehicle_id,
-        description: service.description,
-        status: service.status as ServiceRequest['status'],
-        created_at: service.created_at,
-        location: service.location,
-        client: {
-          id: service.user_id,
-          full_name: service.client?.full_name || 'Cliente',
-          phone: service.client?.phone || 'Não informado'
-        },
-        vehicle: {
-          id: service.vehicle_id,
-          model: service.vehicle?.model || 'Veículo não informado',
-          plate: service.vehicle?.plate || 'Placa não informada',
-          year: service.vehicle?.year || 'Ano não informado'
-        }
-      }));
+      // Mapear dados para o formato esperado
+      const mappedActiveRequests = activeData
+        .filter(request => 
+          request.client && 
+          request.vehicle && 
+          request.location
+        )
+        .map(request => ({
+          id: request.id,
+          clientData: {
+            id: request.client.id,
+            full_name: request.client.full_name,
+            phone: request.client.phone
+          },
+          vehicleData: {
+            id: request.vehicle.id,
+            model: request.vehicle.model,
+            plate: request.vehicle.plate,
+            year: request.vehicle.year
+          },
+          description: request.description,
+          status: request.status,
+          created_at: request.created_at,
+          location: request.location,
+          distance: calculateDistance(
+            mechanicLat,
+            mechanicLng,
+            request.location.latitude,
+            request.location.longitude
+          )
+        }));
 
-      console.log('Serviços ativos formatados:', validActiveServices);
-      setActiveServices(validActiveServices);
+      console.log('Serviços ativos formatados:', mappedActiveRequests);
+      setActiveServices(mappedActiveRequests);
 
       // Buscar estatísticas
       const { data: statsData, error: statsError } = await supabase
@@ -415,7 +441,7 @@ export default function MechanicDashboard() {
       });
 
       // Verificar se o perfil do mecânico existe
-      const { data: mechanicProfile, error: profileError } = await supabase
+      const { error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user?.id)
@@ -436,7 +462,7 @@ export default function MechanicDashboard() {
           mechanic_notes: description
         })
         .eq('id', requestId)
-        .select('*, client:profiles!user_id(*), vehicle:vehicles(*)')
+        .select('*, client:profiles(*), vehicle:vehicles(*)')
         .single();
 
       if (requestError) {
@@ -454,7 +480,11 @@ export default function MechanicDashboard() {
     }
   };
 
-  const handleAcceptRequest = async (requestId: string) => {
+  // Either remove handleAcceptRequest if not used or add it to the JSX where needed
+  // This function is used in the JSX but TypeScript doesn't detect it
+  // This function is used in the QuoteModal component
+  // This function is used when a mechanic accepts a service request
+  const handleAcceptRequest = async (requestId: string): Promise<void> => {
     try {
       const { error } = await supabase
         .from('service_requests')
@@ -462,14 +492,24 @@ export default function MechanicDashboard() {
           mechanic_id: user?.id,
           status: 'accepted'
         })
-        .eq('id', requestId);
+        .eq('id', requestId)
+        .select('*, client:profiles(*), vehicle:vehicles(*)');
 
       if (error) throw error;
-      fetchData(mechanicLocation?.latitude ?? null, mechanicLocation?.longitude ?? null); // Recarrega os dados
+      fetchData(mechanicLocation?.latitude ?? null, mechanicLocation?.longitude ?? null);
     } catch (error) {
       console.error('Erro ao aceitar solicitação:', error);
     }
   };
+  
+  // Fix 2: In the JSX where loading is used, make sure it's properly scoped
+  <button
+    type="submit"
+    disabled={loading}
+    className="w-full bg-yellow-400 text-gray-900 py-2 rounded-lg font-medium hover:bg-yellow-500 transition-colors disabled:opacity-50"
+  >
+    {loading ? 'Enviando...' : 'Enviar Orçamento'}
+  </button>
 
   const getStatusColor = (status: string) => {
     const colors = {
@@ -508,8 +548,8 @@ export default function MechanicDashboard() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-gray-900">
-              Olá, {user?.user_metadata?.full_name || 'Mecânico'}
-            </h1>
+            Olá, {user?.user_metadata?.full_name || 'Mecânico'}
+          </h1>
             <button
               onClick={() => navigate('/profile')}
               className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
@@ -559,7 +599,7 @@ export default function MechanicDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Solicitações Próximas */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold mb-4">Solicitações Próximas</h2>
+          <h2 className="text-xl font-semibold mb-4">Solicitações Próximas</h2>
             {nearbyRequests.length === 0 ? (
               <div className="text-center py-8">
                 <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-3" />
@@ -572,14 +612,14 @@ export default function MechanicDashboard() {
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="font-medium text-gray-900">
-                          {request.client.full_name}
+                          {request.clientData.full_name}
                         </h3>
                         <p className="text-sm text-gray-500">
                           {request.description}
                         </p>
                       </div>
                       <button
-                        onClick={() => setSelectedRequest(request)}
+                        onClick={() => setSelectedRequest(request as ServiceRequest)}
                         className="px-4 py-2 bg-yellow-400 text-gray-900 rounded-lg font-medium hover:bg-yellow-500 transition-colors"
                       >
                         Enviar Orçamento
@@ -603,12 +643,7 @@ export default function MechanicDashboard() {
                         <MapPin className="w-4 h-4" />
                         <span>
                           {mechanicLocation && request.location
-                            ? `${calculateDistance(
-                                mechanicLocation.latitude,
-                                mechanicLocation.longitude,
-                                request.location.latitude,
-                                request.location.longitude
-                              ).toFixed(1)} km`
+                            ? `${request.distance.toFixed(1)} km`
                             : 'Distância indisponível'}
                         </span>
                       </div>
@@ -629,12 +664,12 @@ export default function MechanicDashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                {activeServices.map((service) => service.vehicle && (
+                {activeServices.map((service) => service.vehicleData && (
                   <div key={service.id} className="border border-gray-100 rounded-lg p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h3 className="font-medium">{service.vehicle.model}</h3>
-                        <p className="text-sm text-gray-500">Placa: {service.vehicle.plate}</p>
+                        <h3 className="font-medium">{service.vehicleData.model}</h3>
+                        <p className="text-sm text-gray-500">Placa: {service.vehicleData.plate}</p>
                       </div>
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(service.status)}`}>
                         {getStatusText(service.status)}
