@@ -240,7 +240,7 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:profiles!service_requests_user_id_fkey(
+          client:user_id(
             id,
             full_name,
             phone
@@ -254,8 +254,7 @@ export default function MechanicDashboard() {
         `)
         .eq('status', 'pending')
         .is('mechanic_id', null)
-        .order('created_at', { ascending: false })
-        .returns<SupabaseServiceRequest[]>();
+        .order('created_at', { ascending: false });
 
       if (nearbyError) {
         console.error('Erro ao buscar solicitações:', nearbyError);
@@ -350,7 +349,7 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:profiles!service_requests_user_id_fkey(
+          client:user_id(
             id,
             full_name,
             phone
@@ -364,8 +363,7 @@ export default function MechanicDashboard() {
         `)
         .in('status', ['accepted', 'in_progress'])
         .eq('mechanic_id', user?.id)
-        .order('created_at', { ascending: false })
-        .returns<SupabaseServiceRequest[]>();
+        .order('created_at', { ascending: false });
 
       if (activeError) {
         console.error('Erro ao buscar serviços ativos:', activeError);
