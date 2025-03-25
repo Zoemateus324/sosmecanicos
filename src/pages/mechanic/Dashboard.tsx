@@ -64,7 +64,11 @@ interface SupabaseServiceRequest {
   description: string;
   status: string;
   created_at: string;
-  location: { latitude: number; longitude: number; address: string };
+  location: { 
+    latitude: number; 
+    longitude: number; 
+    address: string 
+  };
   client: { 
     id: string; 
     full_name: string;
@@ -240,7 +244,7 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:user_id(
+          client:profiles!user_id(
             id,
             full_name,
             phone
@@ -309,31 +313,38 @@ export default function MechanicDashboard() {
       });
 
       // Mapear dados para o formato esperado
-      const mappedNearbyRequests = validRequests
+      const mappedNearbyRequests = (nearbyData || [])
+        .filter(request => 
+          request.client && 
+          request.vehicle && 
+          request.location
+        )
         .map(request => ({
           id: request.id,
-          clientData: {
+          user_id: request.user_id,
+          vehicle_id: request.vehicle_id,
+          description: request.description,
+          status: request.status,
+          created_at: request.created_at,
+          location: request.location,
+          client: {
             id: request.client.id,
             full_name: request.client.full_name,
             phone: request.client.phone
           },
-          vehicleData: {
+          vehicle: {
             id: request.vehicle.id,
             model: request.vehicle.model,
             plate: request.vehicle.plate,
             year: request.vehicle.year
           },
-          description: request.description,
-          status: request.status,
-          created_at: request.created_at,
-          location: request.location,
           distance: calculateDistance(
             mechanicLat,
             mechanicLng,
             request.location.latitude,
             request.location.longitude
           )
-        }));
+        })) as ServiceRequest[];
       
       console.log('Solicitações formatadas:', mappedNearbyRequests);
       setNearbyRequests(mappedNearbyRequests);
@@ -349,7 +360,7 @@ export default function MechanicDashboard() {
           status,
           created_at,
           location,
-          client:user_id(
+          client:profiles!user_id(
             id,
             full_name,
             phone
@@ -373,7 +384,7 @@ export default function MechanicDashboard() {
       if (activeError) throw activeError;
 
       // Mapear dados para o formato esperado
-      const mappedActiveRequests = activeData
+      const mappedActiveRequests = (activeData || [])
         .filter(request => 
           request.client && 
           request.vehicle && 
@@ -381,28 +392,30 @@ export default function MechanicDashboard() {
         )
         .map(request => ({
           id: request.id,
-          clientData: {
+          user_id: request.user_id,
+          vehicle_id: request.vehicle_id,
+          description: request.description,
+          status: request.status,
+          created_at: request.created_at,
+          location: request.location,
+          client: {
             id: request.client.id,
             full_name: request.client.full_name,
             phone: request.client.phone
           },
-          vehicleData: {
+          vehicle: {
             id: request.vehicle.id,
             model: request.vehicle.model,
             plate: request.vehicle.plate,
             year: request.vehicle.year
           },
-          description: request.description,
-          status: request.status,
-          created_at: request.created_at,
-          location: request.location,
           distance: calculateDistance(
             mechanicLat,
             mechanicLng,
             request.location.latitude,
             request.location.longitude
           )
-        }));
+        })) as ServiceRequest[];
 
       console.log('Serviços ativos formatados:', mappedActiveRequests);
       setActiveServices(mappedActiveRequests);
@@ -610,7 +623,7 @@ export default function MechanicDashboard() {
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="font-medium text-gray-900">
-                          {request.clientData.full_name}
+                          {request.client.full_name}
                         </h3>
                         <p className="text-sm text-gray-500">
                           {request.description}
@@ -662,12 +675,12 @@ export default function MechanicDashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                {activeServices.map((service) => service.vehicleData && (
+                {activeServices.map((service) => service.vehicle && (
                   <div key={service.id} className="border border-gray-100 rounded-lg p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h3 className="font-medium">{service.vehicleData.model}</h3>
-                        <p className="text-sm text-gray-500">Placa: {service.vehicleData.plate}</p>
+                        <h3 className="font-medium">{service.vehicle.model}</h3>
+                        <p className="text-sm text-gray-500">Placa: {service.vehicle.plate}</p>
                       </div>
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(service.status)}`}>
                         {getStatusText(service.status)}
