@@ -63,6 +63,7 @@ export function useAuth() {
 
     const checkSession = async () => {
       try {
+        console.log('Verificando sessão...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -91,6 +92,7 @@ export function useAuth() {
             });
           }
         } else {
+          console.log('Nenhuma sessão ativa encontrada.');
           if (mounted) {
             setAuthState({
               user: null,
@@ -126,6 +128,7 @@ export function useAuth() {
           isAuthenticated: true,
         });
       } else if (mounted) {
+        console.log('Usuário deslogado ou sessão não encontrada.');
         setAuthState({
           user: null,
           profile: null,
