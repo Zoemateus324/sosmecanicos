@@ -71,7 +71,7 @@ function App() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-7 border-yellow-400"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-400"></div>
       </div>
     );
   }
@@ -79,12 +79,18 @@ function App() {
   return (
     <Routes>
       {/* Rotas públicas */}
-      <Route path="/" element={
-        isAuthenticated && userType ? <Navigate to={`/${userType}/dashboard`} /> : <Home />
+      <Route path="/" element={<Home />} />
+      <Route path="/login" element={
+        isAuthenticated ? <Navigate to={`/${userType}/dashboard`} /> : <Login />
       } />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/profile" element={<Profile />} />
+      <Route path="/register" element={
+        isAuthenticated ? <Navigate to={`/${userType}/dashboard`} /> : <Register />
+      } />
+
+      {/* Rota de perfil - protegida mas acessível para todos os tipos de usuário */}
+      <Route path="/profile" element={
+        isAuthenticated ? <Profile /> : <Navigate to="/login" />
+      } />
 
       {/* Rotas do cliente */}
       <Route

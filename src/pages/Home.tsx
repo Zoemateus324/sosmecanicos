@@ -1,20 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Layout } from '../components/Layout';
 import { MapPin, Wrench, Clock, Shield, Car, ThumbsUp, FileCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Home() {
   const navigate = useNavigate();
-  const [vinNumber, setVinNumber] = useState('');
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Buscando veículo para assistência:', vinNumber);
-  };
-
-  const handleEmergency = () => {
-    console.log('Solicitando ajuda emergencial para:', vinNumber || 'Localização atual');
-  };
 
   return (
     <Layout>
@@ -29,10 +19,6 @@ export default function Home() {
               <p className="text-lg text-gray-600 mb-8">
                 Seu veículo quebrou? Não se preocupe! O SOS Mecânicos conecta você aos melhores profissionais próximos da sua localização, seja na cidade ou na estrada.
               </p>
-              <form onSubmit={handleSearch} className="space-y-4">
-                <div className="flex gap-4">
-                </div>
-              </form>
               <div className="mt-4 space-x-4">
                 <button 
                   onClick={() => navigate('/register')}
@@ -100,44 +86,6 @@ export default function Home() {
               <h3 className="font-semibold mb-2">Histórico Acessível</h3>
               <p className="text-gray-600">
                 Consulte manutenções passadas a qualquer momento.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Como Funciona */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-            Como o SOS Mecânicos funciona?
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center p-6">
-              <div className="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MapPin className="w-8 h-8 text-yellow-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-3">Localize</h3>
-              <p className="text-gray-600">
-                Compartilhe sua localização e encontre mecânicos próximos a você
-              </p>
-            </div>
-            <div className="text-center p-6">
-              <div className="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Wrench className="w-8 h-8 text-yellow-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-3">Solicite</h3>
-              <p className="text-gray-600">
-                Descreva o problema e escolha um profissional qualificado
-              </p>
-            </div>
-            <div className="text-center p-6">
-              <div className="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Car className="w-8 h-8 text-yellow-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-3">Resolva</h3>
-              <p className="text-gray-600">
-                Receba assistência profissional onde você estiver
               </p>
             </div>
           </div>
