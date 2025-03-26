@@ -147,52 +147,57 @@ export function useAuth() {
     }
 
     try {
-      console.log('Buscando perfil para userId:', userId);
+      console.log('Iniciando busca de perfil para userId:', userId);
       
-      // Primeira tentativa: buscar perfil existente
-      const { data: profiles, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (fetchError) {
-        console.error('Erro ao buscar perfil:', fetchError);
-        throw fetchError;
-      }
-
-      if (profiles) {
-        console.log('Perfil encontrado:', profiles);
-        return profiles;
-      }
-
-      // Se não encontrou perfil e não foi fornecido um tipo de usuário, retornar null
-      if (!userType) {
-        console.error('Tipo de usuário não fornecido para criar novo perfil');
-        return null;
-      }
-
-      // Se não encontrou perfil, criar um novo
-      console.log('Perfil não encontrado, criando novo...');
-      
-      // Buscar dados do usuário
+      // Verificar se o usuário existe
       const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
       
       if (userError) {
-        console.error('Erro ao obter dados do usuário:', userError);
+        console.error('Erro ao verificar usuário:', userError);
         throw userError;
       }
 
       if (!authUser) {
-        console.error('Usuário não encontrado');
+        console.error('Usuário não encontrado no Auth');
         return null;
       }
 
+      console.log('Usuário encontrado no Auth:', authUser.id);
+
+      // Buscar perfil existente
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Erro ao buscar perfil:', fetchError);
+        throw fetchError;
+      }
+
+      if (existingProfile) {
+        console.log('Perfil existente encontrado:', existingProfile);
+        return existingProfile;
+      }
+
+      console.log('Perfil não encontrado, verificando tipo de usuário para criar novo');
+
+      // Se não encontrou perfil e não foi fornecido um tipo de usuário
+      if (!userType) {
+        console.error('Tipo de usuário não fornecido para criar novo perfil');
+        throw new Error('Tipo de usuário necessário para criar perfil');
+      }
+
+      console.log('Criando novo perfil com tipo:', userType);
+
       // Obter localização atual
       const location = await getCurrentLocation();
+      console.log('Localização obtida:', location);
 
-      // Criar novo perfil
-      const newProfile: Omit<Profile, 'id'> = {
+      // Preparar dados do novo perfil
+      const newProfileData = {
+        id: userId,
         email: authUser.email || '',
         user_type: userType,
         full_name: authUser.user_metadata?.full_name || '',
@@ -205,9 +210,12 @@ export function useAuth() {
         updated_at: new Date().toISOString()
       };
 
-      const { data: createdProfile, error: createError } = await supabase
+      console.log('Tentando criar novo perfil:', newProfileData);
+
+      // Criar novo perfil
+      const { data: newProfile, error: createError } = await supabase
         .from('profiles')
-        .insert([{ id: userId, ...newProfile }])
+        .insert([newProfileData])
         .select()
         .single();
 
@@ -216,11 +224,16 @@ export function useAuth() {
         throw createError;
       }
 
-      console.log('Novo perfil criado:', createdProfile);
-      return createdProfile;
+      console.log('Novo perfil criado com sucesso:', newProfile);
+      return newProfile;
 
-    } catch (error) {
-      console.error('Erro ao buscar/criar perfil:', error);
+    } catch (error: any) {
+      console.error('Erro detalhado ao buscar/criar perfil:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
       throw error;
     }
   };
@@ -261,28 +274,45 @@ export function useAuth() {
 
   const signIn = async (email: string, password: string): Promise<AuthUser | null> => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      console.log('Iniciando login para:', email);
+      
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
-
-      if (data.user) {
-        const profile = await fetchProfile(data.user.id);
-        if (!profile) {
-          throw new Error('Não foi possível recuperar o perfil');
-        }
-
-        // Iniciar rastreamento de localização após login bem-sucedido
-        startLocationTracking();
-
-        return { user: data.user, profile };
+      if (signInError) {
+        console.error('Erro no login:', signInError);
+        throw signInError;
       }
 
-      return null;
-    } catch (error) {
-      console.error('Erro no login:', error);
+      if (!authData.user) {
+        console.error('Login bem-sucedido mas usuário não encontrado');
+        return null;
+      }
+
+      console.log('Login bem-sucedido, buscando perfil');
+
+      const profile = await fetchProfile(authData.user.id);
+      
+      if (!profile) {
+        console.error('Perfil não encontrado após login');
+        throw new Error('Não foi possível recuperar o perfil');
+      }
+
+      console.log('Perfil recuperado com sucesso:', profile);
+
+      // Iniciar rastreamento de localização
+      startLocationTracking();
+
+      return { user: authData.user, profile };
+    } catch (error: any) {
+      console.error('Erro completo no login:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
       throw error;
     }
   };
