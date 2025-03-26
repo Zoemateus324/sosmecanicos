@@ -31,13 +31,28 @@ export function useAuth() {
         // Verificar sessão atual
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (session?.user && mounted) {
+        if (!mounted) return;
+
+        if (session?.user) {
           setUser(session.user);
           const profile = await fetchProfile(session.user.id);
-          if (mounted) setProfile(profile);
+          if (mounted) {
+            setProfile(profile);
+            if (!profile) {
+              console.error('Erro: Perfil não pôde ser criado ou recuperado');
+              await signOut();
+            }
+          }
+        } else {
+          setUser(null);
+          setProfile(null);
         }
       } catch (error) {
         console.error('Erro na inicialização:', error);
+        if (mounted) {
+          setUser(null);
+          setProfile(null);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -48,26 +63,45 @@ export function useAuth() {
     // Inscrever-se para mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Evento de autenticação:', event);
-      if (session?.user && mounted) {
+      if (!mounted) return;
+
+      if (session?.user) {
         setUser(session.user);
         const profile = await fetchProfile(session.user.id);
-        if (mounted) setProfile(profile);
-      } else if (mounted) {
+        
+        if (mounted) {
+          if (profile) {
+            setProfile(profile);
+          } else {
+            console.error('Erro: Falha ao recuperar ou criar perfil');
+            await signOut();
+            return;
+          }
+        }
+      } else {
         setUser(null);
         setProfile(null);
       }
+      
       if (mounted) setLoading(false);
     });
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 
 
 
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
+    if (!userId) {
+      console.error('UserId não fornecido para busca de perfil');
+      return null;
+    }
+
     try {
       console.log('Buscando perfil para userId:', userId);
       
@@ -99,6 +133,7 @@ export function useAuth() {
 
         if (createError) {
           console.error('Erro ao criar perfil:', createError);
+          setLoading(false);
           return null;
         }
 
@@ -109,6 +144,7 @@ export function useAuth() {
       return profile;
     } catch (error) {
       console.error('Erro ao buscar/criar perfil:', error);
+      setLoading(false);
       return null;
     }
   };
@@ -137,11 +173,9 @@ export function useAuth() {
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
-      if (mounted) {
-        setUser(null);
-        setProfile(null);
-        navigate('/');
-      }
+      setUser(null);
+      setProfile(null);
+      navigate('/');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
