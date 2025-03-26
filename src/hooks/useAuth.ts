@@ -123,8 +123,8 @@ export function useAuth() {
           .insert([
             {
               id: userId,
-              user_type: 'client',
-              full_name: '',
+              user_type: user?.user_metadata?.user_type || 'client',
+              full_name: user?.user_metadata?.full_name || '',
               email: user?.email || ''
             }
           ])
