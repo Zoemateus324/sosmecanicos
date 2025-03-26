@@ -36,51 +36,60 @@ export function useAuth() {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_type, full_name')
+        .select('*')
         .eq('id', userId)
-        .maybeSingle();
+        .single();
 
       if (error) {
         console.error('Erro ao buscar perfil:', error);
         return null;
       }
 
-      if (!data) {
-        console.log('Nenhum perfil encontrado para o usuário');
-        // Se não encontrou o perfil, vamos criar um
-        const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: userId,
-              user_type: 'client', // tipo padrão
-              full_name: ''
-            }
-          ])
-          .select('id, user_type, full_name')
-          .single();
-
-        if (createError) {
-          console.error('Erro ao criar perfil:', createError);
-          return null;
-        }
-
-        console.log('Novo perfil criado:', newProfile);
-        return newProfile as Profile;
-      }
-
       console.log('Perfil encontrado:', data);
-      return {
-        ...data,
-        email: '', // campos opcionais com valores padrão
-        phone: '',
-        address: '',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      } as Profile;
+      return data as Profile;
     } catch (error) {
       console.error('Erro ao buscar perfil:', error);
       return null;
+    }
+  };
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        const profile = await fetchProfile(data.user.id);
+        setAuthState({
+          user: data.user,
+          profile,
+          loading: false,
+          isAuthenticated: true,
+        });
+        return { user: data.user, profile };
+      }
+    } catch (error) {
+      console.error('Erro ao fazer login:', error);
+      throw error;
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      setAuthState({
+        user: null,
+        profile: null,
+        loading: false,
+        isAuthenticated: false,
+      });
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      throw error;
     }
   };
 
@@ -144,6 +153,7 @@ export function useAuth() {
     checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Evento de autenticação:', event);
       if (session?.user && mounted) {
         console.log('Mudança de estado de autenticação para userId:', session.user.id);
         const profile = await fetchProfile(session.user.id);
@@ -175,6 +185,8 @@ export function useAuth() {
     profile: authState.profile,
     loading: authState.loading,
     isAuthenticated: authState.isAuthenticated,
-    userType: authState.profile?.user_type || null
+    userType: authState.profile?.user_type || null,
+    signIn,
+    signOut
   };
 } 
