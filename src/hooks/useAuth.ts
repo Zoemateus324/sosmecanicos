@@ -3,15 +3,12 @@ import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
 export type Profile = {
-  id?: string;
-  user_id: string;
+  id: string;
+  email: string;
   user_type: 'client' | 'mechanic' | 'insurance' | 'tow';
   full_name: string;
   phone?: string;
   address?: string;
-  email?: string;
-  latitude?: number;
-  longitude?: number;
   created_at?: string;
   updated_at?: string;
 };
@@ -43,11 +40,10 @@ export function useAuth() {
         const { data: profiles, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('user_id', userId);
+          .eq('id', userId);
 
         if (error) {
           console.error('Erro ao buscar perfis:', error);
-          // Não lançar o erro, apenas registrar e continuar
         } else {
           existingProfile = profiles && profiles.length > 0 ? profiles[0] : null;
           
@@ -58,11 +54,9 @@ export function useAuth() {
         }
       } catch (fetchError) {
         console.error('Exceção ao buscar perfil:', fetchError);
-        // Não lançar o erro, apenas registrar e continuar tentando criar um perfil
       }
 
       // Se chegou aqui, o perfil não existe ou houve erro ao buscar
-      // Tentar criar um novo perfil
       console.log('Perfil não encontrado ou erro na busca, tentando criar novo...');
       
       let userData;
@@ -76,48 +70,24 @@ export function useAuth() {
       const userEmail = userData.data.user?.email || '';
       const userMetadata = userData.data.user?.user_metadata || {};
 
-      // Tentar obter localização
-      let latitude: number | undefined;
-      let longitude: number | undefined;
-      
-      try {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            timeout: 5000, // Timeout de 5 segundos para não bloquear por muito tempo
-            maximumAge: 60000 // Aceita posições de até 1 minuto atrás
-          });
-        });
-        
-        latitude = position.coords.latitude;
-        longitude = position.coords.longitude;
-      } catch (locationError) {
-        console.warn('Não foi possível obter localização:', locationError);
-        // Continuar sem localização
-      }
-
-      const newProfileData: Profile = {
-        user_id: userId,
+      const newProfileData: Omit<Profile, 'id' | 'created_at' | 'updated_at'> = {
+        email: userEmail,
         user_type: 'client',
         full_name: userMetadata.full_name || '',
-        email: userEmail,
         phone: userMetadata.phone || '',
-        address: '',
-        latitude,
-        longitude
+        address: ''
       };
 
-      // Tentar criar o perfil com tratamento de erro melhorado
       try {
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
-          .insert([newProfileData])
+          .insert([{ id: userId, ...newProfileData }])
           .select()
           .single();
 
         if (createError) {
           console.error('Erro ao criar perfil:', createError);
-          // Verificar se o erro é de conflito (perfil já existe)
-          if (createError.code === '23505' || createError.message?.includes('duplicate')) {
+          if (createError.code === '23505') {
             console.log('Possível conflito de perfil, tentando buscar novamente...');
           } else {
             console.error('Erro desconhecido ao criar perfil:', createError);
@@ -130,14 +100,13 @@ export function useAuth() {
         console.error('Exceção ao criar perfil:', createError);
       }
       
-      // Última tentativa: buscar o perfil novamente em caso de erro de criação
-      // (pode ter sido criado por outra instância ou processo)
+      // Última tentativa: buscar o perfil novamente
       try {
         console.log('Tentando buscar perfil novamente após tentativa de criação...');
         const { data: retryProfiles, error: retryError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('user_id', userId);
+          .eq('id', userId);
           
         if (retryError) {
           console.error('Erro na busca final de perfil:', retryError);
