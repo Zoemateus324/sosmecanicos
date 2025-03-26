@@ -116,7 +116,7 @@ export function useAuth() {
 
   const getCurrentLocation = async (): Promise<Location | null> => {
     if (!navigator.geolocation) {
-      console.error('Geolocalização não suportada neste navegador');
+      console.log('Geolocalização não suportada neste navegador');
       return null;
     }
 
@@ -135,7 +135,7 @@ export function useAuth() {
         timestamp: new Date().toISOString()
       };
     } catch (error) {
-      console.error('Erro ao obter localização atual:', error);
+      console.log('Usuário não permitiu acesso à localização');
       return null;
     }
   };
@@ -149,29 +149,14 @@ export function useAuth() {
     try {
       console.log('Iniciando busca de perfil para userId:', userId);
       
-      // Verificar se o usuário existe
-      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) {
-        console.error('Erro ao verificar usuário:', userError);
-        throw userError;
-      }
-
-      if (!authUser) {
-        console.error('Usuário não encontrado no Auth');
-        return null;
-      }
-
-      console.log('Usuário encontrado no Auth:', authUser.id);
-
       // Buscar perfil existente
       const { data: existingProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
+      if (fetchError) {
         console.error('Erro ao buscar perfil:', fetchError);
         throw fetchError;
       }
@@ -181,8 +166,6 @@ export function useAuth() {
         return existingProfile;
       }
 
-      console.log('Perfil não encontrado, verificando tipo de usuário para criar novo');
-
       // Se não encontrou perfil e não foi fornecido um tipo de usuário
       if (!userType) {
         console.error('Tipo de usuário não fornecido para criar novo perfil');
@@ -191,9 +174,21 @@ export function useAuth() {
 
       console.log('Criando novo perfil com tipo:', userType);
 
-      // Obter localização atual
+      // Tentar obter localização (opcional)
       const location = await getCurrentLocation();
-      console.log('Localização obtida:', location);
+
+      // Buscar dados do usuário
+      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error('Erro ao obter dados do usuário:', userError);
+        throw userError;
+      }
+
+      if (!authUser) {
+        console.error('Usuário não encontrado no Auth');
+        throw new Error('Usuário não encontrado');
+      }
 
       // Preparar dados do novo perfil
       const newProfileData = {
@@ -203,9 +198,12 @@ export function useAuth() {
         full_name: authUser.user_metadata?.full_name || '',
         phone: authUser.user_metadata?.phone || '',
         address: '',
-        latitude: location?.latitude,
-        longitude: location?.longitude,
-        last_location_update: location?.timestamp,
+        // Incluir localização apenas se disponível
+        ...(location && {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          last_location_update: location.timestamp
+        }),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -302,8 +300,12 @@ export function useAuth() {
 
       console.log('Perfil recuperado com sucesso:', profile);
 
-      // Iniciar rastreamento de localização
-      startLocationTracking();
+      // Tentar iniciar rastreamento de localização (opcional)
+      try {
+        startLocationTracking();
+      } catch (error) {
+        console.log('Não foi possível iniciar rastreamento de localização');
+      }
 
       return { user: authData.user, profile };
     } catch (error: any) {
