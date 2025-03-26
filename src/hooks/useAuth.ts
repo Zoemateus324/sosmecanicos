@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
 export type Profile = {
-  id: string;
+  id?: string;
   user_id: string;
   user_type: 'client' | 'mechanic' | 'insurance' | 'tow';
   full_name: string;
@@ -27,94 +27,6 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    let mounted = true;
-    let authSubscription: { unsubscribe: () => void } | null = null;
-
-    const initialize = async () => {
-      if (!mounted) return;
-      setLoading(true);
-
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!mounted) return;
-
-        if (session?.user) {
-          setUser(session.user);
-          const profile = await fetchProfile(session.user.id);
-          
-          if (!mounted) return;
-          
-          if (profile) {
-            setProfile(profile);
-          } else {
-            console.error('Erro: Perfil não encontrado');
-            await signOut();
-          }
-        } else {
-          setUser(null);
-          setProfile(null);
-        }
-      } catch (error) {
-        console.error('Erro na inicialização:', error);
-        if (mounted) {
-          setUser(null);
-          setProfile(null);
-        }
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    const setupAuthSubscription = () => {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (!mounted) return;
-        setLoading(true);
-
-        try {
-          if (session?.user) {
-            setUser(session.user);
-            const profile = await fetchProfile(session.user.id);
-            
-            if (!mounted) return;
-            
-            if (profile) {
-              setProfile(profile);
-            } else {
-              console.error('Erro: Falha ao recuperar perfil');
-              await signOut();
-              return;
-            }
-          } else {
-            setUser(null);
-            setProfile(null);
-          }
-        } catch (error) {
-          console.error('Erro durante mudança de autenticação:', error);
-          if (mounted) {
-            setUser(null);
-            setProfile(null);
-          }
-        } finally {
-          if (mounted) setLoading(false);
-        }
-      });
-
-      authSubscription = subscription;
-    };
-
-    initialize();
-    setupAuthSubscription();
-
-    return () => {
-      mounted = false;
-      if (authSubscription) {
-        authSubscription.unsubscribe();
-      }
-    };
-  }, []);
-
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
     if (!userId) {
       console.error('UserId não fornecido para busca de perfil');
@@ -124,26 +36,28 @@ export function useAuth() {
     try {
       console.log('Buscando perfil para userId:', userId);
       
-      const { data: profile, error } = await supabase
+      // Primeiro, verificar se o perfil existe
+      const { count, error: countError } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId);
 
-      if (error) {
-        console.error('Erro ao buscar perfil:', error);
+      if (countError) {
+        console.error('Erro ao verificar existência do perfil:', countError);
         return null;
       }
 
-      if (!profile) {
+      // Se o perfil não existe, criar um novo
+      if (count === 0) {
         console.log('Perfil não encontrado, criando novo...');
         
         const userData = await supabase.auth.getUser();
-        const userMetadata = userData.data.user?.user_metadata;
+        const userEmail = userData.data.user?.email || '';
+        const userMetadata = userData.data.user?.user_metadata || {};
 
         // Tentar obter localização
-        let latitude = null;
-        let longitude = null;
+        let latitude: number | undefined;
+        let longitude: number | undefined;
         
         try {
           const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -156,12 +70,12 @@ export function useAuth() {
           console.warn('Não foi possível obter localização:', error);
         }
 
-        const newProfileData = {
+        const newProfileData: Profile = {
           user_id: userId,
-          user_type: userMetadata?.user_type || 'client',
-          full_name: userMetadata?.full_name || '',
-          email: userData.data.user?.email || '',
-          phone: '',
+          user_type: 'client',
+          full_name: userMetadata.full_name || '',
+          email: userEmail,
+          phone: userMetadata.phone || '',
           address: '',
           latitude,
           longitude
@@ -180,6 +94,18 @@ export function useAuth() {
 
         console.log('Novo perfil criado:', newProfile);
         return newProfile;
+      }
+
+      // Se o perfil existe, buscá-lo
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        console.error('Erro ao buscar perfil:', error);
+        return null;
       }
 
       console.log('Perfil encontrado:', profile);
@@ -213,6 +139,64 @@ export function useAuth() {
       throw error;
     }
   };
+
+  useEffect(() => {
+    let mounted = true;
+
+    const checkSession = async () => {
+      try {
+        console.log('Verificando sessão...');
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+
+        if (session?.user) {
+          console.log('Sessão encontrada:', session.user.id);
+          setUser(session.user);
+          const profile = await fetchProfile(session.user.id);
+          if (profile && mounted) {
+            setProfile(profile);
+          }
+        } else {
+          console.log('Nenhuma sessão ativa encontrada');
+          if (mounted) {
+            setUser(null);
+            setProfile(null);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao verificar sessão:', error);
+        if (mounted) {
+          setUser(null);
+          setProfile(null);
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    const subscription = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Evento de autenticação:', event);
+      
+      if (session?.user && mounted) {
+        setUser(session.user);
+        const profile = await fetchProfile(session.user.id);
+        if (profile && mounted) {
+          setProfile(profile);
+        }
+      } else if (mounted) {
+        setUser(null);
+        setProfile(null);
+      }
+    });
+
+    checkSession();
+
+    return () => {
+      mounted = false;
+      subscription.data.subscription.unsubscribe();
+    };
+  }, []);
 
   const signOut = async () => {
     try {
