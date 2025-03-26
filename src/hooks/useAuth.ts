@@ -455,6 +455,8 @@ export function useAuth() {
     startLocationTracking,
     stopLocationTracking,
     updateLocation,
-    setProfile
+    setProfile,
+    isAuthenticated: !!user,
+    userType: profile?.user_type
   };
 }

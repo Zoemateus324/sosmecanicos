@@ -33,6 +33,7 @@ import VehicleDetails from './pages/client/VehicleDetails';
 import EditVehicle from './pages/client/EditVehicle';
 import ScheduleService from './pages/client/ScheduleService';
 import Profile from './pages/Profile';
+import Subscriptions from './pages/Subscriptions';
 
 type UserType = 'client' | 'mechanic' | 'insurance' | 'tow' | null;
 
@@ -92,6 +93,11 @@ function App() {
       {/* Rota de perfil - protegida mas acessível para todos os tipos de usuário */}
       <Route path="/profile" element={
         isAuthenticated ? <Profile /> : <Navigate to="/login" replace />
+      } />
+
+      {/* Rota de assinaturas - protegida mas acessível para todos os tipos de usuário */}
+      <Route path="/subscriptions" element={
+        isAuthenticated ? <Subscriptions /> : <Navigate to="/login" replace />
       } />
 
       {/* Rotas do cliente */}
