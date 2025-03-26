@@ -198,12 +198,46 @@ export function useAuth() {
     }
   };
 
+  const deleteAccount = async () => {
+    if (!user?.id) return;
+    
+    try {
+      // Delete user profile first
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user.id);
+
+      if (profileError) {
+        console.error('Erro ao deletar perfil:', profileError);
+        throw profileError;
+      }
+
+      // Then delete the user
+      const { error: userError } = await supabase.auth.admin.deleteUser(user.id);
+
+      if (userError) {
+        console.error('Erro ao deletar usuário:', userError);
+        throw userError;
+      }
+
+      // Clear local state and redirect
+      setUser(null);
+      setProfile(null);
+      navigate('/');
+    } catch (error) {
+      console.error('Erro ao deletar conta:', error);
+      throw error;
+    }
+  };
+
   return {
     user,
     profile,
     loading,
     signIn,
     signOut,
+    deleteAccount,
     isAuthenticated: !!user,
     userType: profile?.user_type,
   };
