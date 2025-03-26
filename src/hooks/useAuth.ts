@@ -25,10 +25,13 @@ export function useAuth() {
 
   useEffect(() => {
     let mounted = true;
+    let authSubscription: { unsubscribe: () => void } | null = null;
 
     const initialize = async () => {
+      if (!mounted) return;
+      setLoading(true);
+
       try {
-        // Verificar sessão atual
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!mounted) return;
@@ -36,12 +39,14 @@ export function useAuth() {
         if (session?.user) {
           setUser(session.user);
           const profile = await fetchProfile(session.user.id);
-          if (mounted) {
+          
+          if (!mounted) return;
+          
+          if (profile) {
             setProfile(profile);
-            if (!profile) {
-              console.error('Erro: Perfil não pôde ser criado ou recuperado');
-              await signOut();
-            }
+          } else {
+            console.error('Erro: Perfil não encontrado');
+            await signOut();
           }
         } else {
           setUser(null);
@@ -58,38 +63,50 @@ export function useAuth() {
       }
     };
 
-    initialize();
+    const setupAuthSubscription = () => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (!mounted) return;
+        setLoading(true);
 
-    // Inscrever-se para mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Evento de autenticação:', event);
-      if (!mounted) return;
-
-      if (session?.user) {
-        setUser(session.user);
-        const profile = await fetchProfile(session.user.id);
-        
-        if (mounted) {
-          if (profile) {
-            setProfile(profile);
+        try {
+          if (session?.user) {
+            setUser(session.user);
+            const profile = await fetchProfile(session.user.id);
+            
+            if (!mounted) return;
+            
+            if (profile) {
+              setProfile(profile);
+            } else {
+              console.error('Erro: Falha ao recuperar perfil');
+              await signOut();
+              return;
+            }
           } else {
-            console.error('Erro: Falha ao recuperar ou criar perfil');
-            await signOut();
-            return;
+            setUser(null);
+            setProfile(null);
           }
+        } catch (error) {
+          console.error('Erro durante mudança de autenticação:', error);
+          if (mounted) {
+            setUser(null);
+            setProfile(null);
+          }
+        } finally {
+          if (mounted) setLoading(false);
         }
-      } else {
-        setUser(null);
-        setProfile(null);
-      }
-      
-      if (mounted) setLoading(false);
-    });
+      });
+
+      authSubscription = subscription;
+    };
+
+    initialize();
+    setupAuthSubscription();
 
     return () => {
       mounted = false;
-      if (subscription) {
-        subscription.unsubscribe();
+      if (authSubscription) {
+        authSubscription.unsubscribe();
       }
     };
   }, []);
@@ -103,8 +120,6 @@ export function useAuth() {
     }
 
     try {
-      console.log('Buscando perfil para userId:', userId);
-      
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('id, user_type, full_name, phone, address, created_at, updated_at')
@@ -117,34 +132,33 @@ export function useAuth() {
       }
 
       if (!profile) {
-        console.log('Perfil não encontrado, criando novo...');
+        const userData = await supabase.auth.getUser();
+        const userMetadata = userData.data.user?.user_metadata;
+
+        const newProfileData = {
+          id: userId,
+          user_type: userMetadata?.user_type || 'client',
+          full_name: userMetadata?.full_name || '',
+          email: userData.data.user?.email || ''
+        };
+
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
-          .insert([
-            {
-              id: userId,
-              user_type: user?.user_metadata?.user_type || 'client',
-              full_name: user?.user_metadata?.full_name || '',
-              email: user?.email || ''
-            }
-          ])
+          .insert([newProfileData])
           .select()
           .single();
 
         if (createError) {
           console.error('Erro ao criar perfil:', createError);
-          setLoading(false);
           return null;
         }
 
         return newProfile;
       }
 
-      console.log('Perfil encontrado:', profile);
       return profile;
     } catch (error) {
       console.error('Erro ao buscar/criar perfil:', error);
-      setLoading(false);
       return null;
     }
   };
