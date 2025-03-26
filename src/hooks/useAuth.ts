@@ -36,17 +36,19 @@ export function useAuth() {
     try {
       console.log('Buscando perfil para userId:', userId);
       
-      // Buscar diretamente o perfil sem verificar a contagem primeiro
-      const { data: existingProfile, error: profileError } = await supabase
+      // Verificar se o perfil existe usando single() em vez de maybeSingle()
+      // para evitar erros 400 quando não encontrar o perfil
+      const { data: profiles, error: countError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+        .eq('user_id', userId);
 
-      if (profileError) {
-        console.error('Erro ao verificar existência do perfil:', profileError);
-        return null;
+      if (countError) {
+        console.error('Erro ao buscar perfis:', countError);
+        throw countError;
       }
+
+      const existingProfile = profiles && profiles.length > 0 ? profiles[0] : null;
 
       // Se o perfil não existe, criar um novo
       if (!existingProfile) {
@@ -82,19 +84,34 @@ export function useAuth() {
           longitude
         };
 
-        const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
-          .insert([newProfileData])
-          .select()
-          .single();
+        try {
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert([newProfileData])
+            .select()
+            .single();
 
-        if (createError) {
+          if (createError) {
+            console.error('Erro ao criar perfil:', createError);
+            throw createError;
+          }
+
+          console.log('Novo perfil criado:', newProfile);
+          return newProfile;
+        } catch (createError) {
           console.error('Erro ao criar perfil:', createError);
+          // Tentar buscar o perfil novamente em caso de erro de duplicação
+          const { data: retryProfiles } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', userId);
+            
+          if (retryProfiles && retryProfiles.length > 0) {
+            console.log('Perfil encontrado após erro de criação:', retryProfiles[0]);
+            return retryProfiles[0];
+          }
           return null;
         }
-
-        console.log('Novo perfil criado:', newProfile);
-        return newProfile;
       }
 
       // Se o perfil existe, retorná-lo diretamente
