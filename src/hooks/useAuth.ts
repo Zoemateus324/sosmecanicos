@@ -8,6 +8,7 @@ export type Profile = {
   full_name: string;
   phone?: string;
   address?: string;
+  email?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -122,7 +123,7 @@ export function useAuth() {
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('id, user_type, full_name, phone, address, created_at, updated_at')
+        .select('id, user_type, full_name, phone, address, created_at, updated_at, email')
         .eq('id', userId)
         .maybeSingle();
 
@@ -139,7 +140,9 @@ export function useAuth() {
           id: userId,
           user_type: userMetadata?.user_type || 'client',
           full_name: userMetadata?.full_name || '',
-          email: userData.data.user?.email || ''
+          email: userData.data.user?.email || '',
+          phone: '',
+          address: ''
         };
 
         const { data: newProfile, error: createError } = await supabase
