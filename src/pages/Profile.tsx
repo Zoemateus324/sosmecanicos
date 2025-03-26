@@ -106,17 +106,25 @@ const [editedProfile, setEditedProfile] = useState<{
     if (!profile?.id) return;
 
     try {
-      const { error } = await supabase
+      // Primeiro deletar o perfil
+      const { error: profileError } = await supabase
         .from('profiles')
         .delete()
         .eq('id', profile.id);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
+      // Depois deletar o usuário no Auth
+      const { error: userError } = await supabase.auth.deleteUser();
+
+      if (userError) throw userError;
+
+      // Fazer logout e redirecionar
       await supabase.auth.signOut();
       navigate('/login');
     } catch (error) {
       console.error('Erro ao deletar conta:', error);
+      alert('Erro ao deletar conta. Por favor, tente novamente.');
     }
   };
 
