@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 
 export type Profile = {
   id: string;
-  user_id: string;
   user_type: 'client' | 'mechanic' | 'insurance' | 'tow';
   full_name: string;
   phone?: string;
@@ -25,49 +24,48 @@ export function useAuth() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Verificar sessão atual
-    checkSession();
+    let mounted = true;
+
+    const initialize = async () => {
+      try {
+        // Verificar sessão atual
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user && mounted) {
+          setUser(session.user);
+          const profile = await fetchProfile(session.user.id);
+          if (mounted) setProfile(profile);
+        }
+      } catch (error) {
+        console.error('Erro na inicialização:', error);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    initialize();
 
     // Inscrever-se para mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Evento de autenticação:', event);
-      if (session?.user) {
+      if (session?.user && mounted) {
         setUser(session.user);
         const profile = await fetchProfile(session.user.id);
-        setProfile(profile);
-      } else {
+        if (mounted) setProfile(profile);
+      } else if (mounted) {
         setUser(null);
         setProfile(null);
       }
-      setLoading(false);
+      if (mounted) setLoading(false);
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
-  const checkSession = async () => {
-    try {
-      console.log('Verificando sessão...');
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        console.log('Sessão encontrada:', session.user.id);
-        setUser(session.user);
-        const profile = await fetchProfile(session.user.id);
-        setProfile(profile);
-      } else {
-        console.log('Nenhuma sessão ativa encontrada');
-        setUser(null);
-        setProfile(null);
-      }
-    } catch (error) {
-      console.error('Erro ao verificar sessão:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
     try {
@@ -75,8 +73,8 @@ export function useAuth() {
       
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('id, user_id, user_type, full_name, phone, address, created_at, updated_at')
-        .eq('user_id', userId)
+        .select('id, user_type, full_name, phone, address, created_at, updated_at')
+        .eq('id', userId)
         .maybeSingle();
 
       if (error) {
@@ -90,9 +88,10 @@ export function useAuth() {
           .from('profiles')
           .insert([
             {
-              user_id: userId,
+              id: userId,
               user_type: 'client',
               full_name: '',
+              email: user?.email || ''
             }
           ])
           .select()
@@ -138,9 +137,11 @@ export function useAuth() {
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
-      setUser(null);
-      setProfile(null);
-      navigate('/');
+      if (mounted) {
+        setUser(null);
+        setProfile(null);
+        navigate('/');
+      }
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
@@ -155,4 +156,4 @@ export function useAuth() {
     isAuthenticated: !!user,
     userType: profile?.user_type,
   };
-} 
+}
