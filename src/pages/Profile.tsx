@@ -25,7 +25,7 @@ interface MechanicStats {
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, profile, loading: authLoading, isAuthenticated } = useAuth();
+  const { profile, loading: authLoading, isAuthenticated } = useAuth();
 
   const [stats, setStats] = useState<MechanicStats | null>(null);
   const [loading, setLoading] = useState(true);

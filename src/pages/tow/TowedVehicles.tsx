@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Layout } from '../../components/Layout';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -54,7 +54,17 @@ export default function TowedVehicles() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setVehicles(data || []);
+      // Transform the data to match the TowedVehicle interface
+      const transformedData = (data || []).map(item => ({
+        id: item.id,
+        vehicle: item.vehicle[0],
+        client: item.client[0],
+        pickup_location: item.pickup_location,
+        delivery_location: item.delivery_location,
+        status: item.status,
+        created_at: item.created_at
+      }));
+      setVehicles(transformedData);
     } catch (error) {
       console.error('Erro ao carregar veículos:', error);
     } finally {

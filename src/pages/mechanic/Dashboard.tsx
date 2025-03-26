@@ -5,6 +5,9 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { Wrench, MapPin, Clock, AlertCircle, CheckCircle2, DollarSign, X } from 'lucide-react';
 
+// Removendo interfaces não utilizadas
+
+// Mantendo apenas as interfaces necessárias
 interface ServiceRequest {
   id: string;
   user_id: string;
@@ -45,43 +48,7 @@ interface QuoteModalProps {
   onSubmit: (requestId: string, quote: number, description: string) => Promise<void>;
 }
 
-interface SupabaseProfile {
-  id: string;
-  full_name: string;
-  phone: string;
-}
 
-interface SupabaseVehicle {
-  id: string;
-  model: string;
-  plate: string;
-  year: string;
-}
-
-interface SupabaseServiceRequest {
-  id: string;
-  user_id: string;
-  vehicle_id: string;
-  description: string;
-  status: string;
-  created_at: string;
-  location: { 
-    latitude: number; 
-    longitude: number; 
-    address: string 
-  };
-  client: { 
-    id: string; 
-    full_name: string;
-    phone: string;
-  };
-  vehicle: { 
-    id: string; 
-    model: string; 
-    plate: string; 
-    year: string;
-  };
-}
 
 const QuoteModal: React.FC<QuoteModalProps> = ({ request, onClose, onSubmit }) => {
   const [quote, setQuote] = useState('');
@@ -230,172 +197,172 @@ export default function MechanicDashboard() {
     }
   }, [authLoading, isAuthenticated, user]);
 
+  const loadData = async () => {
+    if (!user?.id) {
+      console.log('Sem ID do usuário, não carregando dados');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Buscar todas as solicitações pendentes
+      const { data: nearbyData, error: nearbyError } = await supabase
+        .from('service_requests')
+        .select(`
+          id,
+          user_id,
+          vehicle_id,
+          description,
+          status,
+          created_at,
+          location,
+          client:profiles!service_requests_user_id_fkey(
+            id,
+            full_name,
+            phone
+          ),
+          vehicle:vehicles(
+            id,
+            model,
+            plate,
+            year
+          )
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (nearbyError) throw nearbyError;
+
+      // Mapear solicitações próximas
+      const mappedNearbyRequests = (nearbyData || [])
+        .filter(request => 
+          request.client?.[0] && 
+          request.vehicle?.[0] && 
+          request.location
+        )
+        .map(request => ({
+          id: request.id,
+          user_id: request.user_id,
+          vehicle_id: request.vehicle_id,
+          description: request.description,
+          status: request.status,
+          created_at: request.created_at,
+          location: request.location,
+          client: {
+            id: request.client[0].id,
+            full_name: request.client[0].full_name,
+            phone: request.client[0].phone
+          },
+          vehicle: {
+            id: request.vehicle[0].id,
+            model: request.vehicle[0].model,
+            plate: request.vehicle[0].plate,
+            year: request.vehicle[0].year
+          },
+          distance: mechanicLocation ? calculateDistance(
+            mechanicLocation.latitude,
+            mechanicLocation.longitude,
+            request.location.latitude,
+            request.location.longitude
+          ) : 0
+        }));
+
+      setNearbyRequests(mappedNearbyRequests);
+
+      // Buscar serviços ativos
+      const { data: activeData, error: activeError } = await supabase
+        .from('service_requests')
+        .select(`
+          id,
+          user_id,
+          vehicle_id,
+          description,
+          status,
+          created_at,
+          location,
+          client:profiles!service_requests_user_id_fkey(
+            id,
+            full_name,
+            phone
+          ),
+          vehicle:vehicles(
+            id,
+            model,
+            plate,
+            year
+          )
+        `)
+        .in('status', ['accepted', 'in_progress'])
+        .eq('mechanic_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (activeError) throw activeError;
+
+      // Mapear serviços ativos
+      const mappedActiveServices = (activeData || [])
+        .filter(request => 
+          request.client?.[0] && 
+          request.vehicle?.[0] && 
+          request.location
+        )
+        .map(request => ({
+          id: request.id,
+          user_id: request.user_id,
+          vehicle_id: request.vehicle_id,
+          description: request.description,
+          status: request.status,
+          created_at: request.created_at,
+          location: request.location,
+          client: {
+            id: request.client[0].id,
+            full_name: request.client[0].full_name,
+            phone: request.client[0].phone
+          },
+          vehicle: {
+            id: request.vehicle[0].id,
+            model: request.vehicle[0].model,
+            plate: request.vehicle[0].plate,
+            year: request.vehicle[0].year
+          },
+          distance: mechanicLocation ? calculateDistance(
+            mechanicLocation.latitude,
+            mechanicLocation.longitude,
+            request.location.latitude,
+            request.location.longitude
+          ) : 0
+        }));
+
+      setActiveServices(mappedActiveServices);
+
+      // Buscar estatísticas
+      const { data: statsData, error: statsError } = await supabase
+        .from('mechanic_stats')
+        .select('*')
+        .eq('mechanic_id', user.id)
+        .single();
+
+      if (statsError) throw statsError;
+
+      if (statsData) {
+        setStats({
+          completed: statsData.completed_services || 0,
+          rating: statsData.average_rating || 0,
+          earnings: statsData.total_earnings || 0
+        });
+      }
+
+    } catch (err) {
+      console.error('Erro ao carregar dados:', err);
+      setError('Erro ao carregar dados');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Efeito para carregar dados
   useEffect(() => {
-    const loadData = async () => {
-      if (!user?.id) {
-        console.log('Sem ID do usuário, não carregando dados');
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Buscar todas as solicitações pendentes
-        const { data: nearbyData, error: nearbyError } = await supabase
-          .from('service_requests')
-          .select(`
-            id,
-            user_id,
-            vehicle_id,
-            description,
-            status,
-            created_at,
-            location,
-            client:profiles!service_requests_user_id_fkey(
-              id,
-              full_name,
-              phone
-            ),
-            vehicle:vehicles(
-              id,
-              model,
-              plate,
-              year
-            )
-          `)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false });
-
-        if (nearbyError) throw nearbyError;
-
-        // Mapear solicitações próximas
-        const mappedNearbyRequests = (nearbyData || [])
-          .filter(request => 
-            request.client?.[0] && 
-            request.vehicle?.[0] && 
-            request.location
-          )
-          .map(request => ({
-            id: request.id,
-            user_id: request.user_id,
-            vehicle_id: request.vehicle_id,
-            description: request.description,
-            status: request.status,
-            created_at: request.created_at,
-            location: request.location,
-            client: {
-              id: request.client[0].id,
-              full_name: request.client[0].full_name,
-              phone: request.client[0].phone
-            },
-            vehicle: {
-              id: request.vehicle[0].id,
-              model: request.vehicle[0].model,
-              plate: request.vehicle[0].plate,
-              year: request.vehicle[0].year
-            },
-            distance: mechanicLocation ? calculateDistance(
-              mechanicLocation.latitude,
-              mechanicLocation.longitude,
-              request.location.latitude,
-              request.location.longitude
-            ) : 0
-          }));
-
-        setNearbyRequests(mappedNearbyRequests);
-
-        // Buscar serviços ativos
-        const { data: activeData, error: activeError } = await supabase
-          .from('service_requests')
-          .select(`
-            id,
-            user_id,
-            vehicle_id,
-            description,
-            status,
-            created_at,
-            location,
-            client:profiles!service_requests_user_id_fkey(
-              id,
-              full_name,
-              phone
-            ),
-            vehicle:vehicles(
-              id,
-              model,
-              plate,
-              year
-            )
-          `)
-          .in('status', ['accepted', 'in_progress'])
-          .eq('mechanic_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (activeError) throw activeError;
-
-        // Mapear serviços ativos
-        const mappedActiveServices = (activeData || [])
-          .filter(request => 
-            request.client?.[0] && 
-            request.vehicle?.[0] && 
-            request.location
-          )
-          .map(request => ({
-            id: request.id,
-            user_id: request.user_id,
-            vehicle_id: request.vehicle_id,
-            description: request.description,
-            status: request.status,
-            created_at: request.created_at,
-            location: request.location,
-            client: {
-              id: request.client[0].id,
-              full_name: request.client[0].full_name,
-              phone: request.client[0].phone
-            },
-            vehicle: {
-              id: request.vehicle[0].id,
-              model: request.vehicle[0].model,
-              plate: request.vehicle[0].plate,
-              year: request.vehicle[0].year
-            },
-            distance: mechanicLocation ? calculateDistance(
-              mechanicLocation.latitude,
-              mechanicLocation.longitude,
-              request.location.latitude,
-              request.location.longitude
-            ) : 0
-          }));
-
-        setActiveServices(mappedActiveServices);
-
-        // Buscar estatísticas
-        const { data: statsData, error: statsError } = await supabase
-          .from('mechanic_stats')
-          .select('*')
-          .eq('mechanic_id', user.id)
-          .single();
-
-        if (statsError) throw statsError;
-
-        if (statsData) {
-          setStats({
-            completed: statsData.completed_services || 0,
-            rating: statsData.average_rating || 0,
-            earnings: statsData.total_earnings || 0
-          });
-        }
-
-      } catch (err) {
-        console.error('Erro ao carregar dados:', err);
-        setError('Erro ao carregar dados');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (!authLoading && isAuthenticated && user) {
       loadData();
     }

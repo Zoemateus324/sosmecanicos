@@ -4,7 +4,6 @@ import { LogOut, User, Menu, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 export function Navbar() {
-  const navigate = useNavigate();
   const { profile, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
