@@ -87,7 +87,7 @@ const [editedProfile, setEditedProfile] = useState<{
         .update({
           phone: editedProfile.phone
         })
-        .eq('id', profile.id);
+        .eq('user_id', profile.id);
 
       if (error) throw error;
 
@@ -110,7 +110,7 @@ const [editedProfile, setEditedProfile] = useState<{
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
-        .eq('id', profile.id);
+        .eq('user_id', profile.id);
 
       if (profileError) throw profileError;
 
