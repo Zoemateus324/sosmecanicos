@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
+export type UserType = 'client' | 'mechanic' | 'insurance' | 'tow';
+
 export type Profile = {
   id: string;
   email: string;
-  user_type: 'client' | 'mechanic' | 'insurance' | 'tow';
+  user_type: UserType;
   full_name: string;
   phone?: string;
   address?: string;
@@ -25,6 +27,14 @@ export type Location = {
   latitude: number;
   longitude: number;
   timestamp: string;
+};
+
+export type RegisterData = {
+  email: string;
+  password: string;
+  full_name: string;
+  phone: string;
+  user_type: UserType;
 };
 
 export function useAuth() {
@@ -130,7 +140,7 @@ export function useAuth() {
     }
   };
 
-  const fetchProfile = async (userId: string): Promise<Profile | null> => {
+  const fetchProfile = async (userId: string, userType?: UserType): Promise<Profile | null> => {
     if (!userId) {
       console.error('UserId não fornecido para busca de perfil');
       return null;
@@ -156,6 +166,12 @@ export function useAuth() {
         return profiles;
       }
 
+      // Se não encontrou perfil e não foi fornecido um tipo de usuário, retornar null
+      if (!userType) {
+        console.error('Tipo de usuário não fornecido para criar novo perfil');
+        return null;
+      }
+
       // Se não encontrou perfil, criar um novo
       console.log('Perfil não encontrado, criando novo...');
       
@@ -178,7 +194,7 @@ export function useAuth() {
       // Criar novo perfil
       const newProfile: Omit<Profile, 'id'> = {
         email: authUser.email || '',
-        user_type: 'mechanic', // Definir como mechanic por padrão
+        user_type: userType,
         full_name: authUser.user_metadata?.full_name || '',
         phone: authUser.user_metadata?.phone || '',
         address: '',
@@ -209,6 +225,40 @@ export function useAuth() {
     }
   };
 
+  const signUp = async (data: RegisterData): Promise<AuthUser | null> => {
+    try {
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            full_name: data.full_name,
+            phone: data.phone
+          }
+        }
+      });
+
+      if (signUpError) throw signUpError;
+
+      if (authData.user) {
+        const profile = await fetchProfile(authData.user.id, data.user_type);
+        if (!profile) {
+          throw new Error('Não foi possível criar o perfil');
+        }
+
+        // Iniciar rastreamento de localização após registro bem-sucedido
+        startLocationTracking();
+
+        return { user: authData.user, profile };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Erro no registro:', error);
+      throw error;
+    }
+  };
+
   const signIn = async (email: string, password: string): Promise<AuthUser | null> => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -221,7 +271,7 @@ export function useAuth() {
       if (data.user) {
         const profile = await fetchProfile(data.user.id);
         if (!profile) {
-          throw new Error('Não foi possível recuperar ou criar o perfil');
+          throw new Error('Não foi possível recuperar o perfil');
         }
 
         // Iniciar rastreamento de localização após login bem-sucedido
@@ -366,6 +416,7 @@ export function useAuth() {
     profile,
     loading,
     signIn,
+    signUp,
     signOut,
     deleteAccount,
     isAuthenticated: !!user,
