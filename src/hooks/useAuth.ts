@@ -451,9 +451,10 @@ export function useAuth() {
     signUp,
     signOut,
     deleteAccount,
-    isAuthenticated: !!user,
-    userType: profile?.user_type,
     getCurrentLocation,
-    updateLocation
+    startLocationTracking,
+    stopLocationTracking,
+    updateLocation,
+    setProfile
   };
 }
