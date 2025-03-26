@@ -282,6 +282,16 @@ export function useAuth() {
   useEffect(() => {
     let mounted = true;
 
+    // Adicionar evento para quando o usuário sair da página
+    const handleBeforeUnload = () => {
+      supabase.auth.signOut();
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.clear();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Verificar se há uma sessão válida ao iniciar
     const checkSession = async () => {
       try {
         console.log('Verificando sessão...');
@@ -342,6 +352,7 @@ export function useAuth() {
       subscription.data.subscription.unsubscribe();
       // Limpar o rastreamento de localização quando o componente for desmontado
       stopLocationTracking();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
 
