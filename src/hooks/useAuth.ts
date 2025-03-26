@@ -139,115 +139,73 @@ export function useAuth() {
     try {
       console.log('Buscando perfil para userId:', userId);
       
-      let existingProfile: Profile | null = null;
-      
-      try {
-        const { data: profiles, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId);
+      // Primeira tentativa: buscar perfil existente
+      const { data: profiles, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
 
-        if (error) {
-          console.error('Erro ao buscar perfis:', error);
-        } else {
-          existingProfile = profiles && profiles.length > 0 ? profiles[0] : null;
-          
-          if (existingProfile) {
-            console.log('Perfil encontrado:', existingProfile);
-            
-            // Atualizar localização se o perfil existir
-            const location = await getCurrentLocation();
-            if (location) {
-              await updateLocation(location);
-              existingProfile = {
-                ...existingProfile,
-                latitude: location.latitude,
-                longitude: location.longitude,
-                last_location_update: location.timestamp
-              };
-            }
-
-            return existingProfile;
-          }
-        }
-      } catch (fetchError) {
-        console.error('Exceção ao buscar perfil:', fetchError);
+      if (fetchError) {
+        console.error('Erro ao buscar perfil:', fetchError);
+        throw fetchError;
       }
 
-      console.log('Perfil não encontrado ou erro na busca, tentando criar novo...');
+      if (profiles) {
+        console.log('Perfil encontrado:', profiles);
+        return profiles;
+      }
+
+      // Se não encontrou perfil, criar um novo
+      console.log('Perfil não encontrado, criando novo...');
       
-      let userData;
-      try {
-        userData = await supabase.auth.getUser();
-      } catch (userError) {
+      // Buscar dados do usuário
+      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
         console.error('Erro ao obter dados do usuário:', userError);
+        throw userError;
+      }
+
+      if (!authUser) {
+        console.error('Usuário não encontrado');
         return null;
       }
-      
-      const userEmail = userData.data.user?.email || '';
-      const userMetadata = userData.data.user?.user_metadata || {};
-      
-      // Obter localização inicial
+
+      // Obter localização atual
       const location = await getCurrentLocation();
 
-      const newProfileData: Omit<Profile, 'id' | 'created_at' | 'updated_at'> = {
-        email: userEmail,
-        user_type: 'client',
-        full_name: userMetadata.full_name || '',
-        phone: userMetadata.phone || '',
+      // Criar novo perfil
+      const newProfile: Omit<Profile, 'id'> = {
+        email: authUser.email || '',
+        user_type: 'mechanic', // Definir como mechanic por padrão
+        full_name: authUser.user_metadata?.full_name || '',
+        phone: authUser.user_metadata?.phone || '',
         address: '',
         latitude: location?.latitude,
         longitude: location?.longitude,
-        last_location_update: location?.timestamp
+        last_location_update: location?.timestamp,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
-      try {
-        const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
-          .insert([{ id: userId, ...newProfileData }])
-          .select()
-          .single();
+      const { data: createdProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert([{ id: userId, ...newProfile }])
+        .select()
+        .single();
 
-        if (createError) {
-          console.error('Erro ao criar perfil:', createError);
-          if (createError.code === '23505') {
-            console.log('Possível conflito de perfil, tentando buscar novamente...');
-          } else {
-            console.error('Erro desconhecido ao criar perfil:', createError);
-          }
-        } else if (newProfile) {
-          console.log('Novo perfil criado com sucesso:', newProfile);
-          return newProfile;
-        }
-      } catch (createError) {
-        console.error('Exceção ao criar perfil:', createError);
+      if (createError) {
+        console.error('Erro ao criar perfil:', createError);
+        throw createError;
       }
-      
-      try {
-        console.log('Tentando buscar perfil novamente após tentativa de criação...');
-        const { data: retryProfiles, error: retryError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId);
-          
-        if (retryError) {
-          console.error('Erro na busca final de perfil:', retryError);
-          return null;
-        }
-        
-        if (retryProfiles && retryProfiles.length > 0) {
-          console.log('Perfil encontrado na busca final:', retryProfiles[0]);
-          return retryProfiles[0];
-        }
-      } catch (finalError) {
-        console.error('Erro fatal na busca final de perfil:', finalError);
-      }
-      
-      console.error('Não foi possível recuperar ou criar um perfil após múltiplas tentativas');
-      return null;
+
+      console.log('Novo perfil criado:', createdProfile);
+      return createdProfile;
+
     } catch (error) {
-      console.error('Erro geral ao buscar/criar perfil:', error);
-      return null;
+      console.error('Erro ao buscar/criar perfil:', error);
+      throw error;
     }
   };
 
