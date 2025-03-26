@@ -36,19 +36,20 @@ export function useAuth() {
     try {
       console.log('Buscando perfil para userId:', userId);
       
-      // Primeiro, verificar se o perfil existe
-      const { count, error: countError } = await supabase
+      // Buscar diretamente o perfil sem verificar a contagem primeiro
+      const { data: existingProfile, error: profileError } = await supabase
         .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId);
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-      if (countError) {
-        console.error('Erro ao verificar existência do perfil:', countError);
+      if (profileError) {
+        console.error('Erro ao verificar existência do perfil:', profileError);
         return null;
       }
 
       // Se o perfil não existe, criar um novo
-      if (count === 0) {
+      if (!existingProfile) {
         console.log('Perfil não encontrado, criando novo...');
         
         const userData = await supabase.auth.getUser();
@@ -96,20 +97,9 @@ export function useAuth() {
         return newProfile;
       }
 
-      // Se o perfil existe, buscá-lo
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      if (error) {
-        console.error('Erro ao buscar perfil:', error);
-        return null;
-      }
-
-      console.log('Perfil encontrado:', profile);
-      return profile;
+      // Se o perfil existe, retorná-lo diretamente
+      console.log('Perfil encontrado:', existingProfile);
+      return existingProfile;
     } catch (error) {
       console.error('Erro ao buscar/criar perfil:', error);
       return null;
