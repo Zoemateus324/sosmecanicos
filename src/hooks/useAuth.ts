@@ -36,9 +36,9 @@ export function useAuth() {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, user_type, full_name, phone, address, created_at, updated_at')
+        .select('id, user_type, full_name')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Erro ao buscar perfil:', error);
@@ -47,11 +47,37 @@ export function useAuth() {
 
       if (!data) {
         console.log('Nenhum perfil encontrado para o usuário');
-        return null;
+        // Se não encontrou o perfil, vamos criar um
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: userId,
+              user_type: 'client', // tipo padrão
+              full_name: ''
+            }
+          ])
+          .select('id, user_type, full_name')
+          .single();
+
+        if (createError) {
+          console.error('Erro ao criar perfil:', createError);
+          return null;
+        }
+
+        console.log('Novo perfil criado:', newProfile);
+        return newProfile as Profile;
       }
 
       console.log('Perfil encontrado:', data);
-      return data as Profile;
+      return {
+        ...data,
+        email: '', // campos opcionais com valores padrão
+        phone: '',
+        address: '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      } as Profile;
     } catch (error) {
       console.error('Erro ao buscar perfil:', error);
       return null;
