@@ -1,43 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { LogOut, User, Menu, X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-
-type Profile = {
-  full_name: string;
-  user_type: 'client' | 'mechanic' | 'insurance' | 'tow';
-};
+import { useAuth } from '../hooks/useAuth';
 
 export function Navbar() {
   const navigate = useNavigate();
-  const [profile, setProfile] = React.useState<Profile | null>(null);
+  const { profile, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  React.useEffect(() => {
-    getProfile();
-  }, []);
-
-  const getProfile = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('full_name, user_type')
-          .eq('id', user.id)
-          .single();
-        
-        setProfile(profile);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar perfil:', error);
-    }
-  };
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
-      navigate('/login');
+      await signOut();
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
