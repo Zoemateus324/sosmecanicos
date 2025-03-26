@@ -614,14 +614,14 @@ export default function MechanicDashboard() {
         </div>
 
         {/* Grid Principal */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Solicitações Próximas */}
+        <div className="grid grid-cols-1 gap-8">
+          {/* Solicitações de Serviço */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-xl font-semibold mb-4">Solicitações Próximas</h2>
+          <h2 className="text-xl font-semibold mb-4">Solicitações de Serviço</h2>
             {nearbyRequests.length === 0 ? (
               <div className="text-center py-8">
                 <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500">Nenhuma solicitação próxima no momento</p>
+                <p className="text-gray-500">Nenhuma solicitação disponível no momento</p>
               </div>
             ) : (
               <div className="space-y-4">
