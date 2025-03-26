@@ -242,7 +242,7 @@ export default function MechanicDashboard() {
         setLoading(true);
         setError(null);
 
-        // Buscar solicitações próximas
+        // Buscar todas as solicitações pendentes
         const { data: nearbyData, error: nearbyError } = await supabase
           .from('service_requests')
           .select(`
@@ -266,7 +266,6 @@ export default function MechanicDashboard() {
             )
           `)
           .eq('status', 'pending')
-          .is('mechanic_id', null)
           .order('created_at', { ascending: false });
 
         if (nearbyError) throw nearbyError;
