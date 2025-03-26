@@ -17,6 +17,12 @@ interface Profile {
   created_at: string;
 }
 
+interface DeleteAccountModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
 interface MechanicStats {
   completed_services: number;
   average_rating: number;
@@ -30,12 +36,11 @@ export default function Profile() {
   const [stats, setStats] = useState<MechanicStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedProfile, setEditedProfile] = useState<{
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+const [editedProfile, setEditedProfile] = useState<{
     phone: string;
-    address: string;
   }>({
-    phone: '',
-    address: ''
+    phone: ''
   });
   const [saving, setSaving] = useState(false);
 
@@ -47,8 +52,7 @@ export default function Profile() {
 
     if (profile) {
       setEditedProfile({
-        phone: profile.phone || '',
-        address: profile.address || ''
+        phone: profile.phone || ''
       });
 
       // Se for mecânico, buscar estatísticas
@@ -81,8 +85,7 @@ export default function Profile() {
       const { error } = await supabase
         .from('profiles')
         .update({
-          phone: editedProfile.phone,
-          address: editedProfile.address
+          phone: editedProfile.phone
         })
         .eq('id', profile.id);
 
@@ -97,6 +100,51 @@ export default function Profile() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!profile?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', profile.id);
+
+      if (error) throw error;
+
+      await supabase.auth.signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Erro ao deletar conta:', error);
+    }
+  };
+
+  const DeleteAccountModal = ({ isOpen, onClose, onConfirm }: DeleteAccountModalProps) => {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+          <h3 className="text-lg font-semibold mb-4">Confirmar exclusão</h3>
+          <p className="text-gray-600 mb-6">Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita.</p>
+          <div className="flex justify-end space-x-4">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={onConfirm}
+              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Excluir conta
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -173,18 +221,25 @@ export default function Profile() {
               </div>
               <div className="flex items-center space-x-3">
                 <MapPin className="w-5 h-5 text-gray-400" />
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editedProfile.address}
-                    onChange={(e) => setEditedProfile(prev => ({ ...prev, address: e.target.value }))}
-                    placeholder="Seu endereço"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                  />
-                ) : (
-                  <span>{profile?.address || 'Não informado'}</span>
-                )}
+                <span>{profile?.address || 'Não informado'}</span>
               </div>
+
+              {/* Botão de Excluir Conta */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  className="flex items-center space-x-2 text-red-600 hover:text-red-700"
+                >
+                  <span>Excluir conta</span>
+                </button>
+              </div>
+
+              {/* Modal de Confirmação */}
+              <DeleteAccountModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={handleDeleteAccount}
+              />
             </div>
           </div>
 
