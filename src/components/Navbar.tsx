@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 
 type Profile = {
   full_name: string;
-  user_type: 'client' | 'admin';
+  user_type: 'client' | 'mechanic' | 'insurance' | 'tow';
 };
 
 export function Navbar() {
@@ -121,22 +121,86 @@ export function Navbar() {
               >
                 Dashboard
               </Link>
+              {profile.user_type === 'client' && (
+                <>
+                  <Link
+                    to="/vehicles"
+                    className="text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    Veículos
+                  </Link>
+                  <Link
+                    to="/services"
+                    className="text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    Serviços
+                  </Link>
+                </>
+              )}
+              {profile.user_type === 'mechanic' && (
+                <>
+                  <Link
+                    to="/mechanic"
+                    className="text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    Mecânica
+                  </Link>
+                  <Link
+                    to="/services"
+                    className="text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    Serviços
+                  </Link>
+                </>
+              )}
+              {profile.user_type === 'insurance' && (
+                <>
+                  <Link
+                    to="/quotes"
+                    className="text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    Minhas Cotações
+                  </Link>
+                  <Link
+                    to="/clients"
+                    className="text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    Clientes
+                  </Link>
+                </>
+              )}
+              {profile.user_type === 'tow' && (
+                <>
+                  <Link
+                    to="/clients"
+                    className="text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    Clientes
+                  </Link>
+                  <Link
+                    to="/towed-vehicles"
+                    className="text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    Últimos Veículos Guinchados
+                  </Link>
+                  <Link
+                    to="/partner-insurers"
+                    className="text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    Seguradoras Parceiras
+                  </Link>
+                </>
+              )}
               <Link
-                to="/vehicles"
+                to="/profile"
                 className="text-gray-600 hover:text-gray-900 font-medium"
               >
-                Veículos
-              </Link>
-              <Link
-                to="/services"
-                className="text-gray-600 hover:text-gray-900 font-medium"
-              >
-                Serviços
+                Meu Perfil
               </Link>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2">
+            <Link to="/profile" className="hidden sm:flex items-center gap-2">
               <div className="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center">
                 <User className="h-5 w-5 text-yellow-600" />
               </div>
@@ -144,7 +208,7 @@ export function Navbar() {
                 <p className="text-sm font-medium text-gray-900">{profile.full_name}</p>
                 <p className="text-xs text-gray-500 capitalize">{profile.user_type}</p>
               </div>
-            </div>
+            </Link>
             <button
               onClick={handleLogout}
               className="hidden sm:flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium"
@@ -174,19 +238,91 @@ export function Navbar() {
             >
               Dashboard
             </Link>
+            {profile.user_type === 'client' && (
+              <>
+                <Link
+                  to="/vehicles"
+                  className="block text-gray-600 hover:text-gray-900 font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Veículos
+                </Link>
+                <Link
+                  to="/services"
+                  className="block text-gray-600 hover:text-gray-900 font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Serviços
+                </Link>
+              </>
+            )}
+            {profile.user_type === 'mechanic' && (
+              <>
+                <Link
+                  to="/mechanic"
+                  className="block text-gray-600 hover:text-gray-900 font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Mecânica
+                </Link>
+                <Link
+                  to="/services"
+                  className="block text-gray-600 hover:text-gray-900 font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Serviços
+                </Link>
+              </>
+            )}
+            {profile.user_type === 'insurance' && (
+              <>
+                <Link
+                  to="/quotes"
+                  className="block text-gray-600 hover:text-gray-900 font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Minhas Cotações
+                </Link>
+                <Link
+                  to="/clients"
+                  className="block text-gray-600 hover:text-gray-900 font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Clientes
+                </Link>
+              </>
+            )}
+            {profile.user_type === 'tow' && (
+              <>
+                <Link
+                  to="/clients"
+                  className="block text-gray-600 hover:text-gray-900 font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Clientes
+                </Link>
+                <Link
+                  to="/towed-vehicles"
+                  className="block text-gray-600 hover:text-gray-900 font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Últimos Veículos Guinchados
+                </Link>
+                <Link
+                  to="/partner-insurers"
+                  className="block text-gray-600 hover:text-gray-900 font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Seguradoras Parceiras
+                </Link>
+              </>
+            )}
             <Link
-              to="/vehicles"
+              to="/profile"
               className="block text-gray-600 hover:text-gray-900 font-medium"
               onClick={() => setIsMenuOpen(false)}
             >
-              Veículos
-            </Link>
-            <Link
-              to="/services"
-              className="block text-gray-600 hover:text-gray-900 font-medium"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Serviços
+              Meu Perfil
             </Link>
             <div className="flex items-center gap-2 py-2">
               <div className="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center">
