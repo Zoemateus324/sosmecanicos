@@ -4,6 +4,8 @@ import { Layout } from '../components/Layout';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { MapPin, Phone, Mail, Star, Wrench, Clock, Save, Edit2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface Profile {
   id: string;
@@ -23,8 +25,8 @@ interface MechanicStats {
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, loading: authLoading, isAuthenticated } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { user, profile, loading: authLoading, isAuthenticated } = useAuth();
+
   const [stats, setStats] = useState<MechanicStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -43,49 +45,36 @@ export default function Profile() {
       return;
     }
 
-    const fetchProfile = async () => {
-      try {
-        if (!user?.id) return;
+    if (profile) {
+      setEditedProfile({
+        phone: profile.phone || '',
+        address: profile.address || ''
+      });
 
-        // Buscar perfil do usuário
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+      // Se for mecânico, buscar estatísticas
+      if (profile.user_type === 'mechanic') {
+        const fetchMechanicStats = async () => {
+          try {
+            const { data: statsData, error: statsError } = await supabase
+              .from('mechanic_stats')
+              .select('*')
+              .eq('mechanic_id', profile.id)
+              .single();
 
-        if (profileError) throw profileError;
-        setProfile(profileData);
-        setEditedProfile({
-          phone: profileData.phone || '',
-          address: profileData.address || ''
-        });
-
-        // Se for mecânico, buscar estatísticas
-        if (profileData.user_type === 'mechanic') {
-          const { data: statsData, error: statsError } = await supabase
-            .from('mechanic_stats')
-            .select('*')
-            .eq('mechanic_id', user.id)
-            .single();
-
-          if (statsError) throw statsError;
-          setStats(statsData);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar perfil:', error);
-      } finally {
-        setLoading(false);
+            if (statsError) throw statsError;
+            setStats(statsData);
+          } catch (error) {
+            console.error('Erro ao carregar estatísticas:', error);
+          }
+        };
+        fetchMechanicStats();
       }
-    };
-
-    if (isAuthenticated) {
-      fetchProfile();
     }
-  }, [isAuthenticated, authLoading, navigate, user?.id]);
+    setLoading(false);
+  }, [isAuthenticated, authLoading, navigate, profile]);
 
   const handleSave = async () => {
-    if (!user?.id) return;
+    if (!profile?.id) return;
 
     setSaving(true);
     try {
@@ -95,15 +84,12 @@ export default function Profile() {
           phone: editedProfile.phone,
           address: editedProfile.address
         })
-        .eq('id', user.id);
+        .eq('id', profile.id);
 
       if (error) throw error;
 
-      setProfile(prev => prev ? {
-        ...prev,
-        phone: editedProfile.phone,
-        address: editedProfile.address
-      } : null);
+      // Atualizar o perfil no contexto de autenticação
+      window.location.reload();
       
       setIsEditing(false);
     } catch (error) {
@@ -137,7 +123,7 @@ export default function Profile() {
                 <h1 className="text-2xl font-bold text-gray-900">{profile?.full_name}</h1>
                 <p className="text-gray-500 capitalize">{profile?.user_type}</p>
                 <p className="text-sm text-gray-500">
-                  Membro desde {new Date(profile?.created_at || '').toLocaleDateString('pt-BR')}
+                  Membro desde {profile?.created_at ? format(new Date(profile.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ''}
                 </p>
               </div>
             </div>
@@ -235,4 +221,4 @@ export default function Profile() {
       </div>
     </Layout>
   );
-} 
+}
