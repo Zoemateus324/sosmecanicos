@@ -4,11 +4,14 @@ import { useNavigate } from 'react-router-dom';
 
 export type Profile = {
   id: string;
+  user_id: string;
   user_type: 'client' | 'mechanic' | 'insurance' | 'tow';
   full_name: string;
   phone?: string;
   address?: string;
   email?: string;
+  latitude?: number;
+  longitude?: number;
   created_at?: string;
   updated_at?: string;
 };
@@ -112,8 +115,6 @@ export function useAuth() {
     };
   }, []);
 
-
-
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
     if (!userId) {
       console.error('UserId não fornecido para busca de perfil');
@@ -121,10 +122,12 @@ export function useAuth() {
     }
 
     try {
+      console.log('Buscando perfil para userId:', userId);
+      
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('id, user_type, full_name, phone, address, created_at, updated_at, email')
-        .eq('id', userId)
+        .select('*')
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (error) {
@@ -133,16 +136,35 @@ export function useAuth() {
       }
 
       if (!profile) {
+        console.log('Perfil não encontrado, criando novo...');
+        
         const userData = await supabase.auth.getUser();
         const userMetadata = userData.data.user?.user_metadata;
 
+        // Tentar obter localização
+        let latitude = null;
+        let longitude = null;
+        
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject);
+          });
+          
+          latitude = position.coords.latitude;
+          longitude = position.coords.longitude;
+        } catch (error) {
+          console.warn('Não foi possível obter localização:', error);
+        }
+
         const newProfileData = {
-          id: userId,
+          user_id: userId,
           user_type: userMetadata?.user_type || 'client',
           full_name: userMetadata?.full_name || '',
           email: userData.data.user?.email || '',
           phone: '',
-          address: ''
+          address: '',
+          latitude,
+          longitude
         };
 
         const { data: newProfile, error: createError } = await supabase
@@ -156,9 +178,11 @@ export function useAuth() {
           return null;
         }
 
+        console.log('Novo perfil criado:', newProfile);
         return newProfile;
       }
 
+      console.log('Perfil encontrado:', profile);
       return profile;
     } catch (error) {
       console.error('Erro ao buscar/criar perfil:', error);
@@ -177,6 +201,9 @@ export function useAuth() {
 
       if (data.user) {
         const profile = await fetchProfile(data.user.id);
+        if (!profile) {
+          throw new Error('Não foi possível recuperar ou criar o perfil');
+        }
         return { user: data.user, profile };
       }
 
@@ -206,7 +233,7 @@ export function useAuth() {
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
-        .eq('id', user.id);
+        .eq('user_id', user.id);
 
       if (profileError) {
         console.error('Erro ao deletar perfil:', profileError);
