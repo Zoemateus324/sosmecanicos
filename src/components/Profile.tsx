@@ -1,15 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import '../styles/theme.css';
 
 export function Profile() {
-  const { profile, setProfile } = useAuth();
+  const { profile, setProfile, user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
     phone: profile?.phone || '',
     address: profile?.address || ''
   });
+  
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        full_name: profile.full_name || '',
+        phone: profile.phone || '',
+        address: profile.address || ''
+      });
+    }
+  }, [profile]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,13 +69,13 @@ export function Profile() {
 
   return (
     <div className="max-w-2xl mx-auto p-4">
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className="card">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">Perfil do Cliente</h2>
+          <h2 className="heading-2">Perfil do Cliente</h2>
           {!isEditing && (
             <button
               onClick={() => setIsEditing(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="button-primary"
             >
               Editar
             </button>
@@ -89,7 +100,7 @@ export function Profile() {
                   name="full_name"
                   value={formData.full_name}
                   onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="input-field"
                   required
                 />
               </div>
@@ -103,7 +114,7 @@ export function Profile() {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="input-field"
                   required
                 />
               </div>
@@ -117,7 +128,7 @@ export function Profile() {
                   name="address"
                   value={formData.address}
                   onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="input-field"
                 />
               </div>
 
@@ -125,14 +136,14 @@ export function Profile() {
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+                  className="button-secondary"
                   disabled={loading}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                  className="button-primary disabled:opacity-50"
                   disabled={loading}
                 >
                   {loading ? 'Salvando...' : 'Salvar'}
@@ -175,4 +186,4 @@ export function Profile() {
       </div>
     </div>
   );
-} 
+}
