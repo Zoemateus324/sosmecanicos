@@ -179,6 +179,46 @@ export function useAuth() {
 
       if (existingProfile) {
         console.log('Perfil existente encontrado:', existingProfile);
+        
+        // Buscar perfil específico baseado no tipo de usuário
+        if (existingProfile.user_type === 'mechanic') {
+          try {
+            const { data: mechanicProfile } = await supabase
+              .from('mechanic_profiles')
+              .select('*')
+              .eq('id', userId)
+              .maybeSingle();
+            
+            console.log('Perfil de mecânico encontrado:', mechanicProfile);
+          } catch (err) {
+            console.error('Erro ao buscar perfil de mecânico:', err);
+          }
+        } else if (existingProfile.user_type === 'tow') {
+          try {
+            const { data: towProfile } = await supabase
+              .from('tow_truck_profiles')
+              .select('*')
+              .eq('id', userId)
+              .maybeSingle();
+            
+            console.log('Perfil de guincho encontrado:', towProfile);
+          } catch (err) {
+            console.error('Erro ao buscar perfil de guincho:', err);
+          }
+        } else if (existingProfile.user_type === 'insurance') {
+          try {
+            const { data: insuranceProfile } = await supabase
+              .from('insurance_profiles')
+              .select('*')
+              .eq('id', userId)
+              .maybeSingle();
+            
+            console.log('Perfil de seguradora encontrado:', insuranceProfile);
+          } catch (err) {
+            console.error('Erro ao buscar perfil de seguradora:', err);
+          }
+        }
+        
         return existingProfile;
       }
 

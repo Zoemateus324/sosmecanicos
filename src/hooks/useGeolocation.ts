@@ -15,6 +15,16 @@ export function useGeolocation() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  
+  // Função para obter uma localização padrão (centro de São Paulo)
+  const getDefaultLocation = useCallback((): LocationData => {
+    console.log('Usando localização padrão (centro de São Paulo)');
+    return {
+      latitude: -23.5505,
+      longitude: -46.6333,
+      timestamp: new Date().toISOString()
+    };
+  }, []);
 
   // Função para salvar localização no Supabase
   const saveLocationToProfile = useCallback(async (location: LocationData, userId?: string) => {
@@ -67,7 +77,7 @@ export function useGeolocation() {
   const getCurrentLocation = useCallback(async (userId?: string): Promise<LocationData | null> => {
     if (!navigator.geolocation) {
       setError('Geolocalização não é suportada neste navegador');
-      return null;
+      return getDefaultLocation();
     }
 
     setLoading(true);
@@ -117,16 +127,24 @@ export function useGeolocation() {
         setError('Erro ao obter localização');
       }
       
-      return null;
+      // Retornar localização padrão como fallback
+      return getDefaultLocation();
     } finally {
       setLoading(false);
     }
+  }
   }, [saveLocationToProfile, saveLocationToHistory]);
 
   // Função para iniciar o rastreamento contínuo
   const startTracking = useCallback((userId?: string) => {
     if (!navigator.geolocation) {
       setError('Geolocalização não é suportada neste navegador');
+      // Usar localização padrão
+      const defaultLocation = getDefaultLocation();
+      setCurrentLocation(defaultLocation);
+      if (userId) {
+        saveLocationToProfile(defaultLocation, userId);
+      }
       return;
     }
 
@@ -161,13 +179,37 @@ export function useGeolocation() {
         if (err.code === 1) {
           setPermissionDenied(true);
           setError('Permissão de localização negada');
+          // Usar localização padrão
+          const defaultLocation = getDefaultLocation();
+          setCurrentLocation(defaultLocation);
+          if (userId) {
+            saveLocationToProfile(defaultLocation, userId);
+          }
           stopTracking();
         } else if (err.code === 2) {
           setError('Localização indisponível');
+          // Usar localização padrão
+          const defaultLocation = getDefaultLocation();
+          setCurrentLocation(defaultLocation);
+          if (userId) {
+            saveLocationToProfile(defaultLocation, userId);
+          }
         } else if (err.code === 3) {
           setError('Tempo esgotado ao obter localização');
+          // Usar localização padrão
+          const defaultLocation = getDefaultLocation();
+          setCurrentLocation(defaultLocation);
+          if (userId) {
+            saveLocationToProfile(defaultLocation, userId);
+          }
         } else {
           setError('Erro ao rastrear localização');
+          // Usar localização padrão
+          const defaultLocation = getDefaultLocation();
+          setCurrentLocation(defaultLocation);
+          if (userId) {
+            saveLocationToProfile(defaultLocation, userId);
+          }
         }
       },
       {
