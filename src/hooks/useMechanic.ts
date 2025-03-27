@@ -22,6 +22,51 @@ export function useMechanic() {
   const [error, setError] = useState<string | null>(null);
   const { user, profile } = useAuth();
 
+  const createMechanicStats = async (mechanicId: string): Promise<MechanicStats | null> => {
+    try {
+      console.log('Criando estatísticas iniciais para o mecânico:', mechanicId);
+      
+      // Verificar se o perfil existe
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', mechanicId)
+        .single();
+      
+      if (profileError) {
+        console.error('Erro ao verificar perfil do mecânico:', profileError);
+        setError(profileError.message);
+        return null;
+      }
+      
+      // Inserir registro inicial na tabela mechanic_stats
+      const { data, error } = await supabase
+        .from('mechanic_stats')
+        .insert([
+          { 
+            mechanic_id: mechanicId,
+            completed_services: 0,
+            average_rating: 0,
+            total_earnings: 0
+          }
+        ])
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Erro ao criar estatísticas do mecânico:', error);
+        setError(error.message);
+        return null;
+      }
+      
+      return data;
+    } catch (err: any) {
+      console.error('Erro ao criar estatísticas do mecânico:', err);
+      setError(err.message);
+      return null;
+    }
+  };
+
   const getMechanicStats = async (mechanicId: string): Promise<MechanicStats | null> => {
     try {
       setLoading(true);
@@ -34,7 +79,13 @@ export function useMechanic() {
         .single();
 
       if (error) {
-        console.error('Erro ao buscar dados do mecânico:', error);
+        console.log('Estatísticas não encontradas, tentando criar:', error.message);
+        
+        // Se o erro for porque não encontrou resultados, tenta criar um novo registro
+        if (error.code === 'PGRST116') {
+          return await createMechanicStats(mechanicId);
+        }
+        
         setError(error.message);
         return null;
       }

@@ -337,20 +337,53 @@ export default function MechanicDashboard() {
       setActiveServices(mappedActiveServices);
 
       // Buscar estatísticas
-      const { data: statsData, error: statsError } = await supabase
-        .from('mechanic_stats')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+      try {
+        const { data: statsData, error: statsError } = await supabase
+          .from('mechanic_stats')
+          .select('*')
+          .eq('id', user.id)
+          .single();
 
-      if (statsError) throw statsError;
-
-      if (statsData) {
-        setStats({
-          completed: statsData.completed_services || 0,
-          rating: statsData.average_rating || 0,
-          earnings: statsData.total_earnings || 0
-        });
+        if (statsError) {
+          console.log('Erro ao buscar estatísticas:', statsError.message);
+          
+          // Se o erro for porque não encontrou resultados, criar um registro inicial
+          if (statsError.code === 'PGRST116') {
+            console.log('Criando estatísticas iniciais para o mecânico');
+            
+            // Inserir registro inicial na tabela mechanic_stats
+            const { data: newStatsData, error: insertError } = await supabase
+              .from('mechanic_stats')
+              .insert([
+                { 
+                  mechanic_id: user.id,
+                  completed_services: 0,
+                  average_rating: 0,
+                  total_earnings: 0
+                }
+              ])
+              .select()
+              .single();
+            
+            if (insertError) {
+              console.error('Erro ao criar estatísticas do mecânico:', insertError);
+            } else if (newStatsData) {
+              setStats({
+                completed: newStatsData.completed_services || 0,
+                rating: newStatsData.average_rating || 0,
+                earnings: newStatsData.total_earnings || 0
+              });
+            }
+          }
+        } else if (statsData) {
+          setStats({
+            completed: statsData.completed_services || 0,
+            rating: statsData.average_rating || 0,
+            earnings: statsData.total_earnings || 0
+          });
+        }
+      } catch (statsErr) {
+        console.error('Erro ao processar estatísticas:', statsErr);
       }
 
     } catch (err) {
