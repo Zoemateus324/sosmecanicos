@@ -132,8 +132,7 @@ export function useGeolocation() {
     } finally {
       setLoading(false);
     }
-  }
-  }, [saveLocationToProfile, saveLocationToHistory]);
+  }, [saveLocationToProfile, saveLocationToHistory, setError, setLoading, setCurrentLocation, setLocationHistory, setPermissionDenied, getDefaultLocation]);
 
   // Função para iniciar o rastreamento contínuo
   const startTracking = useCallback((userId?: string) => {
@@ -220,7 +219,7 @@ export function useGeolocation() {
     );
 
     setWatchId(id);
-  }, [watchId, saveLocationToProfile, saveLocationToHistory]);
+  }, [watchId, saveLocationToProfile, saveLocationToHistory, setError, setCurrentLocation, setLocationHistory, setPermissionDenied, getDefaultLocation, stopTracking, setWatchId]);
 
   // Função para parar o rastreamento
   const stopTracking = useCallback(() => {
