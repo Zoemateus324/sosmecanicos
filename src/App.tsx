@@ -124,6 +124,8 @@ function App() {
           <PrivateRoute userType={userType} allowedType="mechanic">
             <Routes>
               <Route path="dashboard" element={<MechanicDashboard />} />
+              <Route path="employees" element={<EmployeesPage />} />
+              <Route path="services" element={<ServicesPage />} />
             </Routes>
           </PrivateRoute>
         }

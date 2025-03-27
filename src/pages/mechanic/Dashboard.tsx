@@ -3,7 +3,7 @@ import {Layout} from '../../components/Layout';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import { Wrench, MapPin, Clock, AlertCircle, CheckCircle2, DollarSign, X } from 'lucide-react';
+import { Wrench, MapPin, Clock, AlertCircle, CheckCircle2, DollarSign, X, UserPlus } from 'lucide-react';
 
 // Removendo interfaces não utilizadas
 
@@ -697,6 +697,39 @@ export default function MechanicDashboard() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Links para Cadastros */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div 
+            onClick={() => navigate('/mechanic/employees')}
+            className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer border border-gray-100"
+          >
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                <UserPlus className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Funcionários</h3>
+                <p className="text-gray-500">Gerencie sua equipe de mecânicos e funcionários</p>
+              </div>
+            </div>
+          </div>
+
+          <div 
+            onClick={() => navigate('/mechanic/services')}
+            className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer border border-gray-100"
+          >
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                <Wrench className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Serviços Prestados</h3>
+                <p className="text-gray-500">Cadastre e gerencie os serviços oferecidos</p>
+              </div>
+            </div>
           </div>
         </div>
 
