@@ -68,7 +68,7 @@ export function useProposals() {
         .insert([{
           user_id: clientId,
           title: 'Nova Proposta Recebida',
-          message: `Um mecânico enviou uma proposta de R$ ${totalValue.toFixed(2)} (inclui taxa de 10% da plataforma)`,
+          message: `Um mecânico enviou uma proposta de R$ ${totalValue.toFixed(2)}`,
           type: 'proposal',
           reference_id: proposal.id,
           read: false
@@ -96,7 +96,7 @@ export function useProposals() {
         customer: customerData,
         split: {
           mechanic_id: proposal.mechanic_id,
-          platform_fee_percentage: 20 // 20% para a plataforma
+          platform_fee_percentage: 15 // 15% para a plataforma
         }
       });
 
@@ -199,4 +199,4 @@ export function useProposals() {
     completeService,
     subscribeToProposals
   };
-} 
+}

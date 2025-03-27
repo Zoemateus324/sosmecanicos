@@ -42,6 +42,7 @@ export type PaymentStatus = 'pending' | 'processing' | 'paid' | 'failed' | 'refu
 export function usePayment() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
 
   const getAccessToken = async () => {
     try {
@@ -70,44 +71,67 @@ export function usePayment() {
   const createPayment = async (data: PaymentData) => {
     setLoading(true);
     setError(null);
+    setPaymentStatus(null);
+
+    // Validar dados de entrada
+    if (!data.total || data.total <= 0) {
+      setError('O valor do pagamento deve ser maior que zero');
+      setLoading(false);
+      throw new Error('O valor do pagamento deve ser maior que zero');
+    }
+
+    if (!data.description) {
+      setError('A descrição do serviço é obrigatória');
+      setLoading(false);
+      throw new Error('A descrição do serviço é obrigatória');
+    }
+
+    if (!data.customer.name || !data.customer.email) {
+      setError('Nome e email do cliente são obrigatórios');
+      setLoading(false);
+      throw new Error('Nome e email do cliente são obrigatórios');
+    }
 
     try {
       const accessToken = await getAccessToken();
 
+      // Preparar dados para API
+      const paymentData = {
+        items: [{
+          name: data.description,
+          value: Math.round(data.total * 100), // Converter para centavos
+          amount: 1
+        }],
+        customer: {
+          name: data.customer.name,
+          email: data.customer.email,
+          phone_number: data.customer.phone,
+          cpf: data.customer.cpf
+        },
+        payment: {
+          banking_billet: {
+            expire_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 dias
+            customer_payment_term: 3,
+            message: 'Pagamento do serviço mecânico'
+          }
+        },
+        split: data.split ? {
+          splits: [
+            {
+              recipient_id: data.split.mechanic_id,
+              percentage: 100 - data.split.platform_fee_percentage
+            },
+            {
+              recipient_id: PLATFORM_RECIPIENT_ID,
+              percentage: data.split.platform_fee_percentage
+            }
+          ]
+        } : undefined
+      };
+
       const paymentResponse = await axios.post<EfibankPaymentResponse>(
         `${EFIBANK_API_URL}/v1/charge`,
-        {
-          items: [{
-            name: data.description,
-            value: Math.round(data.total * 100), // Converter para centavos
-            amount: 1
-          }],
-          customer: {
-            name: data.customer.name,
-            email: data.customer.email,
-            phone_number: data.customer.phone,
-            cpf: data.customer.cpf
-          },
-          payment: {
-            banking_billet: {
-              expire_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 dias
-              customer_payment_term: 3,
-              message: 'Pagamento do serviço mecânico'
-            }
-          },
-          split: data.split ? {
-            splits: [
-              {
-                recipient_id: data.split.mechanic_id,
-                percentage: 100 - data.split.platform_fee_percentage
-              },
-              {
-                recipient_id: PLATFORM_RECIPIENT_ID,
-                percentage: data.split.platform_fee_percentage
-              }
-            ]
-          } : undefined
-        },
+        paymentData,
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -116,23 +140,39 @@ export function usePayment() {
         }
       );
 
-      return {
+      const result = {
         payment_id: paymentResponse.data.id,
         status: paymentResponse.data.status,
         payment_url: paymentResponse.data.payment_url,
         barcode: paymentResponse.data.banking_billet?.barcode,
         pdf: paymentResponse.data.banking_billet?.pdf
       };
+
+      setPaymentStatus(paymentResponse.data.status);
+      return result;
     } catch (error: any) {
       console.error('Erro ao criar pagamento:', error);
-      setError(error.response?.data?.message || 'Erro ao processar pagamento');
-      throw error;
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Erro ao processar pagamento';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   const getPaymentStatus = async (paymentId: string) => {
+    if (!paymentId) {
+      const errorMessage = 'ID do pagamento não fornecido';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    setLoading(true);
+    setError(null);
+
     try {
       const accessToken = await getAccessToken();
 
@@ -146,14 +186,32 @@ export function usePayment() {
         }
       );
 
-      return response.data.status;
-    } catch (error) {
+      const status = response.data.status;
+      setPaymentStatus(status);
+      return status;
+    } catch (error: any) {
       console.error('Erro ao verificar status do pagamento:', error);
-      throw error;
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Erro ao verificar status do pagamento';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
   const refundPayment = async (paymentId: string) => {
+    if (!paymentId) {
+      const errorMessage = 'ID do pagamento não fornecido';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    setLoading(true);
+    setError(null);
+
     try {
       const accessToken = await getAccessToken();
 
@@ -168,18 +226,27 @@ export function usePayment() {
         }
       );
 
+      setPaymentStatus('refunded');
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao reembolsar pagamento:', error);
-      throw error;
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Erro ao reembolsar pagamento';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
   return {
     loading,
     error,
+    paymentStatus,
     createPayment,
     getPaymentStatus,
     refundPayment
   };
-} 
+}
