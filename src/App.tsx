@@ -34,6 +34,8 @@ import EditVehicle from './pages/client/EditVehicle';
 import ScheduleService from './pages/client/ScheduleService';
 import Profile from './pages/Profile';
 import Subscriptions from './pages/Subscriptions';
+import EmployeesPage from './pages/mechanic/Employees';
+import ServicesPage from './pages/mechanic/Services';
 
 type UserType = 'client' | 'mechanic' | 'insurance' | 'tow' | null;
 
