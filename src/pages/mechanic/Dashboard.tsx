@@ -340,7 +340,7 @@ export default function MechanicDashboard() {
       const { data: statsData, error: statsError } = await supabase
         .from('mechanic_stats')
         .select('*')
-        .eq('mechanic_id', user.id)
+        .eq('id', user.id)
         .single();
 
       if (statsError) throw statsError;

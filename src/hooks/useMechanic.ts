@@ -30,7 +30,7 @@ export function useMechanic() {
       const { data, error } = await supabase
         .from('mechanic_stats')
         .select('*')
-        .eq('mechanic_id', mechanicId)
+        .eq('id', mechanicId)
         .single();
 
       if (error) {

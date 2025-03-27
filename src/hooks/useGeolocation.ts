@@ -90,7 +90,7 @@ export function useGeolocation() {
           reject,
           {
             enableHighAccuracy: true,
-            timeout: 10000,
+            timeout: 30000,
             maximumAge: 0
           }
         );
@@ -194,7 +194,8 @@ export function useGeolocation() {
             saveLocationToProfile(defaultLocation, userId);
           }
         } else if (err.code === 3) {
-          setError('Tempo esgotado ao obter localização');
+          console.log('Tempo esgotado ao obter localização, usando localização padrão');
+          setError(null); // Não mostrar erro para o usuário, apenas usar o fallback
           // Usar localização padrão
           const defaultLocation = getDefaultLocation();
           setCurrentLocation(defaultLocation);
