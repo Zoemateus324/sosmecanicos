@@ -3,7 +3,8 @@ import { Layout } from '../../components/Layout';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import { Plus, Car, AlertCircle, Clock, Wrench, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Car, AlertCircle, Clock, Wrench, CheckCircle, XCircle, Info } from 'lucide-react';
+import { ServiceDetailsPopup } from '../../components/ServiceDetailsPopup';
 
 interface Vehicle {
   id: string;
@@ -54,6 +55,7 @@ export default function ClientDashboard() {
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated && !loading) {
@@ -329,6 +331,13 @@ export default function ClientDashboard() {
                           {new Date(request.created_at).toLocaleDateString()}
                         </span>
                       </div>
+                      <button
+                        onClick={() => setSelectedRequest(request)}
+                        className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400"
+                      >
+                        <Info className="h-4 w-4 mr-1" />
+                        Ver Detalhes
+                      </button>
                     </div>
                     <div>
                       <h3 className="text-sm font-medium text-gray-900">
@@ -380,6 +389,14 @@ export default function ClientDashboard() {
           </div>
         </div>
       </div>
+      
+      {/* Popup de Detalhes da Solicitação */}
+      {selectedRequest && (
+        <ServiceDetailsPopup
+          serviceRequest={selectedRequest}
+          onClose={() => setSelectedRequest(null)}
+        />
+      )}
     </Layout>
   );
 }
