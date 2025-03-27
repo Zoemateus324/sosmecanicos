@@ -82,6 +82,18 @@ export function useAuth() {
     }
 
     try {
+      // Usar uma localização padrão caso ocorra um erro
+      const useDefaultLocation = (error: GeolocationPositionError) => {
+        console.error('Erro ao obter localização:', error);
+        // Usar localização padrão (centro de São Paulo)
+        const defaultLocation: Location = {
+          latitude: -23.5505,
+          longitude: -46.6333,
+          timestamp: new Date().toISOString()
+        };
+        updateLocation(defaultLocation);
+      };
+
       const watchId = navigator.geolocation.watchPosition(
         (position) => {
           const location: Location = {
@@ -91,12 +103,10 @@ export function useAuth() {
           };
           updateLocation(location);
         },
-        (error) => {
-          console.error('Erro ao obter localização:', error);
-        },
+        useDefaultLocation,
         {
           enableHighAccuracy: true,
-          timeout: 5000,
+          timeout: 10000, // Aumentar o timeout para 10 segundos
           maximumAge: 0
         }
       );
@@ -121,10 +131,11 @@ export function useAuth() {
     }
 
     try {
+      // Aumentar o timeout para 10 segundos para dar mais tempo para obter a localização
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
-          timeout: 5000,
+          timeout: 10000,
           maximumAge: 0
         });
       });
@@ -135,8 +146,13 @@ export function useAuth() {
         timestamp: new Date().toISOString()
       };
     } catch (error) {
-      console.log('Usuário não permitiu acesso à localização');
-      return null;
+      console.log('Erro ao obter localização:', error);
+      // Retornar uma localização padrão (centro de São Paulo) como fallback
+      return {
+        latitude: -23.5505,
+        longitude: -46.6333,
+        timestamp: new Date().toISOString()
+      };
     }
   };
 
