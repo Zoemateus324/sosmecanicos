@@ -418,7 +418,7 @@ export function useAuth() {
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
-        .eq('user_id', user.id);
+        .eq('id', user.id);
 
       if (profileError) {
         console.error('Erro ao deletar perfil:', profileError);
