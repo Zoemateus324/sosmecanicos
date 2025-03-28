@@ -5,6 +5,10 @@ CREATE TABLE IF NOT EXISTS public.mechanic_stats (
     completed_services INTEGER DEFAULT 0,
     average_rating DECIMAL(3,2) DEFAULT 0.00,
     total_earnings DECIMAL(10,2) DEFAULT 0.00,
+    latitude DECIMAL(10,8),
+    longitude DECIMAL(11,8),
+    available BOOLEAN DEFAULT true,
+    last_location_update TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     FOREIGN KEY (mechanic_id) REFERENCES public.profiles(id)
@@ -45,4 +49,4 @@ CREATE TRIGGER set_mechanic_stats_updated_at
 INSERT INTO public.mechanic_stats (mechanic_id)
 SELECT id FROM public.profiles
 WHERE user_type = 'mechanic'
-ON CONFLICT (mechanic_id) DO NOTHING; 
+ON CONFLICT (mechanic_id) DO NOTHING;

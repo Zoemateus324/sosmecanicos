@@ -31,7 +31,8 @@ export function useGeolocation() {
     if (!userId) return;
 
     try {
-      const { error } = await supabase
+      // Atualizar localização no perfil
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({
           latitude: location.latitude,
@@ -40,8 +41,22 @@ export function useGeolocation() {
         })
         .eq('id', userId);
 
-      if (error) {
-        console.error('Erro ao atualizar localização no perfil:', error);
+      if (profileError) {
+        console.error('Erro ao atualizar localização no perfil:', profileError);
+      }
+
+      // Atualizar localização nas estatísticas do mecânico
+      const { error: statsError } = await supabase
+        .from('mechanic_stats')
+        .update({
+          latitude: location.latitude,
+          longitude: location.longitude,
+          last_location_update: location.timestamp
+        })
+        .eq('mechanic_id', userId);
+
+      if (statsError) {
+        console.error('Erro ao atualizar localização nas estatísticas:', statsError);
       }
     } catch (err) {
       console.error('Erro ao salvar localização:', err);

@@ -47,7 +47,11 @@ export function useMechanic() {
             mechanic_id: mechanicId,
             completed_services: 0,
             average_rating: 0,
-            total_earnings: 0
+            total_earnings: 0,
+            latitude: null,
+            longitude: null,
+            available: true,
+            last_location_update: null
           }
         ])
         .select()
@@ -75,7 +79,7 @@ export function useMechanic() {
       const { data, error } = await supabase
         .from('mechanic_stats')
         .select('*')
-        .eq('id', mechanicId)
+        .eq('mechanic_id', mechanicId)
         .single();
 
       if (error) {
