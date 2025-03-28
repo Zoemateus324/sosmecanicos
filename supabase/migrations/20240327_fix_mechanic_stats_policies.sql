@@ -6,7 +6,7 @@ DROP POLICY IF EXISTS "Leitura pública das estatísticas" ON public.mechanic_st
 CREATE POLICY "Mecânicos podem ver e atualizar suas próprias estatísticas"
     ON public.mechanic_stats
     FOR ALL
-    USING (true)
+    USING (auth.uid() = mechanic_id)
     WITH CHECK (auth.uid() = mechanic_id);
 
 -- Garantir que a tabela seja acessível para usuários autenticados

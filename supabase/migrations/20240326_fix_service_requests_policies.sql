@@ -1,6 +1,18 @@
 -- Atualizar políticas de segurança para service_requests
 DROP POLICY IF EXISTS "Mecânicos podem ver solicitações atribuídas a eles" ON public.service_requests;
 DROP POLICY IF EXISTS "Mecânicos podem ver solicitações pendentes" ON public.service_requests;
+
+CREATE POLICY "Mecânicos podem ver solicitações pendentes"
+    ON public.service_requests
+    FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid()
+            AND user_type = 'mechanic'
+        )
+        AND status = 'pending'
+    );
 DROP POLICY IF EXISTS "Mecânicos podem atualizar solicitações atribuídas a eles" ON public.service_requests;
 
 -- Criar novas políticas mais permissivas para mecânicos
