@@ -98,7 +98,11 @@ export function useGeolocation() {
   const getCurrentLocation = useCallback(async (userId?: string): Promise<LocationData | null> => {
     if (!navigator.geolocation) {
       setError('Geolocalização não é suportada neste navegador');
-      return getDefaultLocation();
+      const defaultLocation = getDefaultLocation();
+      if (userId) {
+        await saveLocationToProfile(defaultLocation, userId);
+      }
+      return defaultLocation;
     }
 
     setLoading(true);
@@ -111,8 +115,8 @@ export function useGeolocation() {
           reject,
           {
             enableHighAccuracy: true,
-            timeout: 30000,
-            maximumAge: 0
+            timeout: 10000,
+            maximumAge: 60000
           }
         );
       });
