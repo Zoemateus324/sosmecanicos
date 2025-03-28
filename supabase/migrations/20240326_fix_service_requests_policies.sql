@@ -8,13 +8,7 @@ CREATE POLICY "Mecânicos podem ver todas as solicitações"
     ON public.service_requests
     FOR SELECT
     TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles
-            WHERE id = auth.uid()
-            AND user_type = 'mechanic'
-        )
-    );
+    USING (true);
 
 CREATE POLICY "Mecânicos podem atualizar solicitações"
     ON public.service_requests

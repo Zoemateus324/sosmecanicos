@@ -26,7 +26,7 @@ CREATE POLICY "Mecânicos podem ver e atualizar suas próprias estatísticas"
     ON public.mechanic_stats
     FOR ALL
     USING (true)
-    WITH CHECK (auth.uid() = mechanic_id);
+    WITH CHECK (true);
 
 -- Garantir que a tabela seja acessível para usuários autenticados
 GRANT ALL ON public.mechanic_stats TO authenticated;
