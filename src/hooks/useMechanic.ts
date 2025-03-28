@@ -26,6 +26,18 @@ export function useMechanic() {
     try {
       console.log('Criando estatísticas iniciais para o mecânico:', mechanicId);
       
+      // Verificar se o perfil existe e se já tem estatísticas
+      const { data: existingStats, error: statsError } = await supabase
+        .from('mechanic_stats')
+        .select('*')
+        .eq('mechanic_id', mechanicId)
+        .maybeSingle();
+      
+      if (existingStats) {
+        console.log('Estatísticas já existem para o mecânico');
+        return existingStats;
+      }
+
       // Verificar se o perfil existe
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -42,18 +54,21 @@ export function useMechanic() {
       // Inserir registro inicial na tabela mechanic_stats
       const { data, error } = await supabase
         .from('mechanic_stats')
-        .insert([
+        .upsert([
           { 
             mechanic_id: mechanicId,
             completed_services: 0,
             average_rating: 0,
             total_earnings: 0,
-            latitude: null,
-            longitude: null,
+            latitude: profileData.latitude || null,
+            longitude: profileData.longitude || null,
             available: true,
-            last_location_update: null
+            last_location_update: profileData.last_location_update || null
           }
-        ])
+        ], {
+          onConflict: 'mechanic_id',
+          ignoreDuplicates: false
+        })
         .select()
         .single();
       

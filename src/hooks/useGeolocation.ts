@@ -43,17 +43,23 @@ export function useGeolocation() {
 
       if (profileError) {
         console.error('Erro ao atualizar localização no perfil:', profileError);
+        return;
       }
 
       // Atualizar localização nas estatísticas do mecânico
       const { error: statsError } = await supabase
         .from('mechanic_stats')
-        .update({
-          latitude: location.latitude,
-          longitude: location.longitude,
-          last_location_update: location.timestamp
-        })
-        .eq('mechanic_id', userId);
+        .upsert([
+          { 
+            mechanic_id: userId,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            last_location_update: location.timestamp
+          }
+        ], {
+          onConflict: 'mechanic_id',
+          ignoreDuplicates: false
+        });
 
       if (statsError) {
         console.error('Erro ao atualizar localização nas estatísticas:', statsError);
