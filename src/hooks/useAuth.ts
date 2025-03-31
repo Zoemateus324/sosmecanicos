@@ -422,6 +422,7 @@ export function useAuth() {
             localStorage.removeItem('user');
             localStorage.removeItem('profile');
           }
+        }
       } catch (error) {
         console.error('Erro ao buscar usuário:', error);
       } finally {
