@@ -100,23 +100,48 @@ export function useMechanic() {
       setLoading(true);
       setError(null);
 
+      // Tentar obter dados do cache local primeiro
+      const cachedData = localStorage.getItem(`mechanic_stats_${mechanicId}`);
+      if (cachedData) {
+        const parsedData = JSON.parse(cachedData);
+        const cacheAge = Date.now() - parsedData.timestamp;
+        // Usar cache se tiver menos de 5 minutos
+        if (cacheAge < 300000) {
+          return parsedData.data;
+        }
+      }
+
       const { data, error } = await supabase
         .from('mechanic_stats')
-        .select('*')
+        .select('*, profiles!inner(*)')
         .eq('mechanic_id', mechanicId)
         .single();
 
       if (error) {
-        console.log('Estatísticas não encontradas, tentando criar:', error.message);
+        console.log('Erro ao buscar estatísticas:', error.message);
         
         // Se o erro for porque não encontrou resultados, tenta criar um novo registro
         if (error.code === 'PGRST116') {
-          return await createMechanicStats(mechanicId);
+          const newStats = await createMechanicStats(mechanicId);
+          if (newStats) {
+            // Salvar no cache local
+            localStorage.setItem(`mechanic_stats_${mechanicId}`, JSON.stringify({
+              data: newStats,
+              timestamp: Date.now()
+            }));
+          }
+          return newStats;
         }
         
         setError(error.message);
         return null;
       }
+
+      // Salvar no cache local
+      localStorage.setItem(`mechanic_stats_${mechanicId}`, JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }));
 
       return data;
     } catch (err: any) {

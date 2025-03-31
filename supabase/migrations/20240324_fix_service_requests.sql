@@ -34,7 +34,10 @@ CREATE POLICY "Usuários podem ver suas próprias solicitações"
 
 CREATE POLICY "Mecânicos podem ver solicitações atribuídas a eles"
     ON public.service_requests FOR SELECT
-    USING (auth.uid() = mechanic_id);
+    USING (auth.uid() = mechanic_id OR EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE id = mechanic_id AND user_type = 'mechanic'
+    ));
 
 CREATE POLICY "Usuários podem criar suas próprias solicitações"
     ON public.service_requests FOR INSERT
@@ -46,7 +49,10 @@ CREATE POLICY "Usuários podem atualizar suas próprias solicitações"
 
 CREATE POLICY "Mecânicos podem atualizar solicitações atribuídas a eles"
     ON public.service_requests FOR UPDATE
-    USING (auth.uid() = mechanic_id);
+    USING (auth.uid() = mechanic_id OR EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE id = mechanic_id AND user_type = 'mechanic'
+    ));
 
 CREATE POLICY "Usuários podem deletar suas próprias solicitações"
     ON public.service_requests FOR DELETE
