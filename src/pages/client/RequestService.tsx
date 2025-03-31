@@ -164,6 +164,7 @@ function RequestService() {
         service_type: serviceType,
         description: description.trim(),
         status: 'pending',
+        scheduled_date: new Date(),
         location: location ? {
           type: 'Point',
           coordinates: [location.longitude, location.latitude]
