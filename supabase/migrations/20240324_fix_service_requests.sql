@@ -32,12 +32,17 @@ CREATE POLICY "Usuários podem ver suas próprias solicitações"
     ON public.service_requests FOR SELECT
     USING (auth.uid() = user_id);
 
-CREATE POLICY "Mecânicos podem ver solicitações atribuídas a eles"
+CREATE POLICY "Mecânicos podem ver solicitações pendentes e atribuídas"
     ON public.service_requests FOR SELECT
-    USING (auth.uid() = mechanic_id OR EXISTS (
-        SELECT 1 FROM public.profiles
-        WHERE id = mechanic_id AND user_type = 'mechanic'
-    ));
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid() AND user_type = 'mechanic'
+        ) AND (
+            status = 'pending' OR
+            mechanic_id = auth.uid()
+        )
+    );
 
 CREATE POLICY "Usuários podem criar suas próprias solicitações"
     ON public.service_requests FOR INSERT
