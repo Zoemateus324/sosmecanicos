@@ -3,7 +3,7 @@ DROP POLICY IF EXISTS "Mecânicos podem ver solicitações" ON public.service_re
 DROP POLICY IF EXISTS "Mecânicos podem atualizar solicitações" ON public.service_requests;
 
 -- Criar novas políticas para mecânicos
-CREATE POLICY "Mecânicos podem ver solicitações pendentes"
+CREATE POLICY "Mecânicos podem ver solicitações"
     ON public.service_requests
     FOR SELECT
     TO authenticated
@@ -13,10 +13,10 @@ CREATE POLICY "Mecânicos podem ver solicitações pendentes"
             WHERE id = auth.uid()
             AND user_type = 'mechanic'
         )
-        AND status = 'pending'
+        AND status IN ('pending', 'accepted', 'in_progress', 'completed', 'quoted')
     );
 
-CREATE POLICY "Mecânicos podem atualizar solicitações pendentes"
+CREATE POLICY "Mecânicos podem atualizar solicitações"
     ON public.service_requests
     FOR UPDATE
     TO authenticated
@@ -26,7 +26,7 @@ CREATE POLICY "Mecânicos podem atualizar solicitações pendentes"
             WHERE id = auth.uid()
             AND user_type = 'mechanic'
         )
-        AND status = 'pending'
+        AND status IN ('pending', 'accepted', 'in_progress', 'completed', 'quoted')
     )
     WITH CHECK (
         EXISTS (
@@ -34,7 +34,7 @@ CREATE POLICY "Mecânicos podem atualizar solicitações pendentes"
             WHERE id = auth.uid()
             AND user_type = 'mechanic'
         )
-        AND status IN ('pending', 'accepted', 'in_progress')
+        AND status IN ('pending', 'accepted', 'in_progress', 'completed', 'quoted')
     );
 
 -- Garantir que a tabela seja acessível para usuários autenticados
