@@ -166,11 +166,8 @@ function RequestService() {
         status: 'pending',
         location: location ? {
           latitude: location.latitude,
-          longitude: location.longitude,
-          updated_at: new Date().toISOString()
-        } : null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+          longitude: location.longitude
+        } : null
       };
 
       console.log('Criando solicitação de serviço...', serviceRequest);
