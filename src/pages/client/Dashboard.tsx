@@ -68,6 +68,20 @@ export default function ClientDashboard() {
         return;
       }
 
+      // Verificar cache antes de carregar dados
+      const cachedData = localStorage.getItem(`dashboard_data_${user.id}`);
+      if (cachedData) {
+        const { vehicles: cachedVehicles, serviceRequests: cachedRequests, timestamp } = JSON.parse(cachedData);
+        const cacheAge = Date.now() - timestamp;
+        
+        // Usar cache se tiver menos de 5 minutos
+        if (cacheAge < 300000) {
+          setVehicles(cachedVehicles);
+          setServiceRequests(cachedRequests);
+          return;
+        }
+      }
+
       setLoading(true);
       setError(null);
 
@@ -124,8 +138,18 @@ export default function ClientDashboard() {
         if (vehiclesResponse.error) throw vehiclesResponse.error;
         if (serviceRequestsResponse.error) throw serviceRequestsResponse.error;
 
-        setVehicles(vehiclesResponse.data || []);
-        setServiceRequests(serviceRequestsResponse.data as ServiceRequest[] || []);
+        const newVehicles = vehiclesResponse.data || [];
+        const newServiceRequests = serviceRequestsResponse.data as ServiceRequest[] || [];
+        
+        setVehicles(newVehicles);
+        setServiceRequests(newServiceRequests);
+
+        // Atualizar cache
+        localStorage.setItem(`dashboard_data_${user.id}`, JSON.stringify({
+          vehicles: newVehicles,
+          serviceRequests: newServiceRequests,
+          timestamp: Date.now()
+        }));
       } catch (err) {
         console.error('Erro ao carregar dados:', err);
         setError('Não foi possível carregar seus dados. Por favor, tente novamente.');

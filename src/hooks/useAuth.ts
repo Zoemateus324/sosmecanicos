@@ -38,9 +38,15 @@ export type RegisterData = {
 };
 
 export function useAuth() {
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(() => {
+    const cached = localStorage.getItem('auth_user');
+    return cached ? JSON.parse(cached) : null;
+  });
+  const [profile, setProfile] = useState<Profile | null>(() => {
+    const cached = localStorage.getItem('auth_profile');
+    return cached ? JSON.parse(cached) : null;
+  });
+  const [loading, setLoading] = useState(!user && !profile);
   const [locationWatcher, setLocationWatcher] = useState<number | null>(null);
   const navigate = useNavigate();
 
@@ -160,6 +166,14 @@ export function useAuth() {
     if (!userId) {
       console.error('UserId não fornecido para busca de perfil');
       return null;
+    }
+
+    const cachedProfile = localStorage.getItem('auth_profile');
+    if (cachedProfile) {
+      const parsed = JSON.parse(cachedProfile);
+      if (parsed.id === userId) {
+        return parsed;
+      }
     }
 
     try {
@@ -389,8 +403,8 @@ export function useAuth() {
     const getUser = async () => {
       try {
         // Verificar se há dados no localStorage primeiro
-        const storedUser = localStorage.getItem('user');
-        const storedProfile = localStorage.getItem('profile');
+        const storedUser = localStorage.getItem('auth_user');
+        const storedProfile = localStorage.getItem('auth_profile');
 
         if (storedUser && storedProfile) {
           const parsedUser = JSON.parse(storedUser);
@@ -410,8 +424,8 @@ export function useAuth() {
             if (!isMounted) return;
             
             // Armazenar dados no localStorage
-            localStorage.setItem('user', JSON.stringify(currentUser));
-            localStorage.setItem('profile', JSON.stringify(userProfile));
+            localStorage.setItem('auth_user', JSON.stringify(currentUser));
+            localStorage.setItem('auth_profile', JSON.stringify(userProfile));
             
             setProfile(userProfile);
             startLocationTracking();
@@ -419,8 +433,8 @@ export function useAuth() {
             setUser(null);
             setProfile(null);
             // Limpar localStorage quando não houver usuário
-            localStorage.removeItem('user');
-            localStorage.removeItem('profile');
+            localStorage.removeItem('auth_user');
+            localStorage.removeItem('auth_profile');
           }
         }
       } catch (error) {
@@ -432,19 +446,23 @@ export function useAuth() {
       }
     };
 
-    const subscription = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
       
       if (session?.user) {
         setUser(session.user);
+        localStorage.setItem('auth_user', JSON.stringify(session.user));
         const profile = await fetchProfile(session.user.id);
         if (profile && isMounted) {
           setProfile(profile);
+          localStorage.setItem('auth_profile', JSON.stringify(profile));
           startLocationTracking();
         }
       } else {
         setUser(null);
         setProfile(null);
+        localStorage.removeItem('auth_user');
+        localStorage.removeItem('auth_profile');
         stopLocationTracking();
       }
     });
@@ -453,7 +471,7 @@ export function useAuth() {
 
     return () => {
       isMounted = false;
-      subscription.data.subscription.unsubscribe();
+      subscription.unsubscribe();
       stopLocationTracking();
     };
   }, []);
