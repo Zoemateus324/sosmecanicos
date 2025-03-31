@@ -376,79 +376,55 @@ export function useAuth() {
   };
 
   useEffect(() => {
-    let mounted = true;
+    let isMounted = true;
 
-    // Adicionar evento para quando o usuário sair da página
-    const handleBeforeUnload = () => {
-      supabase.auth.signOut();
-      localStorage.removeItem('supabase.auth.token');
-      sessionStorage.clear();
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    // Verificar se há uma sessão válida ao iniciar
-    const checkSession = async () => {
+    const getUser = async () => {
       try {
-        console.log('Verificando sessão...');
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!mounted) return;
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (!isMounted) return;
 
-        if (session?.user) {
-          console.log('Sessão encontrada:', session.user.id);
-          setUser(session.user);
-          const profile = await fetchProfile(session.user.id);
-          if (profile && mounted) {
-            setProfile(profile);
-            // Iniciar rastreamento de localização se houver sessão ativa
-            startLocationTracking();
-          }
+        if (currentUser) {
+          setUser(currentUser);
+          const userProfile = await fetchProfile(currentUser.id);
+          if (!isMounted) return;
+          setProfile(userProfile);
+          startLocationTracking();
         } else {
-          console.log('Nenhuma sessão ativa encontrada');
-          if (mounted) {
-            setUser(null);
-            setProfile(null);
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao verificar sessão:', error);
-        if (mounted) {
           setUser(null);
           setProfile(null);
         }
+      } catch (error) {
+        console.error('Erro ao buscar usuário:', error);
       } finally {
-        if (mounted) setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     const subscription = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Evento de autenticação:', event);
+      if (!isMounted) return;
       
-      if (session?.user && mounted) {
+      if (session?.user) {
         setUser(session.user);
         const profile = await fetchProfile(session.user.id);
-        if (profile && mounted) {
+        if (profile && isMounted) {
           setProfile(profile);
-          // Iniciar rastreamento de localização quando o estado de autenticação mudar
           startLocationTracking();
         }
-      } else if (mounted) {
+      } else {
         setUser(null);
         setProfile(null);
-        // Parar rastreamento de localização quando o usuário deslogar
         stopLocationTracking();
       }
     });
 
-    checkSession();
+    getUser();
 
     return () => {
-      mounted = false;
+      isMounted = false;
       subscription.data.subscription.unsubscribe();
-      // Limpar o rastreamento de localização quando o componente for desmontado
       stopLocationTracking();
-      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
 

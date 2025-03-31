@@ -457,9 +457,17 @@ export default function MechanicDashboard() {
 
   // Efeito para carregar dados
   useEffect(() => {
+    let isMounted = true;
     if (!authLoading && isAuthenticated && user) {
-      loadData();
+      loadData().finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
     }
+    return () => {
+      isMounted = false;
+    };
   }, [authLoading, isAuthenticated, user, mechanicLocation]);
 
   // Função para calcular distância entre dois pontos usando a fórmula de Haversine
