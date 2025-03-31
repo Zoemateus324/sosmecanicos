@@ -19,8 +19,13 @@ DROP POLICY IF EXISTS "Mecânicos podem atualizar solicitações atribuídas a e
 CREATE POLICY "Mecânicos podem ver todas as solicitações"
     ON public.service_requests
     FOR SELECT
-    TO authenticated
-    USING (true);
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid()
+            AND user_type = 'mechanic'
+        )
+    );
 
 CREATE POLICY "Mecânicos podem atualizar solicitações"
     ON public.service_requests

@@ -4,16 +4,16 @@ DROP TABLE IF EXISTS public.service_requests CASCADE;
 -- Create service_requests table
 CREATE TABLE public.service_requests (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES auth.users(id) NOT NULL,
+    user_id UUID NOT NULL,
     vehicle_id UUID REFERENCES public.vehicles(id) NOT NULL,
-    mechanic_id UUID REFERENCES auth.users(id),
+    mechanic_id UUID,
     description TEXT NOT NULL,
     status TEXT CHECK (status IN ('pending', 'accepted', 'in_progress', 'completed', 'cancelled')) NOT NULL DEFAULT 'pending',
     location JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-    FOREIGN KEY (mechanic_id) REFERENCES public.profiles(id)
+    FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE,
+    FOREIGN KEY (mechanic_id) REFERENCES public.profiles(id) ON DELETE SET NULL
 );
 
 -- Create indexes
@@ -63,4 +63,4 @@ $$ language 'plpgsql';
 CREATE TRIGGER set_updated_at
     BEFORE UPDATE ON public.service_requests
     FOR EACH ROW
-    EXECUTE FUNCTION update_service_requests_updated_at(); 
+    EXECUTE FUNCTION update_service_requests_updated_at();
