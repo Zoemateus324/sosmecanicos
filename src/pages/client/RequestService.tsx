@@ -164,10 +164,8 @@ function RequestService() {
         service_type: serviceType,
         description: description.trim(),
         status: 'pending',
-        location: location ? {
-          type: 'Point',
-          coordinates: [location.longitude, location.latitude]
-        } : null,
+        latitude: location ? location.latitude : null,
+        longitude: location ? location.longitude : null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
