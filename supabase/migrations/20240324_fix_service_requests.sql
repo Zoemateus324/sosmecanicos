@@ -11,6 +11,8 @@ CREATE TABLE public.service_requests (
     description TEXT NOT NULL,
     status TEXT CHECK (status IN ('pending', 'accepted', 'in_progress', 'completed', 'cancelled')) NOT NULL DEFAULT 'pending',
     location JSONB,
+    latitude FLOAT,
+    longitude FLOAT,
     scheduled_date TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
@@ -40,7 +42,8 @@ CREATE POLICY "Mecânicos podem ver solicitações pendentes e atribuídas"
             WHERE id = auth.uid() AND user_type = 'mechanic'
         ) AND (
             status = 'pending' OR
-            mechanic_id = auth.uid()
+            mechanic_id = auth.uid() OR
+            status IN ('accepted', 'in_progress', 'completed')
         )
     );
 
