@@ -313,6 +313,10 @@ export function useAuth() {
           throw new Error('Não foi possível criar o perfil');
         }
 
+        // Armazenar dados no localStorage
+        localStorage.setItem('user', JSON.stringify(authData.user));
+        localStorage.setItem('profile', JSON.stringify(profile));
+
         // Iniciar rastreamento de localização após registro bem-sucedido
         startLocationTracking();
 
@@ -356,6 +360,10 @@ export function useAuth() {
 
       console.log('Perfil recuperado com sucesso:', profile);
 
+      // Armazenar dados no localStorage
+      localStorage.setItem('user', JSON.stringify(authData.user));
+      localStorage.setItem('profile', JSON.stringify(profile));
+
       // Tentar iniciar rastreamento de localização (opcional)
       try {
         startLocationTracking();
@@ -380,19 +388,40 @@ export function useAuth() {
 
     const getUser = async () => {
       try {
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        if (!isMounted) return;
+        // Verificar se há dados no localStorage primeiro
+        const storedUser = localStorage.getItem('user');
+        const storedProfile = localStorage.getItem('profile');
 
-        if (currentUser) {
-          setUser(currentUser);
-          const userProfile = await fetchProfile(currentUser.id);
-          if (!isMounted) return;
-          setProfile(userProfile);
-          startLocationTracking();
+        if (storedUser && storedProfile) {
+          const parsedUser = JSON.parse(storedUser);
+          const parsedProfile = JSON.parse(storedProfile);
+          if (isMounted) {
+            setUser(parsedUser);
+            setProfile(parsedProfile);
+            startLocationTracking();
+          }
         } else {
-          setUser(null);
-          setProfile(null);
-        }
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
+          if (!isMounted) return;
+
+          if (currentUser) {
+            setUser(currentUser);
+            const userProfile = await fetchProfile(currentUser.id);
+            if (!isMounted) return;
+            
+            // Armazenar dados no localStorage
+            localStorage.setItem('user', JSON.stringify(currentUser));
+            localStorage.setItem('profile', JSON.stringify(userProfile));
+            
+            setProfile(userProfile);
+            startLocationTracking();
+          } else {
+            setUser(null);
+            setProfile(null);
+            // Limpar localStorage quando não houver usuário
+            localStorage.removeItem('user');
+            localStorage.removeItem('profile');
+          }
       } catch (error) {
         console.error('Erro ao buscar usuário:', error);
       } finally {
