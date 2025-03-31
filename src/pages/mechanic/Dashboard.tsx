@@ -236,7 +236,21 @@ export default function MechanicDashboard() {
       setLoading(true);
       setError(null);
 
-      // Buscar todas as solicitações pendentes
+      // Verificar se o usuário é um mecânico
+      const { data: mechanicProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Erro ao verificar perfil do mecânico:', profileError);
+        throw profileError;
+      }
+
+      console.log('Perfil do usuário:', mechanicProfile);
+
+      // Buscar todas as solicitações pendentes com localização válida
       const { data: nearbyData, error: nearbyError } = await supabase
         .from("service_requests")
         .select(
@@ -253,7 +267,7 @@ export default function MechanicDashboard() {
             full_name,
             phone
           ),
-          vehicle:vehicles(
+          vehicle:vehicles!service_requests_vehicle_id_fkey(
             id,
             model,
             plate,
@@ -262,9 +276,18 @@ export default function MechanicDashboard() {
         `,
         )
         .eq("status", "pending")
+        .not("location", "is", null)
         .order("created_at", { ascending: false });
 
-      if (nearbyError) throw nearbyError;
+      if (nearbyError) {
+        console.error('Erro ao buscar solicitações pendentes:', nearbyError);
+        throw nearbyError;
+      }
+
+      console.log('Solicitações pendentes encontradas:', nearbyData);
+
+      // Verificar se há solicitações antes do filtro
+      console.log('Total de solicitações antes do filtro:', nearbyData?.length);
 
       // Mapear solicitações próximas
       const mappedNearbyRequests = (nearbyData || [])
@@ -320,7 +343,7 @@ export default function MechanicDashboard() {
             full_name,
             phone
           ),
-          vehicle:vehicles(
+          vehicle:vehicles!service_requests_vehicle_id_fkey(
             id,
             model,
             plate,
@@ -330,6 +353,7 @@ export default function MechanicDashboard() {
         )
         .in("status", ["accepted", "in_progress"])
         .eq("mechanic_id", user.id)
+        .not("location", "is", null)
         .order("created_at", { ascending: false });
 
       if (activeError) throw activeError;
