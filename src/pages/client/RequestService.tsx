@@ -164,10 +164,10 @@ function RequestService() {
         service_type: serviceType,
         description: description.trim(),
         status: 'pending',
-        location: location ? JSON.stringify({
+        location: location ? {
           latitude: location.latitude,
           longitude: location.longitude
-        }) : null,
+        } : null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
