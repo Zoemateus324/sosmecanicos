@@ -165,8 +165,8 @@ function RequestService() {
         description: description.trim(),
         status: 'pending',
         location: location ? {
-          latitude: location.latitude,
-          longitude: location.longitude
+          type: 'Point',
+          coordinates: [location.longitude, location.latitude]
         } : null
       };
 
