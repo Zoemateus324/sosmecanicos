@@ -1,9 +1,19 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
+interface ServiceRequest {
+  id: string;
+  description: string;
+  status: 'pending' | 'quoted' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
+  price?: number;
+  quote_description?: string;
+  quote_status?: 'pending' | 'accepted' | 'rejected';
+}
+
 type ServiceDetailsPopupProps = {
-  serviceRequest: any;
+  serviceRequest: ServiceRequest;
   onClose: () => void;
+  onQuoteResponse?: (requestId: string, accepted: boolean) => Promise<void>;
 };
 
 type Proposal = {
@@ -27,7 +37,50 @@ type Proposal = {
   };
 };
 
-export function ServiceDetailsPopup({ serviceRequest, onClose }: ServiceDetailsPopupProps) {
+export function ServiceDetailsPopup({ serviceRequest, onClose, onQuoteResponse }: ServiceDetailsPopupProps) {
+  const openLocationInMaps = () => {
+    if (serviceRequest.location?.latitude && serviceRequest.location?.longitude) {
+      const url = `https://www.google.com/maps?q=${serviceRequest.location.latitude},${serviceRequest.location.longitude}`;
+      window.open(url, '_blank');
+    }
+  };
+
+  const renderQuoteDetails = () => {
+    if (serviceRequest.status === 'quoted' && serviceRequest.price) {
+      return (
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+          <h3 className="text-lg font-medium text-gray-900">Detalhes do Orçamento</h3>
+          <p className="mt-2 text-gray-600">Valor: R$ {serviceRequest.price.toFixed(2)}</p>
+          {serviceRequest.quote_description && (
+            <p className="mt-2 text-gray-600">{serviceRequest.quote_description}</p>
+          )}
+          {serviceRequest.quote_status === 'pending' && onQuoteResponse && (
+            <div className="mt-4 flex space-x-2">
+              <button
+                onClick={() => onQuoteResponse(serviceRequest.id, true)}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+              >
+                Aceitar Orçamento
+              </button>
+              <button
+                onClick={() => onQuoteResponse(serviceRequest.id, false)}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Rejeitar Orçamento
+              </button>
+            </div>
+          )}
+          {serviceRequest.quote_status === 'accepted' && (
+            <p className="mt-2 text-green-600 font-medium">Orçamento aceito</p>
+          )}
+          {serviceRequest.quote_status === 'rejected' && (
+            <p className="mt-2 text-red-600 font-medium">Orçamento rejeitado</p>
+          )}
+        </div>
+      );
+    }
+    return null;
+  };
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [proposals, setProposals] = useState<Proposal[]>([]);

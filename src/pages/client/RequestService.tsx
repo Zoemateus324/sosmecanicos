@@ -18,35 +18,38 @@ interface ServiceType {
   id: string;
   name: string;
   description: string;
+  price: number;
+  estimated_time: number;
+  category?: string;
 }
 
-const defaultServiceTypes: ServiceType[] = [
-  {
-    id: 'revisao',
-    name: 'Revisão Periódica',
-    description: 'Checagem completa do veículo incluindo óleo, filtros, freios e suspensão'
-  },
-  {
-    id: 'oleo',
-    name: 'Troca de Óleo',
-    description: 'Troca de óleo do motor e filtro de óleo'
-  },
-  {
-    id: 'freios',
-    name: 'Manutenção dos Freios',
-    description: 'Verificação e/ou troca de pastilhas, discos e fluido de freio'
-  },
-  {
-    id: 'alinhamento',
-    name: 'Alinhamento e Balanceamento',
-    description: 'Alinhamento das rodas e balanceamento dos pneus'
-  },
-  {
-    id: 'emergencia',
-    name: 'Serviço de Emergência',
-    description: 'Atendimento emergencial para problemas mecânicos'
-  }
-];
+function RequestService() {
+  const [services, setServices] = useState<ServiceType[]>([]);
+  const [loadingServices, setLoadingServices] = useState(false);
+
+  const fetchServices = async () => {
+    setLoadingServices(true);
+    try {
+      const { data, error } = await supabase
+        .from('mechanic_services')
+        .select('id, name, description, price, estimated_time, category')
+        .order('name');
+
+      if (error) throw error;
+      setServices(data || []);
+    } catch (err) {
+      console.error('Erro ao carregar serviços:', err);
+      setError('Não foi possível carregar a lista de serviços disponíveis');
+    } finally {
+      setLoadingServices(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchServices();
+    }
+  }, [isAuthenticated]);
 
 function RequestService() {
   const navigate = useNavigate();
@@ -164,10 +167,12 @@ function RequestService() {
         service_type: serviceType,
         description: description.trim(),
         status: 'pending',
+        quote_status: 'pending',
         scheduled_date: new Date(),
         location: location ? {
-          type: 'Point',
-          coordinates: [location.longitude, location.latitude]
+          latitude: location.latitude,
+          longitude: location.longitude,
+          address: 'Localização atual' // Endereço será atualizado pelo backend
         } : null
       };
 
@@ -276,11 +281,14 @@ function RequestService() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                 >
                   <option value="">Selecione o tipo de serviço</option>
-                  {defaultServiceTypes.map(type => (
-                    <option key={type.id} value={type.id}>
-                      {type.name}
+                  {services.map(service => (
+                    <option key={service.id} value={service.id}>
+                      {service.name} - R$ {service.price.toFixed(2)} - {service.estimated_time} min
                     </option>
                   ))}
+                  {loadingServices && (
+                    <option disabled>Carregando serviços...</option>
+                  )}
                 </select>
               </div>
 

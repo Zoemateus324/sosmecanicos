@@ -26,7 +26,10 @@ interface ServiceRequest {
   id: string;
   user_id: string;
   description: string;
-  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'quoted' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
+  price?: number;
+  quote_description?: string;
+  quote_status?: 'pending' | 'accepted' | 'rejected';
   created_at: string;
   location?: {
     latitude: number;
@@ -165,8 +168,10 @@ export default function ClientDashboard() {
     switch (status) {
       case 'pending':
         return 'text-yellow-500';
-      case 'accepted':
+      case 'quoted':
         return 'text-blue-500';
+      case 'accepted':
+        return 'text-green-500';
       case 'in_progress':
         return 'text-purple-500';
       case 'completed':
@@ -178,10 +183,55 @@ export default function ClientDashboard() {
     }
   };
 
+  const renderQuoteActions = (request: ServiceRequest) => {
+    if (request.status === 'quoted' && request.quote_status === 'pending') {
+      return (
+        <div className="mt-4 flex space-x-2">
+          <button
+            onClick={() => handleQuoteResponse(request.id, true)}
+            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+          >
+            Aceitar Orçamento
+          </button>
+          <button
+            onClick={() => handleQuoteResponse(request.id, false)}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+          >
+            Rejeitar Orçamento
+          </button>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const renderQuoteDetails = (request: ServiceRequest) => {
+    if (request.status === 'quoted' && request.price) {
+      return (
+        <div className="mt-2 p-4 bg-gray-50 rounded-lg">
+          <h4 className="font-medium text-gray-900">Detalhes do Orçamento</h4>
+          <p className="text-gray-600 mt-1">Valor: R$ {request.price.toFixed(2)}</p>
+          {request.quote_description && (
+            <p className="text-gray-600 mt-1">{request.quote_description}</p>
+          )}
+          {request.quote_status === 'accepted' && (
+            <p className="text-green-600 mt-2">Orçamento aceito</p>
+          )}
+          {request.quote_status === 'rejected' && (
+            <p className="text-red-600 mt-2">Orçamento rejeitado</p>
+          )}
+        </div>
+      );
+    }
+    return null;
+  };
+
   const getStatusText = (status: ServiceRequest['status']) => {
     switch (status) {
       case 'pending':
         return 'Aguardando';
+      case 'quoted':
+        return 'Orçamento Recebido';
       case 'accepted':
         return 'Aceito';
       case 'in_progress':
@@ -195,9 +245,39 @@ export default function ClientDashboard() {
     }
   };
 
+  const handleQuoteResponse = async (requestId: string, accepted: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('service_requests')
+        .update({
+          quote_status: accepted ? 'accepted' : 'rejected',
+          status: accepted ? 'accepted' : 'cancelled'
+        })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      setServiceRequests(prev =>
+        prev.map(request =>
+          request.id === requestId
+            ? {
+                ...request,
+                quote_status: accepted ? 'accepted' : 'rejected',
+                status: accepted ? 'accepted' : 'cancelled'
+              }
+            : request
+        )
+      );
+    } catch (err) {
+      console.error('Erro ao responder orçamento:', err);
+      setError('Não foi possível processar sua resposta ao orçamento');
+    }
+  };
+
   const getStatusIcon = (status: ServiceRequest['status']) => {
     switch (status) {
       case 'pending':
+      case 'quoted':
         return <Clock className="h-5 w-5" />;
       case 'accepted':
         return <CheckCircle className="h-5 w-5" />;
