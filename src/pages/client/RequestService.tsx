@@ -152,10 +152,16 @@ function RequestService() {
         throw new Error('Por favor, permita o acesso à sua localização');
       }
 
+      const selectedService = services.find(service => service.id === serviceType);
+      if (!selectedService) {
+        throw new Error('Serviço selecionado não encontrado');
+      }
+
       const serviceRequest = {
         user_id: user.id,
         vehicle_id: vehicleId,
-        service_type: serviceType,
+        service_type: selectedService.name,
+        service_id: selectedService.id,
         description: description.trim(),
         status: 'pending',
         quote_status: 'pending',
