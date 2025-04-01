@@ -24,6 +24,13 @@ interface ServiceType {
 }
 
 function RequestService() {
+  const navigate = useNavigate();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [loadingLocation, setLoadingLocation] = useState(false);
   const [services, setServices] = useState<ServiceType[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
 
@@ -46,27 +53,13 @@ function RequestService() {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchServices();
-    }
-  }, [isAuthenticated]);
-
-function RequestService() {
-  const navigate = useNavigate();
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [loadingLocation, setLoadingLocation] = useState(false);
-
-  useEffect(() => {
     if (!isAuthenticated && !authLoading) {
       navigate('/login');
       return;
     }
 
     if (isAuthenticated) {
+      fetchServices();
       fetchVehicles();
       getCurrentLocation();
     }
@@ -87,7 +80,6 @@ function RequestService() {
         throw error;
       }
 
-      // Filtra apenas veículos válidos
       const validVehicles = (data || []).filter((vehicle): vehicle is Vehicle => {
         return Boolean(
           vehicle &&
@@ -144,7 +136,6 @@ function RequestService() {
       const description = formData.get('description') as string;
       const serviceType = formData.get('service_type') as string;
 
-      // Validações
       if (!vehicleId) {
         throw new Error('Por favor, selecione um veículo');
       }
@@ -172,26 +163,21 @@ function RequestService() {
         location: location ? {
           latitude: location.latitude,
           longitude: location.longitude,
-          address: 'Localização atual' // Endereço será atualizado pelo backend
+          address: 'Localização atual'
         } : null
       };
 
-      console.log('Criando solicitação de serviço...', serviceRequest);
-
-      const { data, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('service_requests')
         .insert([serviceRequest])
         .select()
         .single();
 
       if (insertError) {
-        console.error('Erro ao criar solicitação:', insertError);
         throw new Error('Erro ao criar solicitação de serviço');
       }
 
-      console.log('Solicitação criada com sucesso:', data);
       navigate('/client/dashboard');
-
     } catch (err) {
       console.error('Erro:', err);
       setError(err instanceof Error ? err.message : 'Erro ao criar solicitação de serviço');

@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function Support() {
   return (
     <div className="container mx-auto px-4 py-8">
@@ -9,26 +7,26 @@ export default function Support() {
         <div className="bg-white rounded-lg shadow-md p-8 mb-8">
           <h2 className="text-2xl font-semibold mb-6">Como Podemos Ajudar?</h2>
           <div className="grid md:grid-cols-2 gap-6">
-            <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+            <div className="p-6 border rounded-lg hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
               <h3 className="text-lg font-medium mb-3">Dúvidas Frequentes</h3>
               <ul className="space-y-3 text-gray-600">
-                <li>Como funciona o sistema de pagamento?</li>
-                <li>Como avaliar um serviço?</li>
-                <li>Como atualizar minhas informações?</li>
-                <li>Política de cancelamento</li>
+                <li className="hover:text-yellow-600 transition-colors cursor-pointer">Como funciona o sistema de pagamento?</li>
+                <li className="hover:text-yellow-600 transition-colors cursor-pointer">Como avaliar um serviço?</li>
+                <li className="hover:text-yellow-600 transition-colors cursor-pointer">Como atualizar minhas informações?</li>
+                <li className="hover:text-yellow-600 transition-colors cursor-pointer">Política de cancelamento</li>
               </ul>
-              <a href="#faq" className="text-yellow-600 hover:text-yellow-700 font-medium mt-4 inline-block">
+              <a href="#faq" className="text-yellow-600 hover:text-yellow-700 font-medium mt-4 inline-block transition-colors">
                 Ver todas as dúvidas →
               </a>
             </div>
-            <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+            <div className="p-6 border rounded-lg hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
               <h3 className="text-lg font-medium mb-3">Contato Direto</h3>
               <ul className="space-y-3 text-gray-600">
                 <li>Email: suporte@plataforma.com</li>
                 <li>WhatsApp: (11) 99999-9999</li>
                 <li>Horário: Seg-Sex, 8h às 18h</li>
               </ul>
-              <button className="bg-yellow-400 text-gray-900 px-4 py-2 rounded-lg hover:bg-yellow-500 transition-colors mt-4">
+              <button className="bg-yellow-400 text-gray-900 px-4 py-2 rounded-lg hover:bg-yellow-500 transition-all duration-300 mt-4 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-opacity-50">
                 Iniciar Chat
               </button>
             </div>
@@ -38,21 +36,21 @@ export default function Support() {
         <div className="bg-yellow-50 rounded-lg p-8 mb-8" id="faq">
           <h2 className="text-2xl font-semibold mb-6">Perguntas Frequentes</h2>
           <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium mb-2">Como funciona o sistema de pagamento?</h3>
-              <p className="text-gray-600">Nosso sistema de pagamento é 100% seguro. O valor só é repassado ao mecânico após a conclusão do serviço e sua confirmação. Aceitamos cartões de crédito, débito e PIX.</p>
+            <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+              <h3 className="text-lg font-medium mb-2">Como funciona o sistema de pagamento e orçamentos?</h3>
+              <p className="text-gray-600">Nosso sistema de pagamento é 100% seguro. Você receberá orçamentos de mecânicos próximos à sua localização, com detalhes dos serviços e preços. O valor só é repassado ao mecânico após a conclusão do serviço e sua confirmação. Aceitamos cartões de crédito, débito e PIX.</p>
             </div>
-            <div>
+            <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
               <h3 className="text-lg font-medium mb-2">Como escolher o melhor mecânico?</h3>
               <p className="text-gray-600">Você pode comparar avaliações, preços e experiência dos mecânicos. Todos os profissionais são verificados e avaliados por outros clientes.</p>
             </div>
-            <div>
+            <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
               <h3 className="text-lg font-medium mb-2">Qual a garantia dos serviços?</h3>
               <p className="text-gray-600">Os serviços têm garantia mínima de 90 dias. Cada mecânico pode oferecer garantias adicionais, que estarão especificadas no orçamento.</p>
             </div>
-            <div>
+            <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
               <h3 className="text-lg font-medium mb-2">Como cancelar um serviço?</h3>
-              <p className="text-gray-600">Você pode cancelar um serviço antes da sua execução sem custos. Após iniciado, consulte nossa política de cancelamento para mais detalhes.</p>
+              <p className="text-gray-600">Você pode cancelar um serviço antes da sua execução sem custos. Se o serviço já foi iniciado, será cobrada uma taxa proporcional ao trabalho realizado, conforme acordado no orçamento. O cancelamento deve ser solicitado através da plataforma para garantir a segurança de ambas as partes.</p>
             </div>
           </div>
         </div>
@@ -94,10 +92,10 @@ export default function Support() {
           <h2 className="text-2xl font-semibold mb-6">Ainda com Dúvidas?</h2>
           <p className="text-gray-600 mb-6">Nossa equipe está pronta para ajudar você</p>
           <div className="space-x-4">
-            <button className="inline-block bg-yellow-400 text-gray-900 px-8 py-3 rounded-lg font-medium hover:bg-yellow-500 transition-colors">
+            <button className="inline-block bg-yellow-400 text-gray-900 px-8 py-3 rounded-lg font-medium hover:bg-yellow-500 transition-all duration-300 transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-opacity-50">
               Fale Conosco
             </button>
-            <a href="/how-it-works" className="inline-block bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors">
+            <a href="/how-it-works" className="inline-block bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-300 transition-all duration-300 transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50">
               Como Funciona
             </a>
           </div>

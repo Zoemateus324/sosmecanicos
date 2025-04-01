@@ -26,11 +26,14 @@ export function useGeolocation() {
     };
   }, []);
 
-  // Função para salvar localização no Supabase
+  // Função para salvar localização no Supabase com cache
   const saveLocationToProfile = useCallback(async (location: LocationData, userId?: string) => {
     if (!userId) return;
 
     try {
+      // Salvar no cache local
+      localStorage.setItem('last_location', JSON.stringify(location));
+
       // Atualizar localização no perfil
       const { error: profileError } = await supabase
         .from('profiles')
@@ -47,7 +50,14 @@ export function useGeolocation() {
       }
 
       // Atualizar localização nas estatísticas do mecânico
-      const { error: statsError } = await supabase
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('id', userId)
+        .single();
+
+      if (profileData?.user_type === 'mechanic') {
+        const { error: statsError } = await supabase
         .from('mechanic_stats')
         .upsert([
           { 
@@ -61,8 +71,9 @@ export function useGeolocation() {
           ignoreDuplicates: false
         });
 
-      if (statsError) {
-        console.error('Erro ao atualizar localização nas estatísticas:', statsError);
+        if (statsError) {
+          console.error('Erro ao atualizar localização nas estatísticas:', statsError);
+        }
       }
     } catch (err) {
       console.error('Erro ao salvar localização:', err);
@@ -159,6 +170,14 @@ export function useGeolocation() {
     }
   }, [saveLocationToProfile, saveLocationToHistory, setError, setLoading, setCurrentLocation, setLocationHistory, setPermissionDenied, getDefaultLocation]);
 
+  // Função para parar o rastreamento
+  const stopTracking = useCallback(() => {
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+      setWatchId(null);
+    }
+  }, [watchId]);
+
   // Função para iniciar o rastreamento contínuo
   const startTracking = useCallback((userId?: string) => {
     if (!navigator.geolocation) {
@@ -245,15 +264,7 @@ export function useGeolocation() {
     );
 
     setWatchId(id);
-  }, [watchId, saveLocationToProfile, saveLocationToHistory, setError, setCurrentLocation, setLocationHistory, setPermissionDenied, getDefaultLocation, stopTracking, setWatchId]);
-
-  // Função para parar o rastreamento
-  const stopTracking = useCallback(() => {
-    if (watchId !== null) {
-      navigator.geolocation.clearWatch(watchId);
-      setWatchId(null);
-    }
-  }, [watchId]);
+  }, [watchId, saveLocationToProfile, saveLocationToHistory, setError, setCurrentLocation, setLocationHistory, setPermissionDenied, getDefaultLocation, setWatchId]);
 
   // Limpar o rastreamento ao desmontar o componente
   useEffect(() => {

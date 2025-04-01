@@ -2,15 +2,28 @@
 DROP POLICY IF EXISTS "Mecânicos podem ver e atualizar suas próprias estatísticas" ON public.mechanic_stats;
 DROP POLICY IF EXISTS "Leitura pública das estatísticas" ON public.mechanic_stats;
 
--- Criar novas políticas mais permissivas
+-- Criar novas políticas mais restritivas
 CREATE POLICY "Mecânicos podem ver e atualizar suas próprias estatísticas"
     ON public.mechanic_stats
     FOR ALL
-    USING (auth.uid() = mechanic_id OR EXISTS (
-        SELECT 1 FROM public.profiles
-        WHERE id = mechanic_id AND user_type = 'mechanic'
-    ))
-    WITH CHECK (auth.uid() = mechanic_id);
+    USING (
+        auth.uid() = mechanic_id
+        AND EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = mechanic_id
+            AND user_type = 'mechanic'
+            AND available = true
+        )
+    )
+    WITH CHECK (
+        auth.uid() = mechanic_id
+        AND EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = mechanic_id
+            AND user_type = 'mechanic'
+            AND available = true
+        )
+    );
 
 -- Garantir que a tabela seja acessível para usuários autenticados
 GRANT ALL ON public.mechanic_stats TO authenticated;

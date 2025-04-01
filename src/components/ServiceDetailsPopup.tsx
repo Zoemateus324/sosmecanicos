@@ -8,6 +8,24 @@ interface ServiceRequest {
   price?: number;
   quote_description?: string;
   quote_status?: 'pending' | 'accepted' | 'rejected';
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+  vehicle: {
+    brand: string;
+    model: string;
+    plate: string;
+  };
+  created_at: string;
+  scheduled_date: string;
+  service_type: string;
+  mechanic?: {
+    id: string;
+    full_name: string;
+    phone: string;
+    email?: string;
+  };
 }
 
 type ServiceDetailsPopupProps = {
@@ -38,6 +56,11 @@ type Proposal = {
 };
 
 export function ServiceDetailsPopup({ serviceRequest, onClose, onQuoteResponse }: ServiceDetailsPopupProps) {
+  const handleQuoteResponse = async (requestId: string, accepted: boolean) => {
+    if (onQuoteResponse) {
+      await onQuoteResponse(requestId, accepted);
+    }
+  };
   const openLocationInMaps = () => {
     if (serviceRequest.location?.latitude && serviceRequest.location?.longitude) {
       const url = `https://www.google.com/maps?q=${serviceRequest.location.latitude},${serviceRequest.location.longitude}`;
@@ -57,13 +80,13 @@ export function ServiceDetailsPopup({ serviceRequest, onClose, onQuoteResponse }
           {serviceRequest.quote_status === 'pending' && onQuoteResponse && (
             <div className="mt-4 flex space-x-2">
               <button
-                onClick={() => onQuoteResponse(serviceRequest.id, true)}
+                onClick={() => handleQuoteResponse(serviceRequest.id, true)}
                 className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
               >
                 Aceitar Orçamento
               </button>
               <button
-                onClick={() => onQuoteResponse(serviceRequest.id, false)}
+                onClick={() => handleQuoteResponse(serviceRequest.id, false)}
                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
                 Rejeitar Orçamento
@@ -214,7 +237,19 @@ export function ServiceDetailsPopup({ serviceRequest, onClose, onQuoteResponse }
               <p className="text-sm text-gray-500">Tipo de Serviço</p>
               <p className="font-medium">{serviceRequest.service_type}</p>
             </div>
+            {serviceRequest.location && (
+              <div>
+                <p className="text-sm text-gray-500">Localização</p>
+                <button
+                  onClick={openLocationInMaps}
+                  className="text-blue-500 hover:text-blue-700 font-medium"
+                >
+                  Abrir no Maps
+                </button>
+              </div>
+            )}
           </div>
+          {renderQuoteDetails()}
 
           <div className="mb-4">
             <p className="text-sm text-gray-500 mb-1">Descrição</p>

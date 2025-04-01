@@ -31,6 +31,8 @@ interface ServiceRequest {
   quote_description?: string;
   quote_status?: 'pending' | 'accepted' | 'rejected';
   created_at: string;
+  scheduled_date: string;
+  service_type: string;
   location?: {
     latitude: number;
     longitude: number;
@@ -164,6 +166,117 @@ export default function ClientDashboard() {
     loadData();
   }, [isAuthenticated, user, navigate]);
 
+  const loadData = async () => {
+    if (!isAuthenticated || !user?.id) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const [vehiclesResponse, serviceRequestsResponse] = await Promise.all([
+        supabase
+          .from('vehicles')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('service_requests')
+          .select(`
+            *,
+            vehicle:vehicles!service_requests_vehicle_id_fkey(
+              id,
+              model,
+              plate,
+              year,
+              brand,
+              vehicle_type
+            )
+          `)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .then(async (result) => {
+            if (result.error) throw result.error;
+            
+            // Para cada solicitação que tem um mechanic_id, buscar os dados do mecânico separadamente
+            const requestsWithMechanics = await Promise.all(
+              result.data.map(async (request) => {
+                if (request.mechanic_id) {
+                  const { data: mechanicData, error: mechanicError } = await supabase
+                    .from('profiles')
+                    .select('id, full_name, phone')
+                    .eq('id', request.mechanic_id)
+                    .single();
+                  
+                  if (!mechanicError && mechanicData) {
+                    return {
+                      ...request,
+                      mechanic: mechanicData
+                    };
+                  }
+                }
+                return request;
+              })
+            );
+            
+            return { data: requestsWithMechanics, error: null };
+          })
+      ]);
+
+      if (vehiclesResponse.error) throw vehiclesResponse.error;
+      if (serviceRequestsResponse.error) throw serviceRequestsResponse.error;
+
+      const newVehicles = vehiclesResponse.data || [];
+      const newServiceRequests = serviceRequestsResponse.data as ServiceRequest[] || [];
+      
+      setVehicles(newVehicles);
+      setServiceRequests(newServiceRequests);
+
+      // Atualizar cache
+      localStorage.setItem(`dashboard_data_${user.id}`, JSON.stringify({
+        vehicles: newVehicles,
+        serviceRequests: newServiceRequests,
+        timestamp: Date.now()
+      }));
+    } catch (err) {
+      console.error('Erro ao carregar dados:', err);
+      setError('Não foi possível carregar seus dados. Por favor, tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQuoteResponse = async (requestId: string, accepted: boolean) => {
+    try {
+      const { error: fetchError } = await supabase
+        .from('service_requests')
+        .select('*')
+        .eq('id', requestId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const updates = {
+        quote_status: accepted ? 'accepted' : 'rejected',
+        status: accepted ? 'accepted' : 'pending'
+      };
+
+      const { error: updateError } = await supabase
+        .from('service_requests')
+        .update(updates)
+        .eq('id', requestId);
+
+      if (updateError) throw updateError;
+
+      // Refresh service requests
+      loadData();
+    } catch (err) {
+      console.error('Error updating quote response:', err);
+      setError('Não foi possível atualizar o status do orçamento.');
+    }
+  };
+
   const getStatusColor = (status: ServiceRequest['status']) => {
     switch (status) {
       case 'pending':
@@ -183,49 +296,6 @@ export default function ClientDashboard() {
     }
   };
 
-  const renderQuoteActions = (request: ServiceRequest) => {
-    if (request.status === 'quoted' && request.quote_status === 'pending') {
-      return (
-        <div className="mt-4 flex space-x-2">
-          <button
-            onClick={() => handleQuoteResponse(request.id, true)}
-            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-          >
-            Aceitar Orçamento
-          </button>
-          <button
-            onClick={() => handleQuoteResponse(request.id, false)}
-            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-          >
-            Rejeitar Orçamento
-          </button>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const renderQuoteDetails = (request: ServiceRequest) => {
-    if (request.status === 'quoted' && request.price) {
-      return (
-        <div className="mt-2 p-4 bg-gray-50 rounded-lg">
-          <h4 className="font-medium text-gray-900">Detalhes do Orçamento</h4>
-          <p className="text-gray-600 mt-1">Valor: R$ {request.price.toFixed(2)}</p>
-          {request.quote_description && (
-            <p className="text-gray-600 mt-1">{request.quote_description}</p>
-          )}
-          {request.quote_status === 'accepted' && (
-            <p className="text-green-600 mt-2">Orçamento aceito</p>
-          )}
-          {request.quote_status === 'rejected' && (
-            <p className="text-red-600 mt-2">Orçamento rejeitado</p>
-          )}
-        </div>
-      );
-    }
-    return null;
-  };
-
   const getStatusText = (status: ServiceRequest['status']) => {
     switch (status) {
       case 'pending':
@@ -242,35 +312,6 @@ export default function ClientDashboard() {
         return 'Cancelado';
       default:
         return status;
-    }
-  };
-
-  const handleQuoteResponse = async (requestId: string, accepted: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('service_requests')
-        .update({
-          quote_status: accepted ? 'accepted' : 'rejected',
-          status: accepted ? 'accepted' : 'cancelled'
-        })
-        .eq('id', requestId);
-
-      if (error) throw error;
-
-      setServiceRequests(prev =>
-        prev.map(request =>
-          request.id === requestId
-            ? {
-                ...request,
-                quote_status: accepted ? 'accepted' : 'rejected',
-                status: accepted ? 'accepted' : 'cancelled'
-              }
-            : request
-        )
-      );
-    } catch (err) {
-      console.error('Erro ao responder orçamento:', err);
-      setError('Não foi possível processar sua resposta ao orçamento');
     }
   };
 
@@ -499,6 +540,7 @@ export default function ClientDashboard() {
         <ServiceDetailsPopup
           serviceRequest={selectedRequest}
           onClose={() => setSelectedRequest(null)}
+          onQuoteResponse={handleQuoteResponse}
         />
       )}
     </Layout>
