@@ -262,6 +262,7 @@ function RequestService() {
               Selecione o Veículo *
             </label>
             <select
+              name="vehicle_id"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
               required
             >
@@ -280,6 +281,7 @@ function RequestService() {
               Tipo de Serviço *
             </label>
             <select
+              name="service_type"
               value={selectedService}
               onChange={(e) => setSelectedService(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
@@ -318,6 +320,7 @@ function RequestService() {
               Descreva o Problema *
             </label>
             <textarea
+              name="description"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
               rows={4}
               placeholder="Descreva o problema que está enfrentando com seu veículo..."

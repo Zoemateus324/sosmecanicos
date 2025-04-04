@@ -1,6 +1,6 @@
 import React from 'react';
 import { Layout } from '../../components/Layout';
-import { Tool, Users, Wallet, ChartBar, Shield, Clock, MapPin, Star } from 'lucide-react';
+import { Wrench, Users, Wallet, BarChart, Shield, Clock, MapPin, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function ParaMecanicos() {
@@ -42,7 +42,7 @@ export default function ParaMecanicos() {
               </div>
             </div>
             <div className="flex items-start space-x-4">
-              <ChartBar className="w-6 h-6 text-yellow-500 flex-shrink-0 mt-1" />
+              <BarChart className="w-6 h-6 text-yellow-500 flex-shrink-0 mt-1" />
               <div>
                 <h3 className="font-medium text-gray-900">Gestão Simplificada</h3>
                 <p className="text-gray-600">Ferramentas para controlar seus serviços e finanças</p>
@@ -128,7 +128,7 @@ export default function ParaMecanicos() {
               </p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
-              <Tool className="w-6 h-6 text-yellow-500 mb-2" />
+              <Wrench className="w-6 h-6 text-yellow-500 mb-2" />
               <h3 className="font-medium text-gray-900 mb-2">Serviços</h3>
               <p className="text-sm text-gray-600">
                 Configure seus serviços e preços
@@ -149,7 +149,7 @@ export default function ParaMecanicos() {
               </p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
-              <ChartBar className="w-6 h-6 text-yellow-500 mb-2" />
+              <BarChart className="w-6 h-6 text-yellow-500 mb-2" />
               <h3 className="font-medium text-gray-900 mb-2">Relatórios</h3>
               <p className="text-sm text-gray-600">
                 Acompanhe seu desempenho
