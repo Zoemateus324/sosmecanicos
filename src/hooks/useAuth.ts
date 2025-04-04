@@ -392,57 +392,97 @@ export function useAuth() {
   };
 
   useEffect(() => {
+    let mounted = true;
+
     const initializeAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
+        setLoading(true);
+        
+        // Verificar sessão atual
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Erro ao obter sessão:', sessionError);
+          throw sessionError;
+        }
+
+        if (session?.user && mounted) {
+          console.log('Sessão encontrada, inicializando usuário');
           setUser(session.user);
-          const profile = await fetchProfile(session.user.id);
-          if (profile) {
-            setProfile(profile);
-            localStorage.setItem('auth_profile', JSON.stringify(profile));
+          
+          try {
+            const profile = await fetchProfile(session.user.id);
+            if (profile && mounted) {
+              setProfile(profile);
+              localStorage.setItem('auth_profile', JSON.stringify(profile));
+              startLocationTracking();
+            }
+          } catch (profileError) {
+            console.error('Erro ao buscar perfil:', profileError);
           }
         }
       } catch (error) {
-        console.error('Erro ao inicializar autenticação:', error);
+        console.error('Erro na inicialização da autenticação:', error);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
+    // Inicializar autenticação
     initializeAuth();
 
+    // Configurar listener de mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setLoading(true);
-      if (session?.user) {
-        setUser(session.user);
-        const profile = await fetchProfile(session.user.id);
-        if (profile) {
-          setProfile(profile);
-          localStorage.setItem('auth_profile', JSON.stringify(profile));
+      console.log('Evento de autenticação:', event);
+      
+      if (mounted) {
+        setLoading(true);
+        
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setProfile(null);
+          localStorage.removeItem('auth_profile');
+          stopLocationTracking();
+        } else if (session?.user) {
+          setUser(session.user);
+          try {
+            const profile = await fetchProfile(session.user.id);
+            if (profile && mounted) {
+              setProfile(profile);
+              localStorage.setItem('auth_profile', JSON.stringify(profile));
+              startLocationTracking();
+            }
+          } catch (error) {
+            console.error('Erro ao buscar perfil após mudança de estado:', error);
+          }
         }
-      } else {
-        setUser(null);
-        setProfile(null);
-        localStorage.removeItem('auth_profile');
+        
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
+      stopLocationTracking();
     };
   }, []);
 
   const signOut = async () => {
     try {
+      setLoading(true);
+      stopLocationTracking();
       await supabase.auth.signOut();
       setUser(null);
       setProfile(null);
-      localStorage.removeItem('auth_profile');
+      localStorage.clear(); // Limpar todo o localStorage
       navigate('/login');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
