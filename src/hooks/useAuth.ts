@@ -38,15 +38,9 @@ export type RegisterData = {
 };
 
 export function useAuth() {
-  const [user, setUser] = useState<any>(() => {
-    const cached = localStorage.getItem('auth_user');
-    return cached ? JSON.parse(cached) : null;
-  });
-  const [profile, setProfile] = useState<Profile | null>(() => {
-    const cached = localStorage.getItem('auth_profile');
-    return cached ? JSON.parse(cached) : null;
-  });
-  const [loading, setLoading] = useState(!user && !profile);
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [locationWatcher, setLocationWatcher] = useState<number | null>(null);
   const navigate = useNavigate();
 
@@ -398,93 +392,55 @@ export function useAuth() {
   };
 
   useEffect(() => {
-    let isMounted = true;
-
-    const getUser = async () => {
+    const initializeAuth = async () => {
       try {
-        // Verificar se há dados no localStorage primeiro
-        const storedUser = localStorage.getItem('auth_user');
-        const storedProfile = localStorage.getItem('auth_profile');
-
-        if (storedUser && storedProfile) {
-          const parsedUser = JSON.parse(storedUser);
-          const parsedProfile = JSON.parse(storedProfile);
-          if (isMounted) {
-            setUser(parsedUser);
-            setProfile(parsedProfile);
-            startLocationTracking();
-          }
-        } else {
-          const { data: { user: currentUser } } = await supabase.auth.getUser();
-          if (!isMounted) return;
-
-          if (currentUser) {
-            setUser(currentUser);
-            const userProfile = await fetchProfile(currentUser.id);
-            if (!isMounted) return;
-            
-            // Armazenar dados no localStorage
-            localStorage.setItem('auth_user', JSON.stringify(currentUser));
-            localStorage.setItem('auth_profile', JSON.stringify(userProfile));
-            
-            setProfile(userProfile);
-            startLocationTracking();
-          } else {
-            setUser(null);
-            setProfile(null);
-            // Limpar localStorage quando não houver usuário
-            localStorage.removeItem('auth_user');
-            localStorage.removeItem('auth_profile');
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUser(session.user);
+          const profile = await fetchProfile(session.user.id);
+          if (profile) {
+            setProfile(profile);
+            localStorage.setItem('auth_profile', JSON.stringify(profile));
           }
         }
       } catch (error) {
-        console.error('Erro ao buscar usuário:', error);
+        console.error('Erro ao inicializar autenticação:', error);
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
+    initializeAuth();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!isMounted) return;
-      
+      setLoading(true);
       if (session?.user) {
         setUser(session.user);
-        localStorage.setItem('auth_user', JSON.stringify(session.user));
         const profile = await fetchProfile(session.user.id);
-        if (profile && isMounted) {
+        if (profile) {
           setProfile(profile);
           localStorage.setItem('auth_profile', JSON.stringify(profile));
-          startLocationTracking();
         }
       } else {
         setUser(null);
         setProfile(null);
-        localStorage.removeItem('auth_user');
         localStorage.removeItem('auth_profile');
-        stopLocationTracking();
       }
+      setLoading(false);
     });
 
-    getUser();
-
     return () => {
-      isMounted = false;
       subscription.unsubscribe();
-      stopLocationTracking();
     };
   }, []);
 
   const signOut = async () => {
     try {
-      // Parar rastreamento de localização antes de fazer logout
-      stopLocationTracking();
-      
       await supabase.auth.signOut();
       setUser(null);
       setProfile(null);
-      navigate('/');
+      localStorage.removeItem('auth_profile');
+      navigate('/login');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
