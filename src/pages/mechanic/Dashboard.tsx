@@ -177,19 +177,23 @@ export default function MechanicDashboard() {
         if ("geolocation" in navigator) {
           navigator.geolocation.getCurrentPosition(
             (position) => {
+              // Verificar precisão da localização
+              if (position.coords.accuracy > 100) {
+                console.warn('Precisão da localização baixa:', position.coords.accuracy);
+              }
               resolve({
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
               });
             },
-            () => {
-              console.log("Erro ao obter localização ou permissão negada");
+            (error) => {
+              console.error("Erro ao obter localização:", error);
               resolve(null);
             },
             {
               enableHighAccuracy: true,
-              timeout: 5000,
-              maximumAge: 0,
+              timeout: 15000, // Aumentado para 15 segundos
+              maximumAge: 0
             },
           );
         } else {

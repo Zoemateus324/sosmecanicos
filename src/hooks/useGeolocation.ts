@@ -106,7 +106,7 @@ export function useGeolocation() {
   }, []);
 
   // Função para obter a localização atual
-  const getCurrentLocation = useCallback(async (userId?: string): Promise<LocationData | null> => {
+  const getCurrentLocation = useCallback(async (userId?: string) => {
     if (!navigator.geolocation) {
       setError('Geolocalização não é suportada neste navegador');
       const defaultLocation = getDefaultLocation();
@@ -126,8 +126,8 @@ export function useGeolocation() {
           reject,
           {
             enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 60000
+            timeout: 15000, // Aumentado para 15 segundos
+            maximumAge: 0
           }
         );
       });
@@ -138,6 +138,11 @@ export function useGeolocation() {
         accuracy: position.coords.accuracy,
         timestamp: new Date().toISOString()
       };
+
+      // Verificar precisão da localização
+      if (position.coords.accuracy > 100) {
+        console.warn('Precisão da localização baixa:', position.coords.accuracy);
+      }
 
       setCurrentLocation(locationData);
       setLocationHistory(prev => [...prev, locationData]);
@@ -168,7 +173,7 @@ export function useGeolocation() {
     } finally {
       setLoading(false);
     }
-  }, [saveLocationToProfile, saveLocationToHistory, setError, setLoading, setCurrentLocation, setLocationHistory, setPermissionDenied, getDefaultLocation]);
+  }, [getDefaultLocation, saveLocationToProfile, saveLocationToHistory]);
 
   // Função para parar o rastreamento
   const stopTracking = useCallback(() => {

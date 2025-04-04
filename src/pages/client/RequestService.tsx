@@ -18,9 +18,12 @@ interface ServiceType {
   id: string;
   name: string;
   description: string;
-  price: number;
-  estimated_time: number;
-  category?: string;
+  price_range?: {
+    min: number;
+    max: number;
+  };
+  average_price?: number;
+  category: string;
 }
 
 function RequestService() {
@@ -33,23 +36,64 @@ function RequestService() {
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [services, setServices] = useState<ServiceType[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
+  const [selectedService, setSelectedService] = useState<string>('');
 
   const fetchServices = async () => {
     setLoadingServices(true);
     try {
-      const { data, error } = await supabase
-        .from('mechanic_services')
-        .select('id, name, description, price, estimated_time, category')
+      // Buscar categorias de serviço com preços médios
+      const { data: categories, error: categoriesError } = await supabase
+        .from('service_categories')
+        .select('*')
         .order('name');
 
-      if (error) throw error;
-      setServices(data || []);
+      if (categoriesError) throw categoriesError;
+
+      // Formatar os dados
+      const formattedServices = (categories || []).map(category => ({
+        id: category.name,
+        name: getCategoryName(category.name),
+        description: category.description,
+        price_range: category.price_range,
+        average_price: category.average_price,
+        category: category.name
+      }));
+
+      setServices(formattedServices);
     } catch (err) {
       console.error('Erro ao carregar serviços:', err);
       setError('Não foi possível carregar a lista de serviços disponíveis');
     } finally {
       setLoadingServices(false);
     }
+  };
+
+  // Função para formatar o nome da categoria
+  const getCategoryName = (category: string) => {
+    const categories: { [key: string]: string } = {
+      'revisao': 'Revisão Periódica',
+      'oleo': 'Troca de Óleo',
+      'freios': 'Manutenção dos Freios',
+      'suspensao': 'Suspensão',
+      'motor': 'Motor',
+      'eletrica': 'Sistema Elétrico',
+      'ar-condicionado': 'Ar Condicionado',
+      'alinhamento': 'Alinhamento e Balanceamento',
+      'embreagem': 'Embreagem',
+      'escapamento': 'Escapamento',
+      'injecao': 'Injeção Eletrônica',
+      'radiador': 'Radiador',
+      'outros': 'Outros Serviços'
+    };
+    return categories[category] || category;
+  };
+
+  // Função para formatar preço
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(price);
   };
 
   useEffect(() => {
@@ -208,146 +252,122 @@ function RequestService() {
 
   return (
     <Layout>
-      <div className="max-w-2xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        <div className="mb-8 flex items-center gap-4">
-          <button
-            onClick={() => navigate('/client/dashboard')}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5 text-gray-600" />
-          </button>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Solicitar Serviço
-          </h1>
-        </div>
+      <div className="max-w-4xl mx-auto p-4">
+        <h1 className="text-2xl font-bold mb-6">Solicitar Serviço</h1>
 
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 text-red-600 rounded-lg p-4 flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5" />
-              <span>{error}</span>
-            </div>
-          )}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Seleção de Veículo */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Selecione o Veículo *
+            </label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+              required
+            >
+              <option value="">Selecione um veículo</option>
+              {vehicles.map((vehicle) => (
+                <option key={vehicle.id} value={vehicle.id}>
+                  {vehicle.brand} {vehicle.model} - {vehicle.plate}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          {!vehicles || vehicles.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-600 mb-4">
-                Você ainda não tem veículos cadastrados
-              </p>
+          {/* Tipo de Serviço */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tipo de Serviço *
+            </label>
+            <select
+              value={selectedService}
+              onChange={(e) => setSelectedService(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+              required
+            >
+              <option value="">Selecione o tipo de serviço</option>
+              {services.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.name}
+                  {service.average_price ? ` - Média: ${formatPrice(service.average_price)}` : ''}
+                </option>
+              ))}
+            </select>
+
+            {/* Mostrar detalhes do serviço selecionado */}
+            {selectedService && services.find(s => s.id === selectedService) && (
+              <div className="mt-2 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">
+                  {services.find(s => s.id === selectedService)?.name}
+                </h4>
+                <p className="text-sm text-gray-600 mb-2">
+                  {services.find(s => s.id === selectedService)?.description}
+                </p>
+                {services.find(s => s.id === selectedService)?.price_range && (
+                  <p className="text-sm text-gray-600">
+                    Faixa de preço: {formatPrice(services.find(s => s.id === selectedService)?.price_range?.min || 0)} - {formatPrice(services.find(s => s.id === selectedService)?.price_range?.max || 0)}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Descrição do Problema */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Descreva o Problema *
+            </label>
+            <textarea
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+              rows={4}
+              placeholder="Descreva o problema que está enfrentando com seu veículo..."
+              required
+            ></textarea>
+          </div>
+
+          {/* Localização */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Localização
+            </label>
+            {loadingLocation ? (
+              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500"></div>
+                <span>Obtendo sua localização...</span>
+              </div>
+            ) : location ? (
+              <div className="text-sm text-gray-600">
+                Localização obtida com sucesso!
+              </div>
+            ) : (
               <button
-                onClick={() => navigate('/client/vehicles/add')}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-yellow-400 hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400"
+                type="button"
+                onClick={getCurrentLocation}
+                className="px-4 py-2 text-sm text-blue-600 hover:text-blue-800"
               >
-                Adicionar Veículo
+                Obter localização atual
               </button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="vehicle_id" className="block text-sm font-medium text-gray-700 mb-1">
-                  Selecione o Veículo *
-                </label>
-                <select
-                  id="vehicle_id"
-                  name="vehicle_id"
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                >
-                  <option value="">Selecione um veículo</option>
-                  {vehicles.map(vehicle => vehicle && (
-                    <option key={vehicle.id} value={vehicle.id}>
-                      {vehicle.model} - Placa: {vehicle.plate}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            )}
+          </div>
 
-              <div>
-                <label htmlFor="service_type" className="block text-sm font-medium text-gray-700 mb-1">
-                  Tipo de Serviço *
-                </label>
-                <select
-                  id="service_type"
-                  name="service_type"
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                >
-                  <option value="">Selecione o tipo de serviço</option>
-                  {services.map(service => (
-                    <option key={service.id} value={service.id}>
-                      {service.name} - R$ {service.price.toFixed(2)} - {service.estimated_time} min
-                    </option>
-                  ))}
-                  {loadingServices && (
-                    <option disabled>Carregando serviços...</option>
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                  Descreva o Problema *
-                </label>
-                <textarea
-                  id="description"
-                  name="description"
-                  required
-                  rows={4}
-                  placeholder="Descreva o problema que está enfrentando com seu veículo..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                />
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <MapPin className="h-5 w-5" />
-                  <span>
-                    {loadingLocation ? (
-                      'Obtendo sua localização...'
-                    ) : location ? (
-                      'Localização obtida com sucesso!'
-                    ) : (
-                      'Aguardando permissão de localização'
-                    )}
-                  </span>
-                  {!location && !loadingLocation && (
-                    <button
-                      type="button"
-                      onClick={getCurrentLocation}
-                      className="ml-2 text-yellow-500 hover:text-yellow-600"
-                    >
-                      Tentar novamente
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => navigate('/client/dashboard')}
-                  className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || !location}
-                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-yellow-400 hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? (
-                    <span className="flex items-center">
-                      <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5" />
-                      Enviando...
-                    </span>
-                  ) : (
-                    'Solicitar Serviço'
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
+          {/* Botões */}
+          <div className="flex justify-end space-x-4">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="px-4 py-2 text-gray-700 hover:text-gray-900"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-yellow-400 text-gray-900 rounded-lg font-medium hover:bg-yellow-500 transition-colors"
+              disabled={loading || loadingLocation}
+            >
+              {loading ? 'Enviando...' : 'Solicitar Serviço'}
+            </button>
+          </div>
+        </form>
       </div>
     </Layout>
   );

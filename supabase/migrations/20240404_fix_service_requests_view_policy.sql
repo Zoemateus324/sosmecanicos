@@ -21,7 +21,7 @@ CREATE POLICY "Mecânicos podem ver solicitações"
                     ms.longitude,
                     (service_requests.location->>'latitude')::float,
                     (service_requests.location->>'longitude')::float
-                ) <= 10)
+                ) <= 30)
                 -- Ou se a solicitação está em um status que requer atenção do mecânico
                 OR service_requests.status IN ('accepted', 'in_progress')
                 OR service_requests.mechanic_id = auth.uid()
