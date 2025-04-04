@@ -1,6 +1,7 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { UNSAFE_DataRouterContext, UNSAFE_DataRouterStateContext } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 
 // Enable React Router v7 future flags
 UNSAFE_DataRouterContext.displayName = 'DataRouter';
@@ -15,7 +16,6 @@ declare global {
     };
   }
 }
-
 
 import { useAuth } from './hooks/useAuth';
 
@@ -36,6 +36,9 @@ import Profile from './pages/Profile';
 import Subscriptions from './pages/Subscriptions';
 import EmployeesPage from './pages/mechanic/Employees';
 import ServicesPage from './pages/mechanic/Services';
+import ComoFunciona from './pages/info/ComoFunciona';
+import ParaClientes from './pages/info/ParaClientes';
+import ParaMecanicos from './pages/info/ParaMecanicos';
 
 type UserType = 'client' | 'mechanic' | 'insurance' | 'tow' | null;
 
@@ -80,94 +83,113 @@ function App() {
   }
 
   return (
-    <Routes>
-      {/* Rotas públicas */}
-      <Route path="/" element={
-        isAuthenticated && userType ? <Navigate to={`/${userType}/dashboard`} replace /> : <Home />
-      } />
-      <Route path="/login" element={
-        isAuthenticated ? <Navigate to={`/${userType}/dashboard`} replace /> : <Login />
-      } />
-      <Route path="/register" element={
-        isAuthenticated ? <Navigate to={`/${userType}/dashboard`} replace /> : <Register />
-      } />
+    <BrowserRouter>
+      <Toaster position="top-right" />
+      <Routes>
+        {/* Rotas públicas */}
+        <Route path="/" element={
+          isAuthenticated && userType ? <Navigate to={`/${userType}/dashboard`} replace /> : <Home />
+        } />
+        <Route path="/login" element={
+          isAuthenticated ? <Navigate to="/" /> : <Login />
+        } />
+        <Route path="/register" element={
+          isAuthenticated ? <Navigate to="/" /> : <Register />
+        } />
+        <Route path="/como-funciona" element={<ComoFunciona />} />
+        <Route path="/para-clientes" element={<ParaClientes />} />
+        <Route path="/para-mecanicos" element={<ParaMecanicos />} />
 
-      {/* Rota de perfil - protegida mas acessível para todos os tipos de usuário */}
-      <Route path="/profile" element={
-        isAuthenticated ? <Profile /> : <Navigate to="/login" replace />
-      } />
+        {/* Rota de perfil - protegida mas acessível para todos os tipos de usuário */}
+        <Route path="/profile" element={
+          isAuthenticated ? <Profile /> : <Navigate to="/login" replace />
+        } />
 
-      {/* Rota de assinaturas - protegida mas acessível para todos os tipos de usuário */}
-      <Route path="/subscriptions" element={
-        isAuthenticated ? <Subscriptions /> : <Navigate to="/login" replace />
-      } />
+        {/* Rota de assinaturas - protegida mas acessível para todos os tipos de usuário */}
+        <Route path="/subscriptions" element={
+          isAuthenticated ? <Subscriptions /> : <Navigate to="/login" replace />
+        } />
 
-      {/* Rotas do cliente */}
-      <Route
-        path="/client/*"
-        element={
-          <PrivateRoute userType={userType} allowedType="client">
-            <Routes>
-              <Route path="dashboard" element={<ClientDashboard />} />
-              <Route path="vehicles/add" element={<AddVehicle />} />
-              <Route path="vehicles/:id" element={<VehicleDetails />} />
-              <Route path="vehicles/:id/edit" element={<EditVehicle />} />
-              <Route path="vehicles/:id/schedule-service" element={<ScheduleService />} />
-              <Route path="request-service" element={<RequestService />} />
-            </Routes>
-          </PrivateRoute>
-        }
-      />
+        {/* Rotas do cliente */}
+        <Route
+          path="/client/*"
+          element={
+            <PrivateRoute userType={userType} allowedType="client">
+              <Routes>
+                <Route path="dashboard" element={<ClientDashboard />} />
+                <Route path="vehicles/add" element={<AddVehicle />} />
+                <Route path="vehicles/:id" element={<VehicleDetails />} />
+                <Route path="vehicles/:id/edit" element={<EditVehicle />} />
+                <Route path="vehicles/:id/schedule-service" element={<ScheduleService />} />
+                <Route path="request-service" element={<RequestService />} />
+              </Routes>
+            </PrivateRoute>
+          }
+        />
 
-      {/* Rotas do mecânico */}
-      <Route
-        path="/mechanic/*"
-        element={
-          <PrivateRoute userType={userType} allowedType="mechanic">
-            <Routes>
-              <Route path="dashboard" element={<MechanicDashboard />} />
-              <Route path="employees" element={<EmployeesPage />} />
-              <Route path="services" element={<ServicesPage />} />
-            </Routes>
-          </PrivateRoute>
-        }
-      />
+        {/* Rotas do mecânico */}
+        <Route
+          path="/mechanic/*"
+          element={
+            <PrivateRoute userType={userType} allowedType="mechanic">
+              <Routes>
+                <Route path="dashboard" element={<MechanicDashboard />} />
+                <Route path="employees" element={<EmployeesPage />} />
+                <Route path="services" element={<ServicesPage />} />
+              </Routes>
+            </PrivateRoute>
+          }
+        />
 
-      {/* Rotas da seguradora */}
-      <Route
-        path="/insurance/*"
-        element={
-          <PrivateRoute userType={userType} allowedType="insurance">
-            <Routes>
-              <Route path="dashboard" element={<InsuranceDashboard />} />
-            </Routes>
-          </PrivateRoute>
-        }
-      />
+        {/* Rotas da seguradora */}
+        <Route
+          path="/insurance/*"
+          element={
+            <PrivateRoute userType={userType} allowedType="insurance">
+              <Routes>
+                <Route path="dashboard" element={<InsuranceDashboard />} />
+              </Routes>
+            </PrivateRoute>
+          }
+        />
 
-      {/* Rotas do guincho */}
-      <Route
-        path="/tow/*"
-        element={
-          <PrivateRoute userType={userType} allowedType="tow">
-            <Routes>
-              <Route path="dashboard" element={<TowDashboard />} />
-            </Routes>
-          </PrivateRoute>
-        }
-      />
+        {/* Rotas do guincho */}
+        <Route
+          path="/tow/*"
+          element={
+            <PrivateRoute userType={userType} allowedType="tow">
+              <Routes>
+                <Route path="dashboard" element={<TowDashboard />} />
+              </Routes>
+            </PrivateRoute>
+          }
+        />
 
-      {/* Rota de fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* Redirecionamento padrão */}
+        <Route
+          path="/"
+          element={
+            isAuthenticated ? (
+              userType === 'mechanic' ? (
+                <Navigate to="/mechanic/dashboard" />
+              ) : (
+                <Navigate to="/client/request-service" />
+              )
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
 function AppWrapper() {
   return (
-    <Router>
+    <BrowserRouter>
       <App />
-    </Router>
+    </BrowserRouter>
   );
 }
 
