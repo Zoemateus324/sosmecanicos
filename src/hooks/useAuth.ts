@@ -398,150 +398,96 @@ export function useAuth() {
     console.log('Iniciando hook useAuth');
 
     const initializeAuth = async () => {
-      if (!mounted || initialized) return;
-
       try {
-        console.log('Iniciando processo de autenticação');
         setLoading(true);
         setError(null);
 
-        // Verificar se já temos dados em cache
+        // Verificar cache local primeiro
         const cachedUser = localStorage.getItem('user');
-        const cachedProfile = localStorage.getItem('auth_profile');
-        const cachedToken = localStorage.getItem('sb-auth-token');
+        const cachedProfile = localStorage.getItem('profile');
 
-        if (cachedUser && cachedProfile && cachedToken && mounted) {
-          try {
-            const parsedUser = JSON.parse(cachedUser);
-            const parsedProfile = JSON.parse(cachedProfile);
-            const parsedToken = JSON.parse(cachedToken);
-
-            // Verificar se o token não está expirado
-            if (parsedToken.expires_at && new Date(parsedToken.expires_at) > new Date()) {
-              console.log('Usando dados do cache');
-              setUser(parsedUser);
-              setProfile(parsedProfile);
-              setInitialized(true);
-              return;
-            } else {
-              console.log('Token expirado, limpando cache');
-              localStorage.clear();
-            }
-          } catch (e) {
-            console.log('Erro ao parsear cache:', e);
-            localStorage.clear();
+        if (cachedUser && cachedProfile) {
+          const parsedUser = JSON.parse(cachedUser);
+          const parsedProfile = JSON.parse(cachedProfile);
+          
+          if (mounted) {
+            setUser(parsedUser);
+            setProfile(parsedProfile);
+            setInitialized(true);
           }
         }
 
-        // Se não temos cache válido, verificar sessão
+        // Verificar sessão atual
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
+
         if (sessionError) {
-          console.error('Erro ao obter sessão:', sessionError);
           throw sessionError;
         }
 
-        if (!session?.user) {
-          console.log('Sem sessão ativa');
+        if (!session) {
           if (mounted) {
             setUser(null);
             setProfile(null);
-            localStorage.clear();
-            // Redirecionar para login apenas se não estiver já na página de login
-            const currentPath = window.location.pathname;
-            if (!currentPath.includes('/login') && !currentPath.includes('/register')) {
-              navigate('/login');
-            }
+            setInitialized(true);
           }
           return;
         }
 
-        console.log('Sessão ativa encontrada, buscando perfil');
-        const profile = await fetchProfile(session.user.id);
-        
-        if (profile && mounted) {
+        // Atualizar usuário e perfil apenas se diferentes do cache
+        if (mounted && (!cachedUser || session.user.id !== JSON.parse(cachedUser).id)) {
           setUser(session.user);
-          setProfile(profile);
-          localStorage.setItem('user', JSON.stringify(session.user));
-          localStorage.setItem('auth_profile', JSON.stringify(profile));
-          startLocationTracking();
-
-          // Redirecionar para home se estiver na página de login
-          const currentPath = window.location.pathname;
-          if (currentPath.includes('/login') || currentPath.includes('/register')) {
-            navigate('/');
+          const profile = await fetchProfile(session.user.id);
+          if (profile) {
+            setProfile(profile);
+            localStorage.setItem('user', JSON.stringify(session.user));
+            localStorage.setItem('profile', JSON.stringify(profile));
           }
         }
 
-      } catch (error: any) {
-        console.error('Erro na inicialização:', error);
-        setError(error.message);
         if (mounted) {
-          setUser(null);
-          setProfile(null);
-          localStorage.clear();
-          // Redirecionar para login em caso de erro
-          navigate('/login');
+          setInitialized(true);
+        }
+
+      } catch (error) {
+        console.error('Erro na inicialização:', error);
+        if (mounted) {
+          setError(error instanceof Error ? error.message : 'Erro desconhecido');
+          setInitialized(true);
         }
       } finally {
         if (mounted) {
           setLoading(false);
-          setInitialized(true);
         }
       }
     };
 
-    // Configurar listener de autenticação
+    initializeAuth();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Evento de autenticação:', event, session?.user?.id);
-      
-      if (!mounted) return;
+      console.log('Evento de autenticação:', event, session);
 
-      try {
-        setError(null);
-
-        if (event === 'SIGNED_OUT' || !session) {
-          console.log('Usuário deslogado ou sessão expirada');
-          setUser(null);
-          setProfile(null);
-          localStorage.clear();
-          stopLocationTracking();
-          navigate('/login');
-          return;
-        }
-
-        if (event === 'INITIAL_SESSION' && !session?.user) {
-          console.log('Sessão inicial sem usuário');
-          setUser(null);
-          setProfile(null);
-          return;
-        }
-
-        if (session?.user) {
-          console.log('Atualizando sessão do usuário');
-          setUser(session.user);
-          const profile = await fetchProfile(session.user.id);
-          if (profile && mounted) {
-            setProfile(profile);
-            localStorage.setItem('user', JSON.stringify(session.user));
-            localStorage.setItem('auth_profile', JSON.stringify(profile));
-            startLocationTracking();
-          }
-        }
-      } catch (error: any) {
-        console.error('Erro no listener de autenticação:', error);
-        setError(error.message);
+      if (event === 'SIGNED_OUT') {
         if (mounted) {
           setUser(null);
           setProfile(null);
-          localStorage.clear();
-          navigate('/login');
+          localStorage.removeItem('user');
+          localStorage.removeItem('profile');
+          stopLocationTracking();
+          console.log('Usuário deslogado');
+        }
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (session?.user && mounted) {
+          setUser(session.user);
+          const profile = await fetchProfile(session.user.id);
+          if (profile) {
+            setProfile(profile);
+            localStorage.setItem('user', JSON.stringify(session.user));
+            localStorage.setItem('profile', JSON.stringify(profile));
+            startLocationTracking();
+          }
         }
       }
     });
-
-    // Iniciar processo de autenticação
-    initializeAuth();
 
     return () => {
       console.log('Desmontando hook useAuth');
@@ -549,7 +495,7 @@ export function useAuth() {
       subscription.unsubscribe();
       stopLocationTracking();
     };
-  }, [navigate]);
+  }, []);
 
   const signOut = async () => {
     try {

@@ -17,13 +17,13 @@ CREATE POLICY "Mecânicos podem ver solicitações"
                 -- Permitir visualização se a localização foi atualizada nas últimas 24 horas
                 (p.last_location_update >= NOW() - INTERVAL '24 hours'
                 AND public.calculate_distance(
-                    ms.latitude,
-                    ms.longitude,
+                    p.latitude,
+                    p.longitude,
                     (service_requests.location->>'latitude')::float,
                     (service_requests.location->>'longitude')::float
-                ) <= 30)
+                ) <= 50)
                 -- Ou se a solicitação está em um status que requer atenção do mecânico
-                OR service_requests.status IN ('accepted', 'in_progress')
+                OR service_requests.status IN ('accepted', 'in_progress', 'quoted')
                 OR service_requests.mechanic_id = auth.uid()
             )
         )
