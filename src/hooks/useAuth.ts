@@ -46,6 +46,15 @@ export function useAuth() {
   const [locationWatcher, setLocationWatcher] = useState<number | null>(null);
   const navigate = useNavigate();
 
+  // Função para limpar o estado
+  const clearState = () => {
+    setUser(null);
+    setProfile(null);
+    setError(null);
+    setInitialized(true);
+    setLoading(false);
+  };
+
   const updateLocation = async (location: Location) => {
     if (!user?.id) return;
 
@@ -164,7 +173,7 @@ export function useAuth() {
       return null;
     }
 
-    const cachedProfile = localStorage.getItem('auth_profile');
+    const cachedProfile = localStorage.getItem('profile');
     if (cachedProfile) {
       const parsed = JSON.parse(cachedProfile);
       if (parsed.id === userId) {
@@ -399,21 +408,31 @@ export function useAuth() {
 
     const initializeAuth = async () => {
       try {
+        if (!mounted) return;
+        
         setLoading(true);
         setError(null);
+        console.log('Iniciando verificação de autenticação...');
 
         // Verificar cache local primeiro
         const cachedUser = localStorage.getItem('user');
         const cachedProfile = localStorage.getItem('profile');
 
         if (cachedUser && cachedProfile) {
-          const parsedUser = JSON.parse(cachedUser);
-          const parsedProfile = JSON.parse(cachedProfile);
-          
-          if (mounted) {
-            setUser(parsedUser);
-            setProfile(parsedProfile);
-            setInitialized(true);
+          try {
+            const parsedUser = JSON.parse(cachedUser);
+            const parsedProfile = JSON.parse(cachedProfile);
+            
+            if (mounted) {
+              setUser(parsedUser);
+              setProfile(parsedProfile);
+              setInitialized(true);
+              startLocationTracking();
+            }
+          } catch (parseError) {
+            console.error('Erro ao processar cache:', parseError);
+            localStorage.removeItem('user');
+            localStorage.removeItem('profile');
           }
         }
 
@@ -421,7 +440,9 @@ export function useAuth() {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
-          throw sessionError;
+          console.error('Erro ao obter sessão:', sessionError);
+          clearState();
+          return;
         }
 
         if (!session) {
@@ -435,12 +456,21 @@ export function useAuth() {
 
         // Atualizar usuário e perfil apenas se diferentes do cache
         if (mounted && (!cachedUser || session.user.id !== JSON.parse(cachedUser).id)) {
-          setUser(session.user);
-          const profile = await fetchProfile(session.user.id);
-          if (profile) {
-            setProfile(profile);
-            localStorage.setItem('user', JSON.stringify(session.user));
-            localStorage.setItem('profile', JSON.stringify(profile));
+          try {
+            setUser(session.user);
+            const profile = await fetchProfile(session.user.id);
+            if (profile) {
+              setProfile(profile);
+              localStorage.setItem('user', JSON.stringify(session.user));
+              localStorage.setItem('profile', JSON.stringify(profile));
+              startLocationTracking();
+            } else {
+              console.error('Perfil não encontrado após verificação de sessão');
+              clearState();
+            }
+          } catch (error) {
+            console.error('Erro ao atualizar usuário e perfil:', error);
+            clearState();
           }
         }
 
@@ -452,7 +482,7 @@ export function useAuth() {
         console.error('Erro na inicialização:', error);
         if (mounted) {
           setError(error instanceof Error ? error.message : 'Erro desconhecido');
-          setInitialized(true);
+          clearState();
         }
       } finally {
         if (mounted) {
@@ -477,13 +507,21 @@ export function useAuth() {
         }
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (session?.user && mounted) {
-          setUser(session.user);
-          const profile = await fetchProfile(session.user.id);
-          if (profile) {
-            setProfile(profile);
-            localStorage.setItem('user', JSON.stringify(session.user));
-            localStorage.setItem('profile', JSON.stringify(profile));
-            startLocationTracking();
+          try {
+            setUser(session.user);
+            const profile = await fetchProfile(session.user.id);
+            if (profile) {
+              setProfile(profile);
+              localStorage.setItem('user', JSON.stringify(session.user));
+              localStorage.setItem('profile', JSON.stringify(profile));
+              startLocationTracking();
+            } else {
+              console.error('Perfil não encontrado após autenticação');
+              clearState();
+            }
+          } catch (error) {
+            console.error('Erro ao atualizar estado após autenticação:', error);
+            clearState();
           }
         }
       }
