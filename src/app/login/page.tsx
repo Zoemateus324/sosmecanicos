@@ -9,22 +9,33 @@ export default function Login(){
     const [error, setError] = useState("");
     const router = useRouter();
 
+    const handleLogin = async () => {
+        setError("");
+        
+        if (!email || !password) {
+            setError("Por favor, preencha todos os campos.");
+            return;
+        }
 
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
 
-    const handleLogin = async () =>{
-        const {error} = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
-        if(error){
-            setError(error.message);
-        }else{
-            router.push("/dashboard");
+            if (error) {
+                if (error.message.includes("Invalid login credentials")) {
+                    setError("Email ou senha incorretos.");
+                } else {
+                    setError("Erro ao fazer login. Por favor, tente novamente.");
+                }
+            } else if (data?.user) {
+                router.push("/dashboard");
+            }
+        } catch (err) {
+            setError("Ocorreu um erro inesperado. Por favor, tente novamente.");
         }
     };
-
-
-
 
     return(
         <div className="min-h-screen flex items-center justify-center">
@@ -35,7 +46,6 @@ export default function Login(){
                 value={email}
                 onChange={(e)=>setEmail(e.target.value)}
                 className="border p-2 mb-4 w-full"
-                
                 />
                 <input type="password"
                 placeholder="Senha"
