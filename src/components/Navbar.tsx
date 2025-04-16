@@ -1,6 +1,7 @@
 "use client"
 import {useAuth} from "@/contexts/AuthContext";
 import Link from "next/link";
+import { supabase } from "@/services/supabase";
 
 
 const menus ={

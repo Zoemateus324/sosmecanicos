@@ -1,6 +1,6 @@
 "use client"
 import { useState } from "react";
-import { supabase } from "../../services/supabase";
+import { supabase } from "@/services/supabase";
 import { useRouter } from "next/navigation";
 
 export default function Login(){
@@ -43,7 +43,7 @@ export default function Login(){
                 onChange={(e) =>setPassword(e.target.value)}
                 className="border p-2 mb-4 w-full" />
                 {error && <p className="text-red-500">{error}</p>}
-                <button onClick={{handleLogin}}
+                <button onClick={handleLogin}
                 className="bg-orange-500 text-white p-2 w-full sans">
                     Entrar
                 </button>
