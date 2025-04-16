@@ -40,8 +40,8 @@ export default function Dashboard() {
       if (error) {
         console.error("Erro ao buscar tipo de usuário:", error);
         setError("Erro ao carregar dados do usuário.");
-      } else {
-        setUserType(data.tipo_usuario);
+      } else if (data) {
+        setUserType(data.tipo_usuario === undefined ? null : data.tipo_usuario);
       }
     };
 
