@@ -21,8 +21,8 @@ export default function SejaParceiro() {
       userIds: [email],
       title: "Bem-vindo ao SOS Mecânicos",
       message: "Sua solicitação de parceria está em análise!",
-    });
-  };*/
+    });*/
+  };
 
   return (
     <div className="container mx-auto p-4 min-h-screen">
