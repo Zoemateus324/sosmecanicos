@@ -11,30 +11,57 @@ export default function Cadastro() {
   const [error, setError] = useState("");
   const router = useRouter();
 
+  const validateEmail = (email: string) => {
+    const re = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    return re.test(email);
+  };
+
   const handleCadastro = async () => {
+    setError("");
+
     if (!nome || !email || !password || !tipoUsuario) {
       setError("Por favor, preencha todos os campos.");
       return;
     }
 
+    if (password.length < 6) {
+      setError("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      setError("Por favor, insira um email válido (ex.: usuario@exemplo.com).");
+      return;
+    }
+
+    const validTiposUsuario = ["cliente", "mecanico", "guincho", "seguradora"];
+    if (!validTiposUsuario.includes(tipoUsuario)) {
+      setError("Tipo de usuário inválido.");
+      return;
+    }
+
     try {
-      // Primeiro, cria o usuário na autenticação
+      console.log("Dados enviados para signUp:", { email, password, nome, tipoUsuario });
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             nome,
-            tipo_usuario: tipoUsuario
-          }
-        }
+            tipo_usuario: tipoUsuario,
+          },
+        },
       });
 
       if (authError) {
+        console.error("Erro de autenticação:", authError);
         if (authError.message.includes("already registered")) {
           setError("Este email já está cadastrado.");
+        } else if (authError.message.includes("is invalid")) {
+          setError(`O email "${email}" é inválido. Tente um email diferente (ex.: joao.teste123@gmail.com).`);
         } else {
-          setError("Erro ao criar conta. Por favor, tente novamente.");
+          setError("Erro ao criar conta: " + authError.message);
         }
         return;
       }
@@ -44,49 +71,35 @@ export default function Cadastro() {
         return;
       }
 
-      // Em seguida, insere os dados na tabela users usando o RLS
-      const { error: dbError } = await supabase
-        .from("users")
-        .insert({
-          id: authData.user.id,
-          nome,
-          email,
-          tipo_usuario: tipoUsuario,
-          created_at: new Date().toISOString()
-        })
-        .select();
+      console.log("Usuário criado com sucesso:", authData.user);
+
+      const { error: dbError } = await supabase.rpc("criar_usuario", {
+        p_id: authData.user.id,
+        p_nome: nome,
+        p_email: email,
+        p_tipo_usuario: tipoUsuario,
+        p_created_at: new Date().toISOString(),
+      });
 
       if (dbError) {
         console.error("Erro ao inserir usuário:", JSON.stringify(dbError));
-        // Tenta remover o usuário da autenticação em caso de erro
-        try {
-          const { error: deleteError } = await supabase.auth.admin.deleteUser(authData.user.id);
-          if (deleteError) {
-            console.error("Erro ao remover usuário após falha:", JSON.stringify(deleteError));
-          }
-        } catch (deleteErr) {
-          console.error("Erro ao tentar remover usuário:", deleteErr);
-        }
-
-        // Mensagem de erro específica baseada no tipo de erro
-        if (dbError.code === "23505") { // Violação de chave única
+        if (dbError.code === "23505") {
           setError("Este email já está registrado no sistema.");
-        } else if (dbError.code === "42501") { // Violação de política RLS
+        } else if (dbError.code === "42501") {
           setError("Você não tem permissão para realizar esta operação.");
         } else {
-          setError("Erro ao salvar dados. Por favor, tente novamente mais tarde.");
+          setError("Erro ao salvar dados: " + dbError.message);
         }
+        await supabase.auth.admin.deleteUser(authData.user.id); // Opcional
         return;
       }
 
-      // Redireciona para o dashboard após sucesso
       router.push("/dashboard");
     } catch (err) {
       console.error("Erro no cadastro:", err);
       setError("Ocorreu um erro inesperado. Por favor, tente novamente.");
     }
-  }
-  
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-light">
@@ -98,6 +111,7 @@ export default function Cadastro() {
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           className="border p-2 mb-4 w-full rounded"
+          required
         />
         <input
           type="email"
@@ -105,6 +119,7 @@ export default function Cadastro() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="border p-2 mb-4 w-full rounded"
+          required
         />
         <input
           type="password"
@@ -112,15 +127,18 @@ export default function Cadastro() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="border p-2 mb-4 w-full rounded"
+          required
+          minLength={6}
         />
         <select
           value={tipoUsuario}
           onChange={(e) => setTipoUsuario(e.target.value)}
           className="border p-2 mb-4 w-full rounded"
+          required
         >
           <option value="">Tipo de Usuário</option>
           <option value="cliente">Cliente</option>
-          <option value="mecanico">Mecânico</option>
+          <option value="mecanico">Mecanico</option>
           <option value="guincho">Guincho</option>
           <option value="seguradora">Seguradora</option>
         </select>
