@@ -6,7 +6,7 @@ export default function Home(){
   return(
     <div className="min-h-screen bg-neutral-light">
       {/* Hero Section */}
-      <section className="bg-primary text-neutral-light py-20">
+      <section className="bg-white text-neutral-light py-20">
         <div className="container mx-auto px-4 flex flex-col md:flex-row items-center">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
