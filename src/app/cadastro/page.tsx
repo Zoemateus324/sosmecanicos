@@ -57,10 +57,25 @@ export default function Cadastro() {
         .select();
 
       if (dbError) {
-        console.error("Erro ao inserir usuário:", dbError);
-        // Se houver erro na inserção, remove o usuário da autenticação
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        setError("Erro ao salvar dados. Por favor, tente novamente.");
+        console.error("Erro ao inserir usuário:", JSON.stringify(dbError));
+        // Tenta remover o usuário da autenticação em caso de erro
+        try {
+          const { error: deleteError } = await supabase.auth.admin.deleteUser(authData.user.id);
+          if (deleteError) {
+            console.error("Erro ao remover usuário após falha:", JSON.stringify(deleteError));
+          }
+        } catch (deleteErr) {
+          console.error("Erro ao tentar remover usuário:", deleteErr);
+        }
+
+        // Mensagem de erro específica baseada no tipo de erro
+        if (dbError.code === "23505") { // Violação de chave única
+          setError("Este email já está registrado no sistema.");
+        } else if (dbError.code === "42501") { // Violação de política RLS
+          setError("Você não tem permissão para realizar esta operação.");
+        } else {
+          setError("Erro ao salvar dados. Por favor, tente novamente mais tarde.");
+        }
         return;
       }
 
