@@ -29,6 +29,8 @@ export default function Dashboard() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [veiculos, setVeiculos] = useState<any[]>([]);
+  const [userNome, setUserNome] = useState(null);
+
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
@@ -56,14 +58,16 @@ export default function Dashboard() {
 
         // Buscar tipo de usuário
         const { data: userData, error: userError } = await supabase
-          .from("users") // Corrigido para "users" (verifique o nome real no Supabase)
-          .select("tipo_usuario")
-          .eq("id", session.user.id)
-          .single();
-
-        if (userError) throw new Error("Erro ao buscar tipo de usuário: " + userError.message);
-
-        setUserType(userData?.tipo_usuario ?? null);
+        .from("users")
+        .select("nome, email, tipo_usuario")
+        .eq("id", session.user.id)
+        .single();
+      
+      if (userError) throw new Error("Erro ao buscar tipo de usuário: " + userError.message);
+      
+      setUserType(userData?.tipo_usuario ?? null);
+      setUserNome(userData?.nome ?? null); // <- Aqui você salva o nome
+      
 
         // Buscar veículos cadastrados
         const { data: veiculosData, error: veiculosError } = await supabase
@@ -163,7 +167,7 @@ export default function Dashboard() {
               <AvatarImage src="https://github.com/shadcn.png" alt="User Avatar" />
               <AvatarFallback>US</AvatarFallback>
             </Avatar>
-            <span className="text-gray-600 text-sm md:text-base">{userEmail || "Carregando..."}</span>
+            <span className="text-gray-600 text-sm md:text-base">{userNome || "Carregando..."}</span>
             <Button
               variant="outline"
               onClick={handleLogout}
@@ -360,17 +364,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* User Type Display */}
-        {!loading && !error && userType && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 1.0 }}
-            className="mt-6 text-lg text-gray-600"
-          >
-            Tipo de usuário: <span className="font-semibold text-blue-900">{userType}</span>
-          </motion.p>
-        )}
+       
       </div>
     </div>
   );
