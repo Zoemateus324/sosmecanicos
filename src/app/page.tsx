@@ -59,7 +59,7 @@ export default function Home(){
               },
               {
                 title: "Pagamento Seguro",
-                description: "Pague com PIX, boleto ou cartão.",
+                description: "Transações protegidas e garantidas através da nossa plataforma",
                 icon: "/assets/secure.svg",
               },
               {
@@ -97,6 +97,13 @@ export default function Home(){
           >
             Comece Agora
           </Link>
+        </div>
+      </section>
+      {/*Depoiments Sections */}
+      <section className="bg-neutral py-16">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3x1 font-bold mb-4"> Depoimentos</h2>
+          <p className="text-lg mb-6">O que nossos clientes dizem</p>
         </div>
       </section>
     </div>

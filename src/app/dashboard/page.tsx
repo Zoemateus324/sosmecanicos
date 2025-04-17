@@ -29,7 +29,7 @@ export default function Dashboard() {
         return;
       }
 
-      setUserEmail(session.user.email);
+      setUserEmail(session.user?.email ?? null);
 
       const { data, error } = await supabase
         .from("users")
