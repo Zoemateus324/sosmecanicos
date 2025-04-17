@@ -49,13 +49,7 @@ export default function Navbar() {
       <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
         {/* Logo and Brand */}
         <Link href="/" className="flex items-center space-x-2">
-          <Image
-            src="/logo-sos-mecanicos.png"
-            alt="SOS Mecânicos Logo"
-            width={32}
-            height={32}
-            className="md:w-10 md:h-10"
-          />
+         
           <span className="text-xl md:text-2xl font-bold text-orange-500">SOS Mecânicos</span>
         </Link>
 

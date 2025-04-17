@@ -37,7 +37,7 @@ export default function ParaMecanicos() {
             transition={{ duration: 1, delay: 0.5 }}
             className="absolute top-4 left-4"
           >
-            <Image src="/assets/wrench.svg" alt="Chave de Boca" width={40} height={40} />
+            
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: -20 }}

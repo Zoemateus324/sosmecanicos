@@ -21,8 +21,14 @@ export default function GerenciarPlanos() {
   const user = session?.user as User | undefined;
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [novoPlano, setNovoPlano] = useState<Partial<Plano>>({
+    nome: "",
+    descricao: "",
     itensInclusos: [],
+    valorMensal: 0,
+    carenciaDias: 0,
+    tempoCobertura: "",
     aceitaConvenios: false,
+    conveniosAceitos: [],
   });
 
   useEffect(() => {
@@ -39,6 +45,12 @@ export default function GerenciarPlanos() {
   const handleSubmit = async () => {
     if (!user || userType !== "seguradora") return;
 
+    // Verificar se os campos obrigatórios estão preenchidos
+    if (!novoPlano.nome || !novoPlano.descricao || !novoPlano.valorMensal) {
+      alert("Por favor, preencha todos os campos obrigatórios");
+      return;
+    }
+
     const { error } = await supabase.from("planos_seguradora").insert({
       ...novoPlano,
       created_by: user.id,
@@ -46,7 +58,16 @@ export default function GerenciarPlanos() {
 
     if (!error) {
       fetchPlanos();
-      setNovoPlano({ itensInclusos: [], aceitaConvenios: false });
+      setNovoPlano({
+        nome: "",
+        descricao: "",
+        itensInclusos: [],
+        valorMensal: 0,
+        carenciaDias: 0,
+        tempoCobertura: "",
+        aceitaConvenios: false,
+        conveniosAceitos: [],
+      });
     }
   };
 

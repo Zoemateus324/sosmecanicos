@@ -42,19 +42,19 @@ export default function ComoFunciona() {
                 step: "1",
                 title: "Solicite o Serviço",
                 description: "Escolha o tipo de serviço e descreva o problema.",
-                icon: "/assets/step1.svg",
+                icon: "/assets/service.svg",
               },
               {
                 step: "2",
                 title: "Receba Propostas",
                 description: "Profissionais próximos enviam orçamentos.",
-                icon: "/assets/step2.svg",
+                icon: "/assets/quote.svg",
               },
               {
                 step: "3",
                 title: "Serviço Concluído",
                 description: "Pague de forma segura e avalie o serviço.",
-                icon: "/assets/step3.svg",
+                icon: "/assets/service-check.svg",
               },
             ].map((step, index) => (
               <motion.div

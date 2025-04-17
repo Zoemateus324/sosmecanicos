@@ -31,22 +31,7 @@ export default function ParaClientes() {
         {/* Benefits Section */}
         <section className="bg-white p-8 rounded-xl shadow-lg relative">
           {/* Floating Elements */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.5 }}
-            className="absolute top-4 left-4"
-          >
-            <Image src="/assets/wrench.svg" alt="Chave de Boca" width={40} height={40} />
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.7 }}
-            className="absolute bottom-4 right-4"
-          >
-            <Image src="/assets/gear.svg" alt="Engrenagem" width={40} height={40} />
-          </motion.div>
+         
 
           <h3 className="text-2xl font-semibold text-blue-900 mb-8 text-center">
             Benefícios para Você
