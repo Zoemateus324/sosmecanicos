@@ -12,9 +12,9 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body>
         <AuthProvider>
-          <Navbar />
+          
           {children}
-          <Footer/>
+          
         </AuthProvider>
       </body>
     </html>

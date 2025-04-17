@@ -3,22 +3,24 @@ import { useState } from "react";
 import { supabase } from "@/services/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { User } from '@supabase/supabase-js';
 
 export default function SolicitarServico() {
   const { session } = useAuth();
+  const user = session?.user as User | undefined;
   const router = useRouter();
   const [tipoServico, setTipoServico] = useState("");
   const [descricao, setDescricao] = useState("");
   const [veiculoId, setVeiculoId] = useState("");
 
   const handleSubmit = async () => {
-    if (!session) {
+    if (!user) {
       router.push("/login");
       return;
     }
 
     const { error } = await supabase.from("requests").insert({
-      cliente_id: session.user.id,
+      cliente_id: user.id,
       tipo_servico: tipoServico,
       descricao,
       veiculo_id: veiculoId,

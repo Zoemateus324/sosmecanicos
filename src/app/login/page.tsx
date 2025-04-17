@@ -39,7 +39,7 @@ export default function Login() {
 
       if (data?.user) {
         console.log("Login bem-sucedido:", data.user);
-        router.push("/dashboard");
+        router.push("/dashboard/cliente");
       } else {
         setError("Falha ao obter sessão. Tente novamente.");
       }

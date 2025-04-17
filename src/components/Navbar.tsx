@@ -40,9 +40,9 @@ export default function Navbar(){
 
 
     return(
-        <nav className="bg-gray-800 text-white p-4">
-      <div className="container mx-auto flex justify-between">
-        <Link href="/">SOS Mecânicos</Link>
+        <nav className="fixed top-0 left-0 w-full bg-white shadow-lg z-50">
+      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        <Link className="text-2xl font-bold text-orange-500" href="/">SOS Mecânicos</Link>
         <div className="space-x-4">
           {!session ? (
             <>
@@ -50,7 +50,7 @@ export default function Navbar(){
               <Link href="/para-clientes">Para Clientes</Link>
               <Link href="/para-mecanicos">Para Mecânicos</Link>
               <Link href="/login">Entrar</Link>
-              <Link href="/cadastro">Cadastrar</Link>
+              <Link className="bg-destructive text-accent py-3 px-6 rounded-lg text-lg hover:bg-orange-600" href="/cadastro">Cadastrar</Link>
             </>
           ) : (
             <>

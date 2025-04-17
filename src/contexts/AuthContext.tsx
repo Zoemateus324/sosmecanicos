@@ -8,9 +8,10 @@ import {
   ReactNode,
 } from "react";
 import { supabase } from "@/services/supabase";
+import { Session } from '@supabase/supabase-js';
 
 type AuthContextType = {
-  session: any;
+  session: Session | null;
   userType: string | null;
   loading: boolean;
 };
@@ -22,12 +23,12 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [userType, setUserType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Busca sessão e tipo de usuário
-  const loadSessionAndUserType = async (session: any) => {
+  const loadSessionAndUserType = async (session: Session) => {
     setSession(session);
 
     if (session?.user) {
@@ -54,14 +55,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      await loadSessionAndUserType(session);
+      if (session) {
+        await loadSessionAndUserType(session);
+      } else {
+        setSession(null);
+        setUserType(null);
+        setLoading(false);
+      }
     };
 
     initAuth();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        await loadSessionAndUserType(session);
+        if (session) {
+          await loadSessionAndUserType(session);
+        } else {
+          setSession(null);
+          setUserType(null);
+          setLoading(false);
+        }
       }
     );
 

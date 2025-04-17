@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/services/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { User } from '@supabase/supabase-js';
 
 type Plano = {
   id: string;
@@ -17,6 +18,7 @@ type Plano = {
 
 export default function GerenciarPlanos() {
   const { session, userType } = useAuth();
+  const user = session?.user as User | undefined;
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [novoPlano, setNovoPlano] = useState<Partial<Plano>>({
     itensInclusos: [],
@@ -35,11 +37,11 @@ export default function GerenciarPlanos() {
   };
 
   const handleSubmit = async () => {
-    if (!session || userType !== "seguradora") return;
+    if (!user || userType !== "seguradora") return;
 
     const { error } = await supabase.from("planos_seguradora").insert({
       ...novoPlano,
-      created_by: session.user.id,
+      created_by: user.id,
     });
 
     if (!error) {
