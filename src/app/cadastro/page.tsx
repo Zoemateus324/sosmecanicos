@@ -1,7 +1,20 @@
 "use client";
+
 import { useState } from "react";
 import { supabase } from "@/services/supabase";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import Link from "next/link";
 
 export default function Cadastro() {
   const [nome, setNome] = useState("");
@@ -102,54 +115,99 @@ export default function Cadastro() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-light">
-      <div className="p-6 bg-white shadow-md rounded-lg w-full max-w-md">
-        <h2 className="text-2xl font-bold text-primary mb-4">Cadastro</h2>
-        <input
-          type="text"
-          placeholder="Nome"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          className="border p-2 mb-4 w-full rounded"
-          required
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="border p-2 mb-4 w-full rounded"
-          required
-        />
-        <input
-          type="password"
-          placeholder="Senha"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="border p-2 mb-4 w-full rounded"
-          required
-          minLength={6}
-        />
-        <select
-          value={tipoUsuario}
-          onChange={(e) => setTipoUsuario(e.target.value)}
-          className="border p-2 mb-4 w-full rounded"
-          required
-        >
-          <option value="">Tipo de Usuário</option>
-          <option value="cliente">Cliente</option>
-          <option value="mecanico">Mecanico</option>
-          <option value="guincho">Guincho</option>
-          <option value="seguradora">Seguradora</option>
-        </select>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        <button
-          onClick={handleCadastro}
-          className="bg-secondary text-neutral p-2 w-full rounded hover:bg-yellow-600"
-        >
-          Cadastrar
-        </button>
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 to-gray-200 p-4">
+      <Card className="w-full max-w-md shadow-lg border-none">
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <Image
+              src="/logo-sos-mecanicos.png"
+              alt="SOS Mecânicos Logo"
+              width={48}
+              height={48}
+            />
+          </div>
+          <CardTitle className="text-3xl font-bold text-purple-700">SOS Mecânicos</CardTitle>
+          <p className="text-gray-600 mt-2">Crie sua conta para começar</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="nome" className="text-sm font-medium text-gray-700">
+              Nome
+            </label>
+            <Input
+              id="nome"
+              type="text"
+              placeholder="Seu nome"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              required
+              className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-sm font-medium text-gray-700">
+              Email
+            </label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="password" className="text-sm font-medium text-gray-700">
+              Senha
+            </label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Sua senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="tipoUsuario" className="text-sm font-medium text-gray-700">
+              Tipo de Usuário
+            </label>
+            <Select onValueChange={setTipoUsuario} value={tipoUsuario}>
+              <SelectTrigger className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors">
+                <SelectValue placeholder="Selecione o tipo de usuário" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cliente">Cliente</SelectItem>
+                <SelectItem value="mecanico">Mecânico</SelectItem>
+                <SelectItem value="guincho">Guincho</SelectItem>
+                <SelectItem value="seguradora">Seguradora</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+          <Button
+            onClick={handleCadastro}
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white transition-colors"
+          >
+            Cadastrar
+          </Button>
+          <p className="text-center text-sm text-gray-600">
+            Já tem uma conta?{" "}
+            <Link href="/login" className="text-purple-600 hover:underline">
+              Faça login
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

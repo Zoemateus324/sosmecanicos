@@ -120,3 +120,11 @@
     @apply bg-background text-foreground;
   }
 }
+/* Garantir que o Dialog fique acima do mapa */
+.DialogOverlay {
+  z-index: 1000 !important;
+}
+
+.DialogContent {
+  z-index: 1001 !important;
+}
