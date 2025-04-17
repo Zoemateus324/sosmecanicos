@@ -22,18 +22,44 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import Link from "next/link";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Toaster } from "@/components/ui/sonner";
 
 export default function Dashboard() {
   const [userType, setUserType] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userNome, setUserNome] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [veiculos, setVeiculos] = useState<any[]>([]);
-  const [userNome, setUserNome] = useState(null);
-
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [isVehicleDialogOpen, setIsVehicleDialogOpen] = useState(false);
+  const [isMechanicDialogOpen, setIsMechanicDialogOpen] = useState(false);
+  const [isTowDialogOpen, setIsTowDialogOpen] = useState(false);
+  const [isEditVehicleDialogOpen, setIsEditVehicleDialogOpen] = useState(false);
+  const [newVehicle, setNewVehicle] = useState({ marca: "", modelo: "", ano: "", placa: "" });
+  const [editVehicle, setEditVehicle] = useState({ id: "", marca: "", modelo: "", ano: "", placa: "" });
+  const [mechanicRequest, setMechanicRequest] = useState({ vehicleId: "", description: "", location: "" });
+  const [towRequest, setTowRequest] = useState({ vehicleId: "", origin: "", destination: "", observations: "" });
   const router = useRouter();
 
   useEffect(() => {
@@ -41,13 +67,12 @@ export default function Dashboard() {
       try {
         setLoading(true);
 
-        // Verificar sessão do usuário
         const {
           data: { session },
           error: sessionError,
         } = await supabase.auth.getSession();
 
-        if (sessionError) throw new Error("Erro ao obter sessão do usuário.");
+        if (sessionError) throw new Error("Erro ao obter sessão do usuário: " + sessionError.message);
         if (!session?.user) {
           router.push("/login");
           return;
@@ -56,27 +81,24 @@ export default function Dashboard() {
         setUserId(session.user.id);
         setUserEmail(session.user?.email ?? null);
 
-        // Buscar tipo de usuário
         const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("nome, email, tipo_usuario")
-        .eq("id", session.user.id)
-        .single();
-      
-      if (userError) throw new Error("Erro ao buscar tipo de usuário: " + userError.message);
-      
-      setUserType(userData?.tipo_usuario ?? null);
-      setUserNome(userData?.nome ?? null); // <- Aqui você salva o nome
-      
+          .from("users")
+          .select("nome, email, tipo_usuario")
+          .eq("id", session.user.id)
+          .single();
 
-        // Buscar veículos cadastrados
+        if (userError) throw new Error("Erro ao buscar tipo de usuário: " + userError.message);
+        if (!userData) throw new Error("Usuário não encontrado na tabela 'users'.");
+
+        setUserType(userData?.tipo_usuario ?? null);
+        setUserNome(userData?.nome ?? null);
+
         const { data: veiculosData, error: veiculosError } = await supabase
           .from("veiculos")
-          .select("id, modelo, placa, ano")
+          .select("id, modelo, placa, ano, marca")
           .eq("user_id", session.user.id);
 
         if (veiculosError) throw new Error("Erro ao buscar veículos: " + veiculosError.message);
-
         setVeiculos(veiculosData ?? []);
       } catch (err: any) {
         setError(err.message || "Erro ao carregar dados do dashboard.");
@@ -87,6 +109,119 @@ export default function Dashboard() {
 
     fetchUserData();
   }, [router]);
+
+  const handleAddVehicle = async () => {
+    try {
+      const { error } = await supabase.from("veiculos").insert({
+        marca: newVehicle.marca,
+        modelo: newVehicle.modelo,
+        ano: parseInt(newVehicle.ano),
+        placa: newVehicle.placa,
+        user_id: userId,
+      });
+
+      if (error) throw new Error("Erro ao cadastrar veículo: " + error.message);
+
+      const { data: updatedVeiculos } = await supabase
+        .from("veiculos")
+        .select("id, modelo, placa, ano, marca")
+        .eq("user_id", userId);
+
+      setVeiculos(updatedVeiculos ?? []);
+      setNewVehicle({ marca: "", modelo: "", ano: "", placa: "" });
+      setIsVehicleDialogOpen(false);
+      toast.success("Veículo cadastrado com sucesso!", {
+        style: { backgroundColor: "#f97316", color: "#ffffff" },
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao cadastrar veículo.", {
+        style: { backgroundColor: "#1e3a8a", color: "#ffffff" },
+      });
+    }
+  };
+
+  const handleEditVehicle = async () => {
+    try {
+      const { error } = await supabase
+        .from("veiculos")
+        .update({
+          marca: editVehicle.marca,
+          modelo: editVehicle.modelo,
+          ano: parseInt(editVehicle.ano),
+          placa: editVehicle.placa,
+        })
+        .eq("id", editVehicle.id);
+
+      if (error) throw new Error("Erro ao atualizar veículo: " + error.message);
+
+      const { data: updatedVeiculos } = await supabase
+        .from("veiculos")
+        .select("id, modelo, placa, ano, marca")
+        .eq("user_id", userId);
+
+      setVeiculos(updatedVeiculos ?? []);
+      setEditVehicle({ id: "", marca: "", modelo: "", ano: "", placa: "" });
+      setIsEditVehicleDialogOpen(false);
+      toast.success("Veículo atualizado com sucesso!", {
+        style: { backgroundColor: "#f97316", color: "#ffffff" },
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar veículo.", {
+        style: { backgroundColor: "#1e3a8a", color: "#ffffff" },
+      });
+    }
+  };
+
+  const handleRequestMechanic = async () => {
+    try {
+      const { error } = await supabase.from("mechanic_requests").insert({
+        vehicle_id: mechanicRequest.vehicleId,
+        description: mechanicRequest.description,
+        location: mechanicRequest.location,
+        cliente_id: userId,
+        status: "pending",
+        created_at: new Date().toISOString(),
+      });
+
+      if (error) throw new Error("Erro ao solicitar mecânico: " + error.message);
+
+      setMechanicRequest({ vehicleId: "", description: "", location: "" });
+      setIsMechanicDialogOpen(false);
+      toast.success("Solicitação de mecânico enviada com sucesso!", {
+        style: { backgroundColor: "#f97316", color: "#ffffff" },
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao solicitar mecânico.", {
+        style: { backgroundColor: "#1e3a8a", color: "#ffffff" },
+      });
+    }
+  };
+
+  const handleRequestTow = async () => {
+    try {
+      const { error } = await supabase.from("tow_requests").insert({
+        vehicle_id: towRequest.vehicleId,
+        origin: towRequest.origin,
+        destination: towRequest.destination,
+        observations: towRequest.observations,
+        cliente_id: userId,
+        status: "pending",
+        created_at: new Date().toISOString(),
+      });
+
+      if (error) throw new Error("Erro ao solicitar guincho: " + error.message);
+
+      setTowRequest({ vehicleId: "", origin: "", destination: "", observations: "" });
+      setIsTowDialogOpen(false);
+      toast.success("Solicitação de guincho enviada com sucesso!", {
+        style: { backgroundColor: "#f97316", color: "#ffffff" },
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao solicitar guincho.", {
+        style: { backgroundColor: "#1e3a8a", color: "#ffffff" },
+      });
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -165,7 +300,7 @@ export default function Dashboard() {
           <div className="flex items-center space-x-4">
             <Avatar>
               <AvatarImage src="https://github.com/shadcn.png" alt="User Avatar" />
-              <AvatarFallback>US</AvatarFallback>
+              <AvatarFallback>{userNome ? userNome.charAt(0).toUpperCase() : "US"}</AvatarFallback>
             </Avatar>
             <span className="text-gray-600 text-sm md:text-base">{userNome || "Carregando..."}</span>
             <Button
@@ -200,7 +335,10 @@ export default function Dashboard() {
             </div>
           </div>
         ) : error ? (
-          <p className="text-red-500 text-center mt-6">{error}</p>
+          <div className="text-red-500 text-center mt-6">
+            <p>{error}</p>
+            <p className="text-sm mt-2">Verifique o console para mais detalhes.</p>
+          </div>
         ) : (
           <div className="space-y-6">
             {/* Grid with 3 Options */}
@@ -210,84 +348,288 @@ export default function Dashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
-                <Link href="/cadastrar-veiculo">
-                  <Card className="border-none shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-                    <CardHeader>
-                      <CardTitle className="text-blue-900">Cadastrar Veículo</CardTitle>
-                      <CardDescription className="text-gray-600">
-                        Adicione um novo veículo à sua conta
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex justify-center">
-                        <svg className="w-12 h-12 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <Card className="border-none shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <CardTitle className="text-blue-900">Cadastrar Veículo</CardTitle>
+                    <CardDescription className="text-gray-600">
+                      Adicione um novo veículo à sua conta
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Dialog open={isVehicleDialogOpen} onOpenChange={setIsVehicleDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-orange-500 hover:bg-orange-600 text-white w-full">
+                          Cadastrar Veículo
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle className="text-blue-900">Cadastrar Novo Veículo</DialogTitle>
+                          <DialogDescription>
+                            Preencha os dados do veículo para adicioná-lo à sua conta.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="marca" className="text-right">
+                              Marca
+                            </Label>
+                            <Input
+                              id="marca"
+                              value={newVehicle.marca}
+                              onChange={(e) => setNewVehicle({ ...newVehicle, marca: e.target.value })}
+                              className="col-span-3"
+                            />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="modelo" className="text-right">
+                              Modelo
+                            </Label>
+                            <Input
+                              id="modelo"
+                              value={newVehicle.modelo}
+                              onChange={(e) => setNewVehicle({ ...newVehicle, modelo: e.target.value })}
+                              className="col-span-3"
+                            />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="ano" className="text-right">
+                              Ano
+                            </Label>
+                            <Input
+                              id="ano"
+                              type="number"
+                              value={newVehicle.ano}
+                              onChange={(e) => setNewVehicle({ ...newVehicle, ano: e.target.value })}
+                              className="col-span-3"
+                            />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="placa" className="text-right">
+                              Placa
+                            </Label>
+                            <Input
+                              id="placa"
+                              value={newVehicle.placa}
+                              onChange={(e) => setNewVehicle({ ...newVehicle, placa: e.target.value })}
+                              className="col-span-3"
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsVehicleDialogOpen(false)}
+                            className="border-orange-500 text-orange-500 hover:bg-orange-50"
+                          >
+                            Cancelar
+                          </Button>
+                          <Button onClick={handleAddVehicle} className="bg-orange-500 hover:bg-orange-600 text-white">
+                            Cadastrar
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </CardContent>
+                </Card>
               </motion.div>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.4 }}
               >
-                <Link href="/solicitar-mecanico">
-                  <Card className="border-none shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-                    <CardHeader>
-                      <CardTitle className="text-blue-900">Solicitar Mecânico</CardTitle>
-                      <CardDescription className="text-gray-600">
-                        Peça ajuda de um mecânico próximo
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex justify-center">
-                        <svg className="w-12 h-12 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M13 10V3L4 14h7v7l9-11h-7z"
-                          />
-                        </svg>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <Card className="border-none shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <CardTitle className="text-blue-900">Solicitar Mecânico</CardTitle>
+                    <CardDescription className="text-gray-600">
+                      Peça ajuda de um mecânico próximo
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Dialog open={isMechanicDialogOpen} onOpenChange={setIsMechanicDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-orange-500 hover:bg-orange-600 text-white w-full">
+                          Solicitar Mecânico
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle className="text-blue-900">Solicitar Mecânico</DialogTitle>
+                          <DialogDescription>
+                            Informe os detalhes para solicitar um mecânico.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="vehicleId" className="text-right">
+                              Veículo
+                            </Label>
+                            <Select
+                              onValueChange={(value) => setMechanicRequest({ ...mechanicRequest, vehicleId: value })}
+                              value={mechanicRequest.vehicleId}
+                            >
+                              <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Selecione um veículo" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {veiculos.map((veiculo) => (
+                                  <SelectItem key={veiculo.id} value={veiculo.id}>
+                                    {veiculo.modelo} - {veiculo.placa}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="description" className="text-right">
+                              Problema
+                            </Label>
+                            <Textarea
+                              id="description"
+                              value={mechanicRequest.description}
+                              onChange={(e) => setMechanicRequest({ ...mechanicRequest, description: e.target.value })}
+                              className="col-span-3"
+                              placeholder="Descreva o problema do veículo"
+                            />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="location" className="text-right">
+                              Localização
+                            </Label>
+                            <Input
+                              id="location"
+                              value={mechanicRequest.location}
+                              onChange={(e) => setMechanicRequest({ ...mechanicRequest, location: e.target.value })}
+                              className="col-span-3"
+                              placeholder="Ex.: Av. Principal, 123"
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsMechanicDialogOpen(false)}
+                            className="border-orange-500 text-orange-500 hover:bg-orange-50"
+                          >
+                            Cancelar
+                          </Button>
+                          <Button
+                            onClick={handleRequestMechanic}
+                            className="bg-orange-500 hover:bg-orange-600 text-white"
+                            disabled={!mechanicRequest.vehicleId || !mechanicRequest.description || !mechanicRequest.location}
+                          >
+                            Solicitar
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </CardContent>
+                </Card>
               </motion.div>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.6 }}
               >
-                <Link href="/solicitar-guincho">
-                  <Card className="border-none shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-                    <CardHeader>
-                      <CardTitle className="text-blue-900">Solicitar Guincho</CardTitle>
-                      <CardDescription className="text-gray-600">
-                        Solicite um guincho para seu veículo
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex justify-center">
-                        <svg className="w-12 h-12 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z M3 8h18M5 8l2-4h10l2 4M7 8v9h10V8H7z"
-                          />
-                        </svg>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <Card className="border-none shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <CardTitle className="text-blue-900">Solicitar Guincho</CardTitle>
+                    <CardDescription className="text-gray-600">
+                      Solicite um guincho para seu veículo
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Dialog open={isTowDialogOpen} onOpenChange={setIsTowDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-orange-500 hover:bg-orange-600 text-white w-full">
+                          Solicitar Guincho
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle className="text-blue-900">Solicitar Guincho</DialogTitle>
+                          <DialogDescription>
+                            Informe os detalhes para solicitar um guincho.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="vehicleId" className="text-right">
+                              Veículo
+                            </Label>
+                            <Select
+                              onValueChange={(value) => setTowRequest({ ...towRequest, vehicleId: value })}
+                              value={towRequest.vehicleId}
+                            >
+                              <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Selecione um veículo" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {veiculos.map((veiculo) => (
+                                  <SelectItem key={veiculo.id} value={veiculo.id}>
+                                    {veiculo.modelo} - {veiculo.placa}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="origin" className="text-right">
+                              Origem
+                            </Label>
+                            <Input
+                              id="origin"
+                              value={towRequest.origin}
+                              onChange={(e) => setTowRequest({ ...towRequest, origin: e.target.value })}
+                              className="col-span-3"
+                              placeholder="Ex.: Av. Principal, 123"
+                            />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="destination" className="text-right">
+                              Destino
+                            </Label>
+                            <Input
+                              id="destination"
+                              value={towRequest.destination}
+                              onChange={(e) => setTowRequest({ ...towRequest, destination: e.target.value })}
+                              className="col-span-3"
+                              placeholder="Ex.: Oficina Central, 456"
+                            />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="observations" className="text-right">
+                              Observações
+                            </Label>
+                            <Textarea
+                              id="observations"
+                              value={towRequest.observations}
+                              onChange={(e) => setTowRequest({ ...towRequest, observations: e.target.value })}
+                              className="col-span-3"
+                              placeholder="Informações adicionais (opcional)"
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsTowDialogOpen(false)}
+                            className="border-orange-500 text-orange-500 hover:bg-orange-50"
+                          >
+                            Cancelar
+                          </Button>
+                          <Button
+                            onClick={handleRequestTow}
+                            className="bg-orange-500 hover:bg-orange-600 text-white"
+                            disabled={!towRequest.vehicleId || !towRequest.origin || !towRequest.destination}
+                          >
+                            Solicitar
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </CardContent>
+                </Card>
               </motion.div>
             </div>
 
@@ -310,6 +652,7 @@ export default function Dashboard() {
                       <Table>
                         <TableHeader>
                           <TableRow>
+                            <TableHead className="text-blue-900">Marca</TableHead>
                             <TableHead className="text-blue-900">Modelo</TableHead>
                             <TableHead className="text-blue-900">Placa</TableHead>
                             <TableHead className="text-blue-900">Ano</TableHead>
@@ -319,18 +662,109 @@ export default function Dashboard() {
                         <TableBody>
                           {veiculos.map((veiculo) => (
                             <TableRow key={veiculo.id} className="hover:bg-gray-50">
+                              <TableCell className="text-gray-800">{veiculo.marca}</TableCell>
                               <TableCell className="text-gray-800">{veiculo.modelo}</TableCell>
                               <TableCell className="text-gray-800">{veiculo.placa}</TableCell>
                               <TableCell className="text-gray-800">{veiculo.ano}</TableCell>
                               <TableCell>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="border-orange-500 text-orange-500 hover:bg-orange-50 mr-2"
-                                  onClick={() => router.push(`/editar-veiculo/${veiculo.id}`)}
-                                >
-                                  Editar
-                                </Button>
+                                <Dialog open={isEditVehicleDialogOpen} onOpenChange={setIsEditVehicleDialogOpen}>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="border-orange-500 text-orange-500 hover:bg-orange-50 mr-2"
+                                      onClick={() =>
+                                        setEditVehicle({
+                                          id: veiculo.id,
+                                          marca: veiculo.marca,
+                                          modelo: veiculo.modelo,
+                                          ano: veiculo.ano.toString(),
+                                          placa: veiculo.placa,
+                                        })
+                                      }
+                                    >
+                                      Editar
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="sm:max-w-[425px]">
+                                    <DialogHeader>
+                                      <DialogTitle className="text-blue-900">Editar Veículo</DialogTitle>
+                                      <DialogDescription>
+                                        Atualize os dados do veículo abaixo.
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="grid gap-4 py-4">
+                                      <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="edit-marca" className="text-right">
+                                          Marca
+                                        </Label>
+                                        <Input
+                                          id="edit-marca"
+                                          value={editVehicle.marca}
+                                          onChange={(e) =>
+                                            setEditVehicle({ ...editVehicle, marca: e.target.value })
+                                          }
+                                          className="col-span-3"
+                                        />
+                                      </div>
+                                      <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="edit-modelo" className="text-right">
+                                          Modelo
+                                        </Label>
+                                        <Input
+                                          id="edit-modelo"
+                                          value={editVehicle.modelo}
+                                          onChange={(e) =>
+                                            setEditVehicle({ ...editVehicle, modelo: e.target.value })
+                                          }
+                                          className="col-span-3"
+                                        />
+                                      </div>
+                                      <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="edit-ano" className="text-right">
+                                          Ano
+                                        </Label>
+                                        <Input
+                                          id="edit-ano"
+                                          type="number"
+                                          value={editVehicle.ano}
+                                          onChange={(e) =>
+                                            setEditVehicle({ ...editVehicle, ano: e.target.value })
+                                          }
+                                          className="col-span-3"
+                                        />
+                                      </div>
+                                      <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="edit-placa" className="text-right">
+                                          Placa
+                                        </Label>
+                                        <Input
+                                          id="edit-placa"
+                                          value={editVehicle.placa}
+                                          onChange={(e) =>
+                                            setEditVehicle({ ...editVehicle, placa: e.target.value })
+                                          }
+                                          className="col-span-3"
+                                        />
+                                      </div>
+                                    </div>
+                                    <DialogFooter>
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => setIsEditVehicleDialogOpen(false)}
+                                        className="border-orange-500 text-orange-500 hover:bg-orange-50"
+                                      >
+                                        Cancelar
+                                      </Button>
+                                      <Button
+                                        onClick={handleEditVehicle}
+                                        className="bg-orange-500 hover:bg-orange-600 text-white"
+                                      >
+                                        Salvar
+                                      </Button>
+                                    </DialogFooter>
+                                  </DialogContent>
+                                </Dialog>
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -342,8 +776,13 @@ export default function Dashboard() {
                                       .eq("id", veiculo.id);
                                     if (!error) {
                                       setVeiculos(veiculos.filter((v) => v.id !== veiculo.id));
+                                      toast.success("Veículo removido com sucesso!", {
+                                        style: { backgroundColor: "#f97316", color: "#ffffff" },
+                                      });
                                     } else {
-                                      setError("Erro ao remover veículo.");
+                                      toast.error("Erro ao remover veículo: " + error.message, {
+                                        style: { backgroundColor: "#1e3a8a", color: "#ffffff" },
+                                      });
                                     }
                                   }}
                                 >
@@ -356,7 +795,15 @@ export default function Dashboard() {
                       </Table>
                     </div>
                   ) : (
-                    <p className="text-gray-600">Nenhum veículo cadastrado.</p>
+                    <div className="text-center">
+                      <p className="text-gray-600 mb-4">Você ainda não tem nenhum veículo cadastrado.</p>
+                      <Button
+                        onClick={() => setIsVehicleDialogOpen(true)}
+                        className="bg-orange-500 hover:bg-orange-600 text-white"
+                      >
+                        Cadastrar Meu Primeiro Veículo
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -364,7 +811,17 @@ export default function Dashboard() {
           </div>
         )}
 
-       
+        {/* User Type Display */}
+        {!loading && !error && userType && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 1.0 }}
+            className="mt-6 text-lg text-gray-600"
+          >
+            Tipo de usuário: <span className="font-semibold text-blue-900">{userType}</span>
+          </motion.p>
+        )}
       </div>
     </div>
   );

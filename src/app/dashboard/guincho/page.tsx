@@ -16,6 +16,22 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function TowTruckDashboard() {
   const [userType, setUserType] = useState<string | null>(null);
@@ -27,7 +43,9 @@ export default function TowTruckDashboard() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [filterStatus, setFilterStatus] = useState<string>("pending");
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -35,8 +53,10 @@ export default function TowTruckDashboard() {
         setLoading(true);
         const {
           data: { session },
+          error: sessionError,
         } = await supabase.auth.getSession();
 
+        if (sessionError) throw new Error("Erro ao obter sessão: " + sessionError.message);
         if (!session?.user) {
           router.push("/login");
           return;
@@ -52,7 +72,7 @@ export default function TowTruckDashboard() {
           .eq("id", session.user.id)
           .single();
 
-        if (userError) throw new Error("Erro ao buscar tipo de usuário.");
+        if (userError) throw new Error("Erro ao buscar tipo de usuário: " + userError.message);
 
         const tipo = userData?.tipo_usuario;
         setUserType(tipo);
@@ -65,14 +85,32 @@ export default function TowTruckDashboard() {
           return;
         }
 
-        // Buscar solicitações pendentes
+        // Buscar solicitações com base no filtro de status
         const { data: towData, error: towError } = await supabase
           .from("tow_requests")
-          .select("id, origin, destination, created_at, cliente_id")
-          .eq("status", "pending");
+          .select("id, origin, destination, created_at, cliente_id, status, guincho_id")
+          .eq(filterStatus === "accepted" ? "guincho_id" : "status", filterStatus === "accepted" ? session.user.id : filterStatus);
 
-        if (towError) throw new Error("Erro ao buscar solicitações de guincho.");
-        setTowRequests(towData || []);
+        if (towError) throw new Error("Erro ao buscar solicitações de guincho: " + towError.message);
+
+        // Buscar nome do cliente para cada solicitação
+        const towRequestsWithClient = await Promise.all(
+          towData.map(async (request: any) => {
+            const { data: clientData, error: clientError } = await supabase
+              .from("users")
+              .select("email")
+              .eq("id", request.cliente_id)
+              .single();
+
+            if (clientError) {
+              console.error("Erro ao buscar cliente:", clientError);
+              return { ...request, clientName: "Desconhecido" };
+            }
+            return { ...request, clientName: clientData?.email || "Desconhecido" };
+          })
+        );
+
+        setTowRequests(towRequestsWithClient || []);
 
         // Buscar serviços concluídos
         const { count: servicosCount, error: servicosError } = await supabase
@@ -81,7 +119,7 @@ export default function TowTruckDashboard() {
           .eq("guincho_id", session.user.id)
           .eq("status", "concluido");
 
-        if (servicosError) throw new Error("Erro ao buscar serviços concluídos.");
+        if (servicosError) throw new Error("Erro ao buscar serviços concluídos: " + servicosError.message);
         setServicosConcluidos(servicosCount ?? 0);
 
         // Buscar ganhos totais
@@ -91,18 +129,18 @@ export default function TowTruckDashboard() {
           .eq("guincho_id", session.user.id)
           .eq("status", "concluido");
 
-        if (ganhosError) throw new Error("Erro ao buscar ganhos totais.");
+        if (ganhosError) throw new Error("Erro ao buscar ganhos totais: " + ganhosError.message);
         const total = ganhosData?.reduce((sum, request) => sum + (request.valor || 0), 0) ?? 0;
         setGanhosTotais(total);
       } catch (err: any) {
-        setError(err.message || "Erro ao car cregar dados do dashboard.");
+        setError(err.message || "Erro ao carregar dados do dashboard.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchUserData();
-  }, [router]);
+  }, [router, filterStatus]);
 
   const handleAcceptRequest = async (requestId: string) => {
     try {
@@ -114,8 +152,41 @@ export default function TowTruckDashboard() {
       if (error) throw error;
 
       setTowRequests(towRequests.filter((request) => request.id !== requestId));
-    } catch (err) {
-      setError("Erro ao aceitar solicitação. Tente novamente.");
+      toast({
+        title: "Sucesso",
+        description: "Solicitação aceita com sucesso!",
+        variant: "default",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Erro",
+        description: "Erro ao aceitar solicitação: " + (err.message || "Tente novamente."),
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      const { error } = await supabase
+        .from("tow_requests")
+        .update({ status: "pending", guincho_id: null })
+        .eq("id", requestId);
+
+      if (error) throw error;
+
+      setTowRequests(towRequests.filter((request) => request.id !== requestId));
+      toast({
+        title: "Sucesso",
+        description: "Solicitação rejeitada com sucesso!",
+        variant: "default",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Erro",
+        description: "Erro ao rejeitar solicitação: " + (err.message || "Tente novamente."),
+        variant: "destructive",
+      });
     }
   };
 
@@ -243,7 +314,10 @@ export default function TowTruckDashboard() {
             </Card>
           </div>
         ) : error ? (
-          <p className="text-red-500 text-center mt-6">{error}</p>
+          <div className="text-red-500 text-center mt-6">
+            <p>{error}</p>
+            <p className="text-sm mt-2">Verifique o console para mais detalhes.</p>
+          </div>
         ) : (
           <div className="space-y-6">
             {/* Cards Section */}
@@ -261,7 +335,9 @@ export default function TowTruckDashboard() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold text-orange-500">{towRequests.length}</p>
+                    <p className="text-2xl font-bold text-orange-500">
+                      {towRequests.filter((req) => req.status === "pending").length}
+                    </p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -310,37 +386,80 @@ export default function TowTruckDashboard() {
               transition={{ duration: 0.5, delay: 0.8 }}
             >
               <Card className="border-none shadow-lg">
-                <CardHeader>
-                  <CardTitle className="text-blue-900">Solicitações de Guincho</CardTitle>
-                  <CardDescription className="text-gray-600">
-                    Solicitações que você pode aceitar
-                  </CardDescription>
+                <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <CardTitle className="text-blue-900">Solicitações de Guincho</CardTitle>
+                    <CardDescription className="text-gray-600">
+                      Gerencie as solicitações de guincho
+                    </CardDescription>
+                  </div>
+                  <Select onValueChange={setFilterStatus} defaultValue={filterStatus}>
+                    <SelectTrigger className="w-[180px] border-orange-500 text-orange-500">
+                      <SelectValue placeholder="Filtrar por status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pendentes</SelectItem>
+                      <SelectItem value="accepted">Aceitas</SelectItem>
+                      <SelectItem value="concluido">Concluídas</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </CardHeader>
                 <CardContent>
                   {towRequests.length > 0 ? (
-                    <ul className="space-y-4">
-                      {towRequests.map((request) => (
-                        <li
-                          key={request.id}
-                          className="p-4 bg-gray-50 rounded-lg flex justify-between items-center hover:bg-gray-100 transition"
-                        >
-                          <div>
-                            <p className="text-gray-800 font-semibold">
-                              De: {request.origin} - Para: {request.destination}
-                            </p>
-                            <p className="text-gray-600 text-sm">
-                              Criada em: {format(new Date(request.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                            </p>
-                          </div>
-                          <Button
-                            onClick={() => handleAcceptRequest(request.id)}
-                            className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white hover:from-orange-600 hover:to-yellow-600"
-                          >
-                            Aceitar
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-blue-900">Cliente</TableHead>
+                            <TableHead className="text-blue-900">Origem</TableHead>
+                            <TableHead className="text-blue-900">Destino</TableHead>
+                            <TableHead className="text-blue-900">Distância (km)</TableHead>
+                            <TableHead className="text-blue-900">Data de Criação</TableHead>
+                            <TableHead className="text-blue-900">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {towRequests.map((request) => (
+                            <TableRow key={request.id} className="hover:bg-gray-50">
+                              <TableCell className="text-gray-800">{request.clientName}</TableCell>
+                              <TableCell className="text-gray-800">{request.origin}</TableCell>
+                              <TableCell className="text-gray-800">{request.destination}</TableCell>
+                              <TableCell className="text-gray-800">
+                                {(Math.random() * 50 + 5).toFixed(1)} km {/* Distância fictícia */}
+                              </TableCell>
+                              <TableCell className="text-gray-800">
+                                {format(new Date(request.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                              </TableCell>
+                              <TableCell>
+                                {request.status === "pending" ? (
+                                  <>
+                                    <Button
+                                      onClick={() => handleAcceptRequest(request.id)}
+                                      className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white hover:from-orange-600 hover:to-yellow-600 mr-2"
+                                      size="sm"
+                                    >
+                                      Aceitar
+                                    </Button>
+                                    <Button
+                                      onClick={() => handleRejectRequest(request.id)}
+                                      variant="outline"
+                                      className="border-red-500 text-red-500 hover:bg-red-50"
+                                      size="sm"
+                                    >
+                                      Rejeitar
+                                    </Button>
+                                  </>
+                                ) : request.status === "aceito" ? (
+                                  <span className="text-orange-500 font-semibold">Aceita</span>
+                                ) : (
+                                  <span className="text-green-500 font-semibold">Concluída</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   ) : (
                     <p className="text-gray-600">Nenhuma solicitação disponível no momento.</p>
                   )}
