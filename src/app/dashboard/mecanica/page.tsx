@@ -38,7 +38,7 @@ export default function MechanicDashboard() {
         return;
       }
 
-      const tipo = userData?.tipo_usuario;
+      const tipo = userData?.tipo_usuario ?? null;
       setUserType(tipo);
 
       if (tipo !== "mecanico") {
