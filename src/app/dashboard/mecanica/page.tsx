@@ -24,7 +24,7 @@ export default function MechanicDashboard() {
         return;
       }
 
-      setUserEmail(session.user.email);
+      setUserEmail(session.user.email ?? null);
 
       const { data: userData, error: userError } = await supabase
         .from("users")
