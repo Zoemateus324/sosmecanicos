@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { supabase } from "@/services/supabase";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,7 @@ export default function Cadastro() {
   const [password, setPassword] = useState("");
   const [tipoUsuario, setTipoUsuario] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const validateEmail = (email: string) => {
@@ -31,37 +32,42 @@ export default function Cadastro() {
 
   const handleCadastro = async () => {
     setError("");
+    setLoading(true);
 
     if (!nome || !email || !password || !tipoUsuario) {
       setError("Por favor, preencha todos os campos.");
+      setLoading(false);
       return;
     }
 
     if (password.length < 6) {
       setError("A senha deve ter pelo menos 6 caracteres.");
+      setLoading(false);
       return;
     }
 
     if (!validateEmail(email)) {
       setError("Por favor, insira um email válido (ex.: usuario@exemplo.com).");
+      setLoading(false);
       return;
     }
 
     const validTiposUsuario = ["cliente", "mecanico", "guincho", "seguradora"];
     if (!validTiposUsuario.includes(tipoUsuario)) {
       setError("Tipo de usuário inválido.");
+      setLoading(false);
       return;
     }
 
     try {
-      console.log("Dados enviados para signUp:", { email, password, nome, tipoUsuario });
+      console.log("Iniciando processo de cadastro...");
+      console.log("Dados enviados para signUp:", { email, tipoUsuario });
 
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            nome,
             tipo_usuario: tipoUsuario,
           },
         },
@@ -76,43 +82,88 @@ export default function Cadastro() {
         } else {
           setError("Erro ao criar conta: " + authError.message);
         }
+        setLoading(false);
         return;
       }
 
       if (!authData.user) {
         setError("Erro ao criar usuário. Por favor, tente novamente.");
+        setLoading(false);
         return;
       }
 
       console.log("Usuário criado com sucesso:", authData.user);
+      console.log("Criando perfil na tabela profiles...");
 
-      const { error: dbError } = await supabase
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          nome: nome,
-          email: email,
-          tipo_usuario: tipoUsuario,
-          created_at: new Date().toISOString()
-        });
+      // Primeiro, verificamos se já existe um perfil
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', authData.user.id)
+        .single();
 
-      if (dbError) {
-        console.error("Erro ao inserir usuário:", JSON.stringify(dbError));
-        if (dbError.code === "23505") {
-          setError("Este email já está registrado no sistema.");
-        } else if (dbError.code === "42501") {
-          setError("Você não tem permissão para realizar esta operação.");
-        } else {
-          setError("Erro ao salvar dados: " + dbError.message);
+      if (existingProfile) {
+        console.log("Perfil já existe, atualizando...");
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            tipo_usuario: tipoUsuario
+          })
+          .eq('id', authData.user.id);
+
+        if (updateError) {
+          console.error("Erro ao atualizar perfil:", updateError);
+          setError("Erro ao atualizar perfil: " + updateError.message);
+          setLoading(false);
+          return;
         }
-        await supabase.auth.admin.deleteUser(authData.user.id); // Opcional
-        return;
+      } else {
+        console.log("Criando novo perfil...");
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: authData.user.id,
+            tipo_usuario: tipoUsuario
+          });
+
+        if (insertError) {
+          console.error("Erro ao inserir perfil:", insertError);
+          if (insertError.code === "23505") {
+            setError("Este perfil já está registrado no sistema.");
+          } else if (insertError.code === "42501") {
+            setError("Você não tem permissão para realizar esta operação.");
+          } else {
+            setError("Erro ao salvar dados: " + insertError.message);
+          }
+          
+          console.log("Tentando deletar o usuário após falha...");
+          try {
+            await supabase.auth.admin.deleteUser(authData.user.id);
+            console.log("Usuário deletado com sucesso após falha.");
+          } catch (deleteError) {
+            console.error("Erro ao deletar usuário após falha:", deleteError);
+          }
+          setLoading(false);
+          return;
+        }
       }
 
-      router.push("/dashboard");
+      console.log("Perfil criado/atualizado com sucesso!");
+      console.log("Redirecionando...");
+
+      // Redirecionar baseado no tipo de usuário
+      const dashboardPath = `/${tipoUsuario === 'mecanico' ? 'mecanico' : 
+                             tipoUsuario === 'guincho' ? 'guincho' : 
+                             tipoUsuario === 'seguradora' ? 'seguradora' : 
+                             'cliente'}`;
+      
+      console.log("Redirecionando para:", `/dashboard${dashboardPath}`);
+      router.push(`/dashboard${dashboardPath}`);
+      
     } catch (err) {
       console.error("Erro no cadastro:", err);
       setError("Ocorreu um erro inesperado. Por favor, tente novamente.");
+      setLoading(false);
     }
   };
 
@@ -120,14 +171,6 @@ export default function Cadastro() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 to-gray-200 p-4">
       <Card className="w-full max-w-md shadow-lg border-none">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <Image
-              src="/logo-sos-mecanicos.png"
-              alt="SOS Mecânicos Logo"
-              width={48}
-              height={48}
-            />
-          </div>
           <CardTitle className="text-3xl font-bold text-purple-700">SOS Mecânicos</CardTitle>
           <p className="text-gray-600 mt-2">Crie sua conta para começar</p>
         </CardHeader>
@@ -143,6 +186,7 @@ export default function Cadastro() {
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               required
+              disabled={loading}
               className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
             />
           </div>
@@ -157,6 +201,7 @@ export default function Cadastro() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
               className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
             />
           </div>
@@ -171,6 +216,7 @@ export default function Cadastro() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading}
               minLength={6}
               className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
             />
@@ -198,9 +244,10 @@ export default function Cadastro() {
           )}
           <Button
             onClick={handleCadastro}
+            disabled={loading}
             className="w-full bg-purple-600 hover:bg-purple-700 text-white transition-colors"
           >
-            Cadastrar
+            {loading ? "Cadastrando..." : "Cadastrar"}
           </Button>
           <p className="text-center text-sm text-gray-600">
             Já tem uma conta?{" "}
