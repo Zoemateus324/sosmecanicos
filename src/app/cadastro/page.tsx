@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { supabase } from "@/services/supabase";
 import { useRouter } from "next/navigation";
-
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +21,7 @@ export default function Cadastro() {
   const [password, setPassword] = useState("");
   const [tipoUsuario, setTipoUsuario] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -32,137 +32,87 @@ export default function Cadastro() {
 
   const handleCadastro = async () => {
     setError("");
+    setSuccess(false);
     setLoading(true);
 
-    if (!nome || !email || !password || !tipoUsuario) {
-      setError("Por favor, preencha todos os campos.");
-      setLoading(false);
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("A senha deve ter pelo menos 6 caracteres.");
-      setLoading(false);
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      setError("Por favor, insira um email válido (ex.: usuario@exemplo.com).");
-      setLoading(false);
-      return;
-    }
-
-    const validTiposUsuario = ["cliente", "mecanico", "guincho", "seguradora"];
-    if (!validTiposUsuario.includes(tipoUsuario)) {
-      setError("Tipo de usuário inválido.");
-      setLoading(false);
-      return;
-    }
-
     try {
-      console.log("Iniciando processo de cadastro...");
-      console.log("Dados enviados para signUp:", { email, tipoUsuario });
+      // Validações básicas
+      if (!nome || !email || !password || !tipoUsuario) {
+        setError("Por favor, preencha todos os campos.");
+        setLoading(false);
+        return;
+      }
 
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      if (password.length < 6) {
+        setError("A senha deve ter pelo menos 6 caracteres.");
+        setLoading(false);
+        return;
+      }
+
+      if (!validateEmail(email)) {
+        setError("Por favor, insira um email válido.");
+        setLoading(false);
+        return;
+      }
+
+      // Criar usuário
+      console.log("Tentando criar usuário:", { email, tipoUsuario });
+      
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            tipo_usuario: tipoUsuario,
-          },
-        },
+            tipo_usuario: tipoUsuario
+          }
+        }
       });
 
-      if (authError) {
-        console.error("Erro de autenticação:", authError);
-        if (authError.message.includes("already registered")) {
-          setError("Este email já está cadastrado.");
-        } else if (authError.message.includes("is invalid")) {
-          setError(`O email "${email}" é inválido. Tente um email diferente (ex.: joao.teste123@gmail.com).`);
-        } else {
-          setError("Erro ao criar conta: " + authError.message);
-        }
-        setLoading(false);
-        return;
+      if (signUpError) {
+        console.error("Erro no cadastro:", signUpError);
+        throw signUpError;
       }
 
-      if (!authData.user) {
-        setError("Erro ao criar usuário. Por favor, tente novamente.");
-        setLoading(false);
-        return;
+      if (!data.user) {
+        throw new Error("Erro ao criar usuário");
       }
 
-      console.log("Usuário criado com sucesso:", authData.user);
-      console.log("Criando perfil na tabela profiles...");
-
-      // Primeiro, verificamos se já existe um perfil
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', authData.user.id)
-        .single();
-
-      if (existingProfile) {
-        console.log("Perfil já existe, atualizando...");
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
+      // Criar perfil manualmente se necessário
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .insert([
+          {
+            id: data.user.id,
             tipo_usuario: tipoUsuario
-          })
-          .eq('id', authData.user.id);
+          }
+        ])
+        .select();
 
-        if (updateError) {
-          console.error("Erro ao atualizar perfil:", updateError);
-          setError("Erro ao atualizar perfil: " + updateError.message);
-          setLoading(false);
-          return;
-        }
+      if (profileError) {
+        console.error("Error creating profile:", profileError);
+        setError("Erro ao criar perfil do usuário");
+        return;
+      }
+
+      setSuccess(true);
+      console.log("Cadastro realizado com sucesso!");
+
+      // Redirecionar após 2 segundos
+      setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+
+    } catch (err: any) {
+      console.error("Erro detalhado:", err);
+      
+      if (err.message?.includes("already registered")) {
+        setError("Este email já está cadastrado.");
+      } else if (err.message?.includes("valid email")) {
+        setError("Por favor, insira um email válido.");
       } else {
-        console.log("Criando novo perfil...");
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            id: authData.user.id,
-            tipo_usuario: tipoUsuario
-          });
-
-        if (insertError) {
-          console.error("Erro ao inserir perfil:", insertError);
-          if (insertError.code === "23505") {
-            setError("Este perfil já está registrado no sistema.");
-          } else if (insertError.code === "42501") {
-            setError("Você não tem permissão para realizar esta operação.");
-          } else {
-            setError("Erro ao salvar dados: " + insertError.message);
-          }
-          
-          console.log("Tentando deletar o usuário após falha...");
-          try {
-            await supabase.auth.admin.deleteUser(authData.user.id);
-            console.log("Usuário deletado com sucesso após falha.");
-          } catch (deleteError) {
-            console.error("Erro ao deletar usuário após falha:", deleteError);
-          }
-          setLoading(false);
-          return;
-        }
+        setError(err.message || "Erro ao criar conta. Tente novamente.");
       }
-
-      console.log("Perfil criado/atualizado com sucesso!");
-      console.log("Redirecionando...");
-
-      // Redirecionar baseado no tipo de usuário
-      const dashboardPath = `/${tipoUsuario === 'mecanico' ? 'mecanico' : 
-                             tipoUsuario === 'guincho' ? 'guincho' : 
-                             tipoUsuario === 'seguradora' ? 'seguradora' : 
-                             'cliente'}`;
-      
-      console.log("Redirecionando para:", `/dashboard${dashboardPath}`);
-      router.push(`/dashboard${dashboardPath}`);
-      
-    } catch (err) {
-      console.error("Erro no cadastro:", err);
-      setError("Ocorreu um erro inesperado. Por favor, tente novamente.");
+    } finally {
       setLoading(false);
     }
   };
@@ -237,11 +187,20 @@ export default function Cadastro() {
               </SelectContent>
             </Select>
           </div>
+          
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
               {error}
             </div>
           )}
+          
+          {success && (
+            <div className="p-3 bg-green-50 border border-green-200 text-green-600 rounded-lg text-sm">
+              <p>Cadastro realizado com sucesso!</p>
+              <p className="mt-1">Redirecionando para a página de login...</p>
+            </div>
+          )}
+
           <Button
             onClick={handleCadastro}
             disabled={loading}
@@ -249,6 +208,7 @@ export default function Cadastro() {
           >
             {loading ? "Cadastrando..." : "Cadastrar"}
           </Button>
+
           <p className="text-center text-sm text-gray-600">
             Já tem uma conta?{" "}
             <Link href="/login" className="text-purple-600 hover:underline">

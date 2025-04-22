@@ -32,22 +32,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setSession(session);
 
     if (session?.user) {
-      const { data, error } = await supabase
-        .from("usuarios") // ajuste para o nome correto da sua tabela
-        .select("tipo")
-        .eq("id", session.user.id)
-        .single();
-
-      if (!error && data) {
-        setUserType(data.tipo); // Ex: "seguradora", "cliente", etc.
-      } else {
-        setUserType(null);
-      }
+      const userType = await loadUserType(session);
+      setUserType(userType);
     } else {
       setUserType(null);
     }
 
     setLoading(false);
+  };
+
+  const loadUserType = async (session: Session) => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")  // Changed from "usuarios" to "profiles"
+        .select("tipo_usuario")  // Changed from "tipo" to "tipo_usuario"
+        .eq("id", session.user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching user type:", error);
+        return null;
+      }
+
+      return data?.tipo_usuario || null;  // Changed from "tipo" to "tipo_usuario"
+    } catch (error) {
+      console.error("Error in loadUserType:", error);
+      return null;
+    }
   };
 
   useEffect(() => {

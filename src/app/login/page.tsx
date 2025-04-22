@@ -174,12 +174,19 @@ export default function Login() {
           >
             {loading ? "Entrando..." : "Entrar"}
           </Button>
-          <p className="text-center text-sm text-gray-600">
-            Ainda não tem uma conta?{" "}
-            <Link href="/cadastro" className="text-purple-600 hover:underline">
-              Cadastre-se
+
+          <div className="flex flex-col space-y-2 text-center text-sm">
+            <Link href="/esqueci-senha" className="text-purple-600 hover:underline">
+              Esqueceu sua senha?
             </Link>
-          </p>
+            <p className="text-gray-600">
+              Ainda não tem uma conta?{" "}
+              <Link href="/cadastro" className="text-purple-600 hover:underline">
+                Cadastre-se
+              </Link>
+            </p>
+          </div>
+
         </CardContent>
       </Card>
     </div>
