@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 export default function TowTruckDashboard() {
   const [userType, setUserType] = useState<string | null>(null);
@@ -45,7 +45,6 @@ export default function TowTruckDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [filterStatus, setFilterStatus] = useState<string>("pending");
   const router = useRouter();
-  const { toast } = useToast();
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -152,17 +151,9 @@ export default function TowTruckDashboard() {
       if (error) throw error;
 
       setTowRequests(towRequests.filter((request) => request.id !== requestId));
-      toast({
-        title: "Sucesso",
-        description: "Solicitação aceita com sucesso!",
-        variant: "default",
-      });
+      toast.success("Solicitação aceita com sucesso!");
     } catch (err: any) {
-      toast({
-        title: "Erro",
-        description: "Erro ao aceitar solicitação: " + (err.message || "Tente novamente."),
-        variant: "destructive",
-      });
+      toast.error("Erro ao aceitar solicitação: " + (err.message || "Tente novamente."));
     }
   };
 
@@ -176,17 +167,9 @@ export default function TowTruckDashboard() {
       if (error) throw error;
 
       setTowRequests(towRequests.filter((request) => request.id !== requestId));
-      toast({
-        title: "Sucesso",
-        description: "Solicitação rejeitada com sucesso!",
-        variant: "default",
-      });
+      toast.success("Solicitação rejeitada com sucesso!");
     } catch (err: any) {
-      toast({
-        title: "Erro",
-        description: "Erro ao rejeitar solicitação: " + (err.message || "Tente novamente."),
-        variant: "destructive",
-      });
+      toast.error("Erro ao rejeitar solicitação: " + (err.message || "Tente novamente."));
     }
   };
 

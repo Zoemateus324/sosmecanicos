@@ -39,12 +39,14 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
-    "@types/date-fns": "^2.5.3",
+
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.3.0",
+    "mode-watcher": "^1.0.2",
+    "svelte-sonner": "^0.3.28",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

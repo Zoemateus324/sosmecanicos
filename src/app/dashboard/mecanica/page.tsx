@@ -38,8 +38,8 @@ export default function MechanicDashboard() {
         return;
       }
 
-      const tipo = userData?.tipo_usuario ?? null;
-      setUserType(tipo);
+      const tipo = userData?.tipo_usuario;
+      setUserType(tipo ?? null);
 
       if (tipo !== "mecanico") {
         if (tipo === "cliente") router.push("/dashboard");
