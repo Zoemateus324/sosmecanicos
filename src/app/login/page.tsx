@@ -3,13 +3,10 @@
 import { useState } from "react";
 import { supabase } from "@/services/supabase";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Link from "next/link";
-import Footer from "@/components/Footer";
-import Navbar from "@/components/Navbar";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -37,7 +34,7 @@ export default function Login() {
         if (authError.message.includes("Invalid login credentials")) {
           setError("Email ou senha incorretos.");
         } else if (authError.message.includes("Email not confirmed")) {
-          setError("Por favor, confirme seu email antes de fazer login. Verifique sua caixa de entrada ou peça um novo link no dashboard do Supabase.");
+          setError("Por favor, confirme seu email antes de fazer login.");
         } else {
           setError("Erro ao fazer login: " + authError.message);
         }
@@ -46,7 +43,32 @@ export default function Login() {
 
       if (data?.user) {
         console.log("Login bem-sucedido:", data.user);
-        router.push("/dashboard/cliente");
+
+        // Fetch user type from profiles table
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('user_type')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError) {
+          console.error("Erro ao buscar tipo de usuário:", profileError);
+          setError("Erro ao determinar tipo de usuário.");
+          return;
+        }
+
+        const userType = profile?.user_type;
+
+        // Redirect based on user type
+        if (userType === 'mecanico') {
+          router.push('/dashboard/mecanico');
+        } else if (userType === 'guincho') {
+          router.push('/dashboard/guincho');
+        } else if (userType === 'seguradora') {
+          router.push('/dashboard/seguradora');
+        } else {
+          router.push('/dashboard/cliente'); // Default to cliente
+        }
       } else {
         setError("Falha ao obter sessão. Tente novamente.");
       }
@@ -58,17 +80,8 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 to-gray-200 p-4">
-      <Navbar/>
       <Card className="w-full max-w-md shadow-lg border-none">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <Image
-              src="/logo-sos-mecanicos.png"
-              alt="SOS Mecânicos Logo"
-              width={48}
-              height={48}
-            />
-          </div>
           <CardTitle className="text-3xl font-bold text-purple-700">SOS Mecânicos</CardTitle>
           <p className="text-gray-600 mt-2">Faça login para acessar sua conta</p>
         </CardHeader>
@@ -121,7 +134,6 @@ export default function Login() {
           </p>
         </CardContent>
       </Card>
-      
     </div>
   );
 }
