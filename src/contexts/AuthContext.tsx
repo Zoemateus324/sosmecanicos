@@ -44,8 +44,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loadUserType = async (session: Session) => {
     try {
       const { data, error } = await supabase
-        .from("profiles")  // Changed from "usuarios" to "profiles"
-        .select("tipo_usuario")  // Changed from "tipo" to "tipo_usuario"
+        .from("profiles")
+        .select("user_type")
         .eq("id", session.user.id)
         .single();
 
@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
 
-      return data?.tipo_usuario || null;  // Changed from "tipo" to "tipo_usuario"
+      return data?.user_type || null;
     } catch (error) {
       console.error("Error in loadUserType:", error);
       return null;

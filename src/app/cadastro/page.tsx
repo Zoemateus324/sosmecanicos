@@ -20,6 +20,7 @@ export default function Cadastro() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [tipoUsuario, setTipoUsuario] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -37,7 +38,7 @@ export default function Cadastro() {
 
     try {
       // Validações básicas
-      if (!nome || !email || !password || !tipoUsuario) {
+      if (!nome || !email || !password || !tipoUsuario || !phoneNumber) {
         setError("Por favor, preencha todos os campos.");
         setLoading(false);
         return;
@@ -63,7 +64,7 @@ export default function Cadastro() {
         password,
         options: {
           data: {
-            tipo_usuario: tipoUsuario
+            user_type: tipoUsuario
           }
         }
       });
@@ -80,17 +81,19 @@ export default function Cadastro() {
       // Criar perfil manualmente se necessário
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .insert([
+        .update([
           {
-            id: data.user.id,
-            tipo_usuario: tipoUsuario
+            user_type: tipoUsuario,
+            full_name: nome,
+            phone_number: phoneNumber
           }
         ])
+        .eq('id', data.user.id)
         .select();
 
       if (profileError) {
-        console.error("Error creating profile:", profileError);
-        setError("Erro ao criar perfil do usuário");
+        console.error("Error updating profile:", profileError);
+        setError("Erro ao atualizar perfil do usuário");
         return;
       }
 
@@ -127,14 +130,29 @@ export default function Cadastro() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <label htmlFor="nome" className="text-sm font-medium text-gray-700">
-              Nome
+              Nome Completo
             </label>
             <Input
               id="nome"
               type="text"
-              placeholder="Seu nome"
+              placeholder="Seu nome completo"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
+              required
+              disabled={loading}
+              className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="phoneNumber" className="text-sm font-medium text-gray-700">
+              Telefone
+            </label>
+            <Input
+              id="phoneNumber"
+              type="tel"
+              placeholder="Seu telefone"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
               required
               disabled={loading}
               className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
