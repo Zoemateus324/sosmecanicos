@@ -86,13 +86,15 @@ export default function Cadastro() {
 
       console.log("Usuário criado com sucesso:", authData.user);
 
-      const { error: dbError } = await supabase.rpc("criar_usuario", {
-        p_id: authData.user.id,
-        p_nome: nome,
-        p_email: email,
-        p_tipo_usuario: tipoUsuario,
-        p_created_at: new Date().toISOString(),
-      });
+      const { error: dbError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          nome: nome,
+          email: email,
+          tipo_usuario: tipoUsuario,
+          created_at: new Date().toISOString()
+        });
 
       if (dbError) {
         console.error("Erro ao inserir usuário:", JSON.stringify(dbError));
