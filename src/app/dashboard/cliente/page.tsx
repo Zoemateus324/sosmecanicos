@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import Image from "next/image";
 import {
   Table,
   TableBody,
@@ -49,17 +48,15 @@ const VehicleMap = dynamic(() => import("@/components/VehicleMap"), {
   ssr: false, // Desativa o SSR para este componente
 });
 
-// Função para calcular a distância entre dois pontos (em km) usando a fórmula de Haversine
-const calculateDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371; // Raio da Terra em km
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c; // Distância em km
-};
+// Tipo para mecânico
+interface Mechanic {
+  id: string;
+  nome: string;
+  latitude: number;
+  longitude: number;
+  name?: string;
+  distance?: number;
+}
 
 export default function Dashboard() {
   const [userType, setUserType] = useState<string | null>(null);
@@ -79,7 +76,7 @@ export default function Dashboard() {
   const [mechanicRequest, setMechanicRequest] = useState({ vehicleId: "", description: "", location: "" });
   const [towRequest, setTowRequest] = useState({ vehicleId: "", origin: "", destination: "", observations: "" });
   const [userPosition, setUserPosition] = useState<number[] | null>(null);
-  const [mechanics, setMechanics] = useState<any[]>([]);
+  const [mechanics, setMechanics] = useState<Mechanic[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -357,12 +354,14 @@ export default function Dashboard() {
         className="md:w-64 md:static md:flex md:flex-col bg-white shadow-lg h-full z-50"
       >
         <div className="p-4 flex items-center space-x-2">
+       {/*
           <Image
             src="/logo-sos-mecanicos.png"
             alt="SOS Mecânicos Logo"
             width={32}
             height={32}
           />
+          */} 
           <h2 className="text-xl md:text-2xl font-bold text-purple-600">SOS Mecânicos</h2>
         </div>
         <nav className="mt-6">
@@ -939,3 +938,15 @@ export default function Dashboard() {
     </div>
   );
 }
+
+// Função para calcular a distância entre dois pontos (em km) usando a fórmula de Haversine
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371; // Raio da Terra em km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distância em km
+};

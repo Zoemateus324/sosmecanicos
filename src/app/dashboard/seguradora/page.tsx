@@ -116,7 +116,10 @@ export default function InsurerDashboard() {
       {/* Sidebar */}
       <div className="w-64 bg-white shadow-lg">
         <div className="p-4 flex items-center space-x-2">
+          {/*
           <img src="/logo-sos-mecanicos.png" alt="SOS Mecânicos Logo" className="h-8 w-8" />
+           */}
+          
           <h2 className="text-2xl font-bold text-orange-500">SOS Mecânicos</h2>
         </div>
         <nav className="mt-6">
