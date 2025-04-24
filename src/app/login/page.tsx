@@ -53,63 +53,50 @@ export default function Login() {
           console.log("Buscando tipo de usuário para:", data.user.id);
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('tipo_usuario')
+            .select('tipo_usuario, full_name')
             .eq('id', data.user.id)
-            .limit(1);
-
-          console.log("Resposta do Supabase:", { profileData, profileError });
+            .single();
 
           if (profileError) {
             console.error("Erro ao buscar tipo de usuário:", profileError);
-            setError("Erro ao determinar tipo de usuário: " + profileError.message);
+            setError("Erro ao carregar perfil do usuário. Por favor, tente novamente.");
             setLoading(false);
             return;
           }
 
-          if (!profileData || profileData.length === 0) {
+          if (!profileData) {
             console.error("Perfil não encontrado");
-            setError("Perfil de usuário não encontrado. Entre em contato com o suporte.");
+            setError("Perfil de usuário não encontrado. Por favor, faça o cadastro.");
             setLoading(false);
             return;
           }
 
-          console.log("Perfil recuperado:", profileData[0]);
-          const userType = profileData[0].tipo_usuario;
+          console.log("Perfil recuperado:", profileData);
+          const userType = profileData.tipo_usuario;
           console.log("Tipo de usuário:", userType);
 
           if (!userType) {
             console.error("Tipo de usuário não encontrado no perfil");
-            setError("Tipo de usuário não encontrado. Entre em contato com o suporte.");
+            setError("Tipo de usuário não definido. Por favor, atualize seu perfil.");
             setLoading(false);
             return;
           }
 
-          // Força a atualização da rota
-          router.refresh();
+          // Armazenar informações do usuário no localStorage
+          localStorage.setItem('userType', userType);
+          localStorage.setItem('userName', profileData.full_name || '');
+          localStorage.setItem('userEmail', email);
 
-          // Redirect based on user type with replace
-          const dashboardPath = `/${userType === 'mecanico' ? 'mecanico' : 
-                                 userType === 'guincho' ? 'guincho' : 
-                                 userType === 'seguradora' ? 'seguradora' : 
-                                 'cliente'}`;
-          
-          console.log("Redirecionando para:", `/dashboard${dashboardPath}`);
-          
-          // Tenta o redirecionamento de três formas diferentes
-          try {
-            await router.replace(`/dashboard${dashboardPath}`);
-          } catch (routerError) {
-            console.error("Erro no router.replace:", routerError);
-            try {
-              window.location.href = `/dashboard${dashboardPath}`;
-            } catch (locationError) {
-              console.error("Erro no window.location:", locationError);
-              window.location.replace(`/dashboard${dashboardPath}`);
-            }
-          }
+          // Definir o caminho do dashboard baseado no tipo de usuário
+          const dashboardPath = `/dashboard/${userType.toLowerCase()}`;
+          console.log("Redirecionando para:", dashboardPath);
+
+          // Redirecionar para o dashboard apropriado
+          router.replace(dashboardPath);
+
         } catch (profileError) {
           console.error("Erro ao processar perfil:", profileError);
-          setError("Erro ao processar informações do usuário.");
+          setError("Erro ao processar informações do usuário. Por favor, tente novamente.");
           setLoading(false);
         }
       } else {

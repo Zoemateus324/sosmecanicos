@@ -100,7 +100,7 @@ export default function Dashboard() {
 
         const { data: userData, error: userError } = await supabase
           .from("profiles")
-          .select("nome, email, user_type")
+          .select("full_name, email, user_type, tipo_usuario")
           .eq("id", session.user.id)
           .single();
 
@@ -108,7 +108,7 @@ export default function Dashboard() {
         if (!userData) throw new Error("Usuário não encontrado na tabela 'profiles'.");
 
         setUserType(userData?.user_type ?? null);
-        setUserNome(userData?.nome ?? null);
+        setUserNome(userData?.full_name ?? null);
 
         const { data: veiculosData, error: veiculosError } = await supabase
           .from("veiculos")

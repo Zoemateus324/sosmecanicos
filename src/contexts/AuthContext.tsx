@@ -27,48 +27,98 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userType, setUserType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Busca sessão e tipo de usuário
-  const loadSessionAndUserType = async (session: Session) => {
-    setSession(session);
-
-    if (session?.user) {
-      const userType = await loadUserType(session);
-      setUserType(userType);
-    } else {
-      setUserType(null);
-    }
-
-    setLoading(false);
-  };
-
   const loadUserType = async (session: Session) => {
     try {
+      console.log("Fetching user type for ID:", session.user.id);
+      
+      // Buscar o perfil do usuário
       const { data, error } = await supabase
-        .from("profiles")
-        .select("user_type")
-        .eq("id", session.user.id)
+        .from('profiles')
+        .select('tipo_usuario')
+        .eq('id', session.user.id)
         .single();
 
       if (error) {
-        console.error("Error fetching user type:", error);
+        console.error("Error fetching profile:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        
+        // Se o perfil não existir, retornar null
+        if (error.code === 'PGRST116') {
+          console.log("Profile not found, user needs to register");
+        }
         return null;
       }
 
-      return data?.user_type || null;
+      if (!data || !data.tipo_usuario) {
+        console.log("Invalid profile data:", data);
+        return null;
+      }
+
+      console.log("Profile data found:", data);
+      return data.tipo_usuario;
     } catch (error) {
       console.error("Error in loadUserType:", error);
       return null;
     }
   };
 
+  // Busca sessão e tipo de usuário
+  const loadSessionAndUserType = async (session: Session) => {
+    try {
+      console.log("Loading session and user type for:", session.user.email);
+      setSession(session);
+
+      if (session?.user) {
+        const userType = await loadUserType(session);
+        console.log("User type loaded:", userType);
+        
+        // Se não encontrar o tipo de usuário, fazer logout
+        if (!userType) {
+          console.log("No user type found, logging out");
+          await supabase.auth.signOut();
+          setSession(null);
+          setUserType(null);
+          // Usar window.location para navegação
+          window.location.href = '/cadastro';
+          return;
+        }
+
+        setUserType(userType);
+      } else {
+        console.log("No user in session");
+        setUserType(null);
+      }
+    } catch (error) {
+      console.error("Error in loadSessionAndUserType:", error);
+      setUserType(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const initAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session) {
-        await loadSessionAndUserType(session);
-      } else {
+      try {
+        console.log("Initializing auth...");
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        
+        console.log("Session retrieved:", session ? "Yes" : "No");
+        
+        if (session) {
+          await loadSessionAndUserType(session);
+        } else {
+          setSession(null);
+          setUserType(null);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Error in initAuth:", error);
         setSession(null);
         setUserType(null);
         setLoading(false);
@@ -79,9 +129,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        if (session) {
-          await loadSessionAndUserType(session);
-        } else {
+        console.log("Auth state changed:", _event);
+        try {
+          if (session) {
+            await loadSessionAndUserType(session);
+          } else {
+            setSession(null);
+            setUserType(null);
+            setLoading(false);
+          }
+        } catch (error) {
+          console.error("Error in auth state change:", error);
           setSession(null);
           setUserType(null);
           setLoading(false);
@@ -101,4 +159,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
