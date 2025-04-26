@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { supabase } from "@/services/supabase";
+import { createComponentClient } from "@/models/supabase";
 import Image from "next/image";
 
 const menus = {
@@ -35,14 +34,7 @@ const menus = {
 };
 
 export default function Navbar() {
-  const { session, userType, loading } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  if (loading) return null;
-
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
+  const supabase = createComponentClient();
 
   return (
     <nav className="fixed top-0 left-0 w-full bg-white shadow-lg z-50">

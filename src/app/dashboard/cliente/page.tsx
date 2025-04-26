@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/services/supabase";
+import { supabase } from "@/models/supabase";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {

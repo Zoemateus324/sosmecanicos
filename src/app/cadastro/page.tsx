@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/services/supabase";
+import { createComponentClient } from "@/models/supabase";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,105 +16,54 @@ import {
 import Link from "next/link";
 
 export default function Cadastro() {
+  const supabase = createComponentClient();
+  const router = useRouter();
+
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [tipoUsuario, setTipoUsuario] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [tipoUsuario, setTipoUsuario] = useState("");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleCadastro = async () => {
     setLoading(true);
-    setError("");
-    setSuccess(false);
-  
-    console.log("Valores do formulário:", {
-      nome,
+    setError(""); // Limpar erro ao tentar novamente
+    setSuccess(false); // Limpar sucesso ao tentar novamente
+
+    const { user, error: signupError } = await supabase.auth.signUp({
       email,
-      password: password ? "preenchido" : "vazio",
-      tipoUsuario,
-      phoneNumber,
+      password,
     });
-  
-    try {
-      // Validações básicas
-      if (!email?.trim() || !password || !nome?.trim() || !tipoUsuario || !phoneNumber?.trim()) {
-        throw new Error("Todos os campos são obrigatórios");
-      }
-  
-      if (password.length < 6) {
-        throw new Error("A senha deve ter pelo menos 6 caracteres");
-      }
-  
-      console.log("Iniciando criação do usuário...");
-  
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: email.trim(),
-        password: password,
-        options: {
-          data: {
-            full_name: nome.trim(),
-            phone_number: phoneNumber.trim(),
-            user_type: tipoUsuario
-          }
-        }
-      });
-  
-      if (signUpError) {
-        console.error("Erro no signup:", signUpError);
-        if (signUpError.message.includes("unique constraint") || signUpError.message.toLowerCase().includes("already registered")) {
-          throw new Error("Este email já está cadastrado");
-        }
-        throw signUpError;
-      }
-  
-      if (!data?.user?.id) {
-        throw new Error("Erro ao criar usuário: resposta inválida do servidor");
-      }
-  
-      console.log("Usuário criado com sucesso, ID:", data.user.id);
-  
-      // O perfil será criado automaticamente pelo gatilho no banco de dados
-  
-      setSuccess(true);
-      setError("Conta criada! Por favor, verifique seu email para confirmar o cadastro.");
-  
-      setTimeout(() => {
-        router.push('/login');
-      }, 2000);
-  
-    } catch (err) {
-      console.error("Erro detalhado:", err);
-      setSuccess(false);
-  
-      let errorMessage = "Erro ao criar conta. Por favor, tente novamente.";
-  
-      if (err.message) {
-        errorMessage = err.message;
-      }
-  
-      if (err.error_description) {
-        errorMessage = err.error_description;
-      }
-  
-      if (errorMessage.includes("duplicate") || errorMessage.includes("unique constraint") || errorMessage.toLowerCase().includes("already registered")) {
-        errorMessage = "Este email já está cadastrado.";
-      }
-  
-      if (errorMessage.includes("valid email")) {
-        errorMessage = "Por favor, insira um email válido.";
-      }
-  
-      if (errorMessage.includes("Database error")) {
-        errorMessage = "Erro no servidor. Por favor, tente novamente mais tarde.";
-      }
-  
-      setError(errorMessage);
-    } finally {
+
+    if (signupError) {
+      setError(signupError.message);
       setLoading(false);
+    } else {
+      // Salvar outros dados do usuário como nome, telefone e tipo de usuário no banco de dados
+      const { data, error: insertError } = await supabase
+        .from("users") // Certifique-se de que a tabela é correta
+        .insert([
+          {
+            nome,
+            email,
+            phoneNumber,
+            tipoUsuario,
+            user_id: user.id, // Relaciona ao ID do usuário do Supabase
+          },
+        ]);
+
+      if (insertError) {
+        setError(insertError.message);
+        setLoading(false);
+      } else {
+        setSuccess(true);
+        setTimeout(() => {
+          router.push("/login"); // Redirecionar após sucesso
+        }, 2000);
+      }
     }
   };
 
@@ -245,7 +194,7 @@ export default function Cadastro() {
 
           {success && (
             <div className="p-3 bg-green-50 border border-green-200 text-green-600 rounded-lg text-sm">
-              Cadastro realizado com sucesso!
+              Cadastro realizado com sucesso! Redirecionando...
             </div>
           )}
 
