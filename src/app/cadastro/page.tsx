@@ -44,7 +44,7 @@ export default function Cadastro() {
     } else {
       // Salvar outros dados do usuário como nome, telefone e tipo de usuário no banco de dados
       const { data, error: insertError } = await supabase
-        .from("users") // Certifique-se de que a tabela é correta
+        .from("user") // Certifique-se de que a tabela é correta
         .insert([
           {
             nome,
