@@ -5,6 +5,7 @@ const nextConfig = {
   swcMinify: true,
   experimental: {
     serverActions: true,
+    
   },
   images: {
     domains: ['localhost', 'github.com', 'vercel.app', 'sosmecanicos-gydkbuy6r-zoemateus324s-projects.vercel.app'],

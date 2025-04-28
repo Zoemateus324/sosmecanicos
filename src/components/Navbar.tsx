@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { createComponentClient } from "@/models/supabase";
 import Image from "next/image";
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
+import { useSupabase } from "@/components/supabase-provider";
+import { useAuth } from "../contexts/AuthContext";
+import { toast } from "sonner";
+
 const menus = {
   cliente: [
-    { name: "Dashboard", href: "/dashboard" },
+    { name: "Dashboard", href: "/dashboard/cliente" },
     { name: "Meus Veículos", href: "/veiculos" },
     { name: "Solicitar Serviço", href: "/solicitar" },
     { name: "Meus Pedidos", href: "/pedidos" },
@@ -34,20 +37,47 @@ const menus = {
 };
 
 export default function Navbar() {
-  const supabase = createComponentClient();
+  const { user, userType, isLoading } = useAuth();
+  const supabase = useSupabase();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const toggleMenu = () => {
+    setIsMenuOpen((prev) => !prev);
+  };
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw new Error("Erro ao fazer logout: " + error.message);
+      setIsMenuOpen(false);
+      toast.success("Logout realizado com sucesso!", {
+        style: { backgroundColor: "#7C3AED", color: "#ffffff" },
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao fazer logout.", {
+        style: { backgroundColor: "#6B7280", color: "#ffffff" },
+      });
+    }
+  };
+
+  useEffect(() => {
+    // Optional: Add any side effects, e.g., redirect if not authenticated
+    if (!isLoading && !user) {
+      setIsMenuOpen(false);
+    }
+  }, [user, isLoading]);
 
   return (
     <nav className="fixed top-0 left-0 w-full bg-white shadow-lg z-50">
       <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
         {/* Logo and Brand */}
         <Link href="/" className="flex items-center space-x-2">
-         
           <span className="text-xl md:text-2xl font-bold text-orange-500">SOS Mecânicos</span>
         </Link>
 
         {/* Desktop Links */}
         <div className="hidden md:flex items-center space-x-4 md:space-x-6">
-          {!session ? (
+          {!user ? (
             <>
               <Link href="/como-funciona" className="text-gray-600 hover:text-orange-500 text-base md:text-lg">
                 Como Funciona
@@ -81,7 +111,7 @@ export default function Navbar() {
                   </Link>
                 ))}
               <button
-                onClick={() => supabase.auth.signOut()}
+                onClick={handleLogout}
                 className="text-gray-600 hover:text-orange-500 text-base md:text-lg"
               >
                 Sair
@@ -107,7 +137,7 @@ export default function Navbar() {
       {isMenuOpen && (
         <div className="md:hidden bg-white shadow-lg">
           <div className="container mx-auto px-4 py-4 flex flex-col space-y-4">
-            {!session ? (
+            {!user ? (
               <>
                 <Link
                   href="/como-funciona"
@@ -159,10 +189,7 @@ export default function Navbar() {
                     </Link>
                   ))}
                 <button
-                  onClick={() => {
-                    supabase.auth.signOut();
-                    setIsMenuOpen(false);
-                  }}
+                  onClick={handleLogout}
                   className="text-gray-600 hover:text-orange-500 text-base text-left"
                 >
                   Sair
