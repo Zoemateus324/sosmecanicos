@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext"; // Verifique se o caminho está correto
+import { useAuth } from "@/contexts/AuthContext";
 import { useSupabase } from "@/components/supabase-provider";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -29,8 +29,7 @@ type Vehicle = {
 };
 
 export default function ClienteDashboard() {
-  // Use as propriedades do contexto corretamente: session, userType e loading
-  const { session, userType, loading } = useAuth();  // Aqui, usamos as propriedades corretas
+  const { user, userType, isLoading } = useAuth();
   const supabase = useSupabase();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -40,7 +39,7 @@ export default function ClienteDashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (!loading && !session) {
+    if (!isLoading && !user) {
       router.push("/login");
     } else if (userType !== "cliente") {
       router.push("/dashboard");
@@ -48,14 +47,14 @@ export default function ClienteDashboard() {
       fetchMechanics();
       fetchVehicles();
     }
-  }, [session, userType, loading, router]); // A dependência de loading foi ajustada aqui
+  }, [user, userType, isLoading, router]);
 
   async function fetchMechanics() {
     try {
       const { data: mechanicsData, error: mechanicsError } = await supabase
         .from("users")
         .select("id, nome, latitude, longitude")
-        .eq("tipoUsuario", "mecanico");
+        .eq("tipo_usuario", "mecanico");
 
       if (mechanicsError) {
         throw new Error("Erro ao carregar mecânicos: " + mechanicsError.message);
@@ -88,7 +87,7 @@ export default function ClienteDashboard() {
       const { data: vehiclesData, error: vehiclesError } = await supabase
         .from("vehicles")
         .select("id, marca, modelo, ano, placa")
-        .eq("user_id", session?.user.id); // Verifique se está acessando o ID do usuário corretamente
+        .eq("user_id", user?.id);
 
       if (vehiclesError) {
         throw new Error("Erro ao carregar veículos: " + vehiclesError.message);
@@ -125,7 +124,7 @@ export default function ClienteDashboard() {
 
     try {
       const { error } = await supabase.from("requests").insert({
-        user_id: session?.user.id,
+        user_id: user?.id,
         mechanic_id: selectedMechanic.id,
         status: "pending",
         created_at: new Date().toISOString(),

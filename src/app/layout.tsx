@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import "leaflet/dist/leaflet.css";
 import { SupabaseProvider } from "@/components/supabase-provider";
 import { Toaster } from "sonner"; // Importamos Toaster diretamente de sonner
+import SupabaseProvider from "@/components/supabase-provider";
 export default function RootLayout({
   children,
 }: {
@@ -14,13 +15,11 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
-        <AuthProvider>
-        <SpeedInsights/>
-          <SupabaseProvider>
-          {children}
-
-          </SupabaseProvider>
-        </AuthProvider>
+        <SupabaseProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </SupabaseProvider>
       </body>
     </html>
   );

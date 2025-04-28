@@ -37,8 +37,8 @@ const menus = {
 };
 
 export default function Navbar() {
-  const { user, userType, isLoading } = useAuth();
   const supabase = useSupabase();
+  const { user, userType, isLoading } = useAuth(); // Add isLoading from useAuth
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
