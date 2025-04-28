@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { createComponentClient } from "@/models/supabase";
 import Image from "next/image";
-
+import { cn } from "@/lib/utils"
 const menus = {
   cliente: [
     { name: "Dashboard", href: "/dashboard" },

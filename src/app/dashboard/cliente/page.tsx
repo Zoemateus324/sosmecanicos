@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/models/supabase";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -42,10 +41,12 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
+import { useSupabase } from "@/components/supabase-provider";
+import { calculateDistance } from "@/utils/calculateDistance";
 
 // Importa o VehicleMap dinamicamente com SSR desativado
 const VehicleMap = dynamic(() => import("@/components/VehicleMap"), {
-  ssr: false, // Desativa o SSR para este componente
+  ssr: false,
 });
 
 // Tipo para mecânico
@@ -59,6 +60,9 @@ interface Mechanic {
 }
 
 export default function Dashboard() {
+  const supabase = useSupabase();
+  const router = useRouter();
+
   const [userType, setUserType] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userNome, setUserNome] = useState<string | null>(null);
@@ -77,7 +81,16 @@ export default function Dashboard() {
   const [towRequest, setTowRequest] = useState({ vehicleId: "", origin: "", destination: "", observations: "" });
   const [userPosition, setUserPosition] = useState<number[] | null>(null);
   const [mechanics, setMechanics] = useState<Mechanic[]>([]);
-  const router = useRouter();
+
+//obter usuario logado
+  const getUser = async () => {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) throw new Error("Erro ao obter usuário: " + error.message);
+    return data.user;
+  };
+
+
+
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -98,6 +111,7 @@ export default function Dashboard() {
         setUserId(session.user.id);
         setUserEmail(session.user?.email ?? null);
 
+        setUserNome(session.user?.user_metadata?.full_name ?? null);
         const { data: userData, error: userError } = await supabase
           .from("profiles")
           .select("full_name, email, user_type, tipo_usuario")
@@ -107,7 +121,7 @@ export default function Dashboard() {
         if (userError) throw new Error("Erro ao buscar tipo de usuário: " + userError.message);
         if (!userData) throw new Error("Usuário não encontrado na tabela 'profiles'.");
 
-        setUserType(userData?.user_type ?? null);
+        setUserType(userData?.user_type ?? userData?.tipo_usuario ?? null);
         setUserNome(userData?.full_name ?? null);
 
         const { data: veiculosData, error: veiculosError } = await supabase
@@ -124,7 +138,6 @@ export default function Dashboard() {
       }
     };
 
-    // Obter a localização do usuário
     const fetchUserLocation = () => {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -136,7 +149,7 @@ export default function Dashboard() {
             toast.error("Erro ao obter localização: " + err.message, {
               style: { backgroundColor: "#6B7280", color: "#ffffff" },
             });
-            setUserPosition(null); // Usa posição padrão se houver erro
+            setUserPosition(null);
           }
         );
       } else {
@@ -147,52 +160,18 @@ export default function Dashboard() {
       }
     };
 
-    // Buscar mecânicas próximas no Supabase
-    const fetchMechanics = async () => {
-      try {
-        const { data: mechanicsData, error: mechanicsError } = await supabase
-          .from("users")
-          .select("id, nome, latitude, longitude")
-          .eq("tipo_usuario", "mecanico");
-
-        if (mechanicsError) throw new Error("Erro ao buscar mecânicas: " + mechanicsError.message);
-        if (mechanicsData && userPosition) {
-          const mechanicsWithDistance = mechanicsData
-            .filter((mechanic) => mechanic.latitude && mechanic.longitude) // Filtra mecânicas com localização válida
-            .map((mechanic) => ({
-              ...mechanic,
-              name: mechanic.nome,
-              distance: calculateDistance(
-                userPosition[0],
-                userPosition[1],
-                mechanic.latitude,
-                mechanic.longitude
-              ),
-            }))
-            .sort((a, b) => a.distance - b.distance); // Ordena por distância
-          setMechanics(mechanicsWithDistance);
-        }
-      } catch (err: any) {
-        toast.error("Erro ao buscar mecânicas próximas: " + err.message, {
-          style: { backgroundColor: "#6B7280", color: "#ffffff" },
-        });
-        setMechanics([]);
-      }
-    };
-
     fetchUserData();
     fetchUserLocation();
-  }, [router]);
+  }, [supabase, router]);
 
-  // Atualizar mecânicas sempre que a posição do usuário mudar
   useEffect(() => {
     if (userPosition) {
       const fetchMechanics = async () => {
         try {
           const { data: mechanicsData, error: mechanicsError } = await supabase
-            .from("users")
+            .from("user")
             .select("id, nome, latitude, longitude")
-            .eq("tipo_usuario", "mecanico");
+            .eq("tipoUsuario", "mecânico");
 
           if (mechanicsError) throw new Error("Erro ao buscar mecânicas: " + mechanicsError.message);
           if (mechanicsData) {
@@ -208,7 +187,7 @@ export default function Dashboard() {
                   mechanic.longitude
                 ),
               }))
-              .sort((a, b) => a.distance - b.distance);
+              .sort((a, b) => (a.distance || 0) - (b.distance || 0));
             setMechanics(mechanicsWithDistance);
           }
         } catch (err: any) {
@@ -220,7 +199,7 @@ export default function Dashboard() {
       };
       fetchMechanics();
     }
-  }, [userPosition]);
+  }, [userPosition, supabase]);
 
   const handleAddVehicle = async () => {
     try {
@@ -336,8 +315,15 @@ export default function Dashboard() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw new Error("Erro ao fazer logout: " + error.message);
+      router.push("/login");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao fazer logout.", {
+        style: { backgroundColor: "#6B7280", color: "#ffffff" },
+      });
+    }
   };
 
   const toggleSidebar = () => {
@@ -351,22 +337,14 @@ export default function Dashboard() {
         initial={{ x: -256 }}
         animate={{ x: isSidebarOpen ? 0 : -256 }}
         transition={{ duration: 0.3 }}
-        className="md:w-64 md:static md:flex md:flex-col bg-white shadow-lg h-full z-50"
+        className="fixed md:static md:w-64 md:flex md:flex-col bg-white shadow-lg h-full z-50"
       >
         <div className="p-4 flex items-center space-x-2">
-       {/*
-          <Image
-            src="/logo-sos-mecanicos.png"
-            alt="SOS Mecânicos Logo"
-            width={32}
-            height={32}
-          />
-          */} 
           <h2 className="text-xl md:text-2xl font-bold text-purple-600">SOS Mecânicos</h2>
         </div>
         <nav className="mt-6">
           <a
-            href="/dashboard"
+            href="/dashboard/cliente"
             className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 rounded font-semibold text-purple-700 bg-purple-50"
           >
             Dashboard
@@ -389,7 +367,7 @@ export default function Dashboard() {
       {/* Overlay for mobile sidebar */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black opacity-50 z-50 md:hidden"
+          className="fixed inset-0 bg-black opacity-50 z-40 md:hidden"
           onClick={toggleSidebar}
         />
       )}
@@ -414,7 +392,7 @@ export default function Dashboard() {
           <div className="flex items-center space-x-4">
             <Avatar>
               <AvatarImage src="https://github.com/shadcn.png" alt="User Avatar" />
-              <AvatarFallback>{userNome ? userNome.charAt(0).toUpperCase() : "US"}</AvatarFallback>
+              <AvatarFallback>{userNome ? userNome.charAt(0).toUpperCase() : "U"}</AvatarFallback>
             </Avatar>
             <span className="text-gray-600 text-sm md:text-base">{userNome || "Carregando..."}</span>
             <Button
@@ -468,7 +446,13 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <VehicleMap
-                      isDialogOpen={isVehicleDialogOpen || isMechanicDialogOpen || isTowDialogOpen || isEditVehicleDialogOpen || isSidebarOpen}
+                      isDialogOpen={
+                        isVehicleDialogOpen ||
+                        isMechanicDialogOpen ||
+                        isTowDialogOpen ||
+                        isEditVehicleDialogOpen ||
+                        isSidebarOpen
+                      }
                       userPosition={userPosition}
                       mechanics={mechanics}
                     />
@@ -550,7 +534,10 @@ export default function Dashboard() {
                               <TableCell className="text-gray-800">{veiculo.placa}</TableCell>
                               <TableCell className="text-gray-800">{veiculo.ano}</TableCell>
                               <TableCell>
-                                <Dialog open={isEditVehicleDialogOpen} onOpenChange={setIsEditVehicleDialogOpen}>
+                                <Dialog
+                                  open={isEditVehicleDialogOpen}
+                                  onOpenChange={setIsEditVehicleDialogOpen}
+                                >
                                   <DialogTrigger asChild>
                                     <Button
                                       variant="outline"
@@ -653,17 +640,18 @@ export default function Dashboard() {
                                   size="sm"
                                   className="border-red-500 text-red-500 hover:bg-red-50"
                                   onClick={async () => {
-                                    const { error } = await supabase
-                                      .from("veiculos")
-                                      .delete()
-                                      .eq("id", veiculo.id);
-                                    if (!error) {
+                                    try {
+                                      const { error } = await supabase
+                                        .from("veiculos")
+                                        .delete()
+                                        .eq("id", veiculo.id);
+                                      if (error) throw new Error("Erro ao remover veículo: " + error.message);
                                       setVeiculos(veiculos.filter((v) => v.id !== veiculo.id));
                                       toast.success("Veículo removido com sucesso!", {
                                         style: { backgroundColor: "#7C3AED", color: "#ffffff" },
                                       });
-                                    } else {
-                                      toast.error("Erro ao remover veículo: " + error.message, {
+                                    } catch (err: any) {
+                                      toast.error(err.message || "Erro ao remover veículo.", {
                                         style: { backgroundColor: "#6B7280", color: "#ffffff" },
                                       });
                                     }
@@ -770,7 +758,10 @@ export default function Dashboard() {
               >
                 Cancelar
               </Button>
-              <Button onClick={handleAddVehicle} className="bg-purple-600 hover:bg-purple-700 text-white">
+              <Button
+                onClick={handleAddVehicle}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
                 Cadastrar
               </Button>
             </DialogFooter>
@@ -813,7 +804,9 @@ export default function Dashboard() {
                 <Textarea
                   id="description"
                   value={mechanicRequest.description}
-                  onChange={(e) => setMechanicRequest({ ...mechanicRequest, description: e.target.value })}
+                  onChange={(e) =>
+                    setMechanicRequest({ ...mechanicRequest, description: e.target.value })
+                  }
                   className="col-span-3"
                   placeholder="Descreva o problema do veículo"
                 />
@@ -825,7 +818,9 @@ export default function Dashboard() {
                 <Input
                   id="location"
                   value={mechanicRequest.location}
-                  onChange={(e) => setMechanicRequest({ ...mechanicRequest, location: e.target.value })}
+                  onChange={(e) =>
+                    setMechanicRequest({ ...mechanicRequest, location: e.target.value })
+                  }
                   className="col-span-3"
                   placeholder="Ex.: Av. Principal, 123"
                 />
@@ -842,7 +837,11 @@ export default function Dashboard() {
               <Button
                 onClick={handleRequestMechanic}
                 className="bg-purple-600 hover:bg-purple-700 text-white"
-                disabled={!mechanicRequest.vehicleId || !mechanicRequest.description || !mechanicRequest.location}
+                disabled={
+                  !mechanicRequest.vehicleId ||
+                  !mechanicRequest.description ||
+                  !mechanicRequest.location
+                }
               >
                 Solicitar
               </Button>
@@ -898,7 +897,9 @@ export default function Dashboard() {
                 <Input
                   id="destination"
                   value={towRequest.destination}
-                  onChange={(e) => setTowRequest({ ...towRequest, destination: e.target.value })}
+                  onChange={(e) =>
+                    setTowRequest({ ...towRequest, destination: e.target.value })
+                  }
                   className="col-span-3"
                   placeholder="Ex.: Oficina Central, 456"
                 />
@@ -910,7 +911,9 @@ export default function Dashboard() {
                 <Textarea
                   id="observations"
                   value={towRequest.observations}
-                  onChange={(e) => setTowRequest({ ...towRequest, observations: e.target.value })}
+                  onChange={(e) =>
+                    setTowRequest({ ...towRequest, observations: e.target.value })
+                  }
                   className="col-span-3"
                   placeholder="Informações adicionais (opcional)"
                 />
@@ -927,7 +930,9 @@ export default function Dashboard() {
               <Button
                 onClick={handleRequestTow}
                 className="bg-purple-600 hover:bg-purple-700 text-white"
-                disabled={!towRequest.vehicleId || !towRequest.origin || !towRequest.destination}
+                disabled={
+                  !towRequest.vehicleId || !towRequest.origin || !towRequest.destination
+                }
               >
                 Solicitar
               </Button>
@@ -938,15 +943,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-// Função para calcular a distância entre dois pontos (em km) usando a fórmula de Haversine
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-  const R = 6371; // Raio da Terra em km
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c; // Distância em km
-};

@@ -4,6 +4,7 @@ import "./globals.css";
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import Footer from "@/components/Footer";
 import "leaflet/dist/leaflet.css";
+import { SupabaseProvider } from "@/components/supabase-provider";
 import { Toaster } from "sonner"; // Importamos Toaster diretamente de sonner
 export default function RootLayout({
   children,
@@ -15,8 +16,10 @@ export default function RootLayout({
       <body>
         <AuthProvider>
         <SpeedInsights/>
+          <SupabaseProvider>
           {children}
-          
+
+          </SupabaseProvider>
         </AuthProvider>
       </body>
     </html>

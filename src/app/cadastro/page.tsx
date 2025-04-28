@@ -51,7 +51,7 @@ export default function Cadastro() {
             email,
             phoneNumber,
             tipoUsuario,
-            user_id: user.id, // Relaciona ao ID do usuário do Supabase
+             // Relaciona ao ID do usuário do Supabase
           },
         ]);
 
