@@ -38,16 +38,23 @@ export default function ClienteDashboard() {
   const [selectedMechanic, setSelectedMechanic] = useState<Mechanic | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  const dashboardRoutes = {
+    mecanico: "/dashboard/mecanico",
+    guincho: "/dashboard/guincho",
+    seguradora: "/dashboard/seguradora",
+  };
+  
   useEffect(() => {
     if (!isLoading && !user) {
       router.push("/login");
-    } else if (userType !== "cliente") {
-      router.push("/dashboard");
-    } else {
+    } else if (!isLoading && userType && userType !== "cliente") {
+      router.push(dashboardRoutes[userType] || "/login");
+    } else if (!isLoading && userType === "cliente") {
       fetchMechanics();
       fetchVehicles();
     }
   }, [user, userType, isLoading, router]);
+  
 
   async function fetchMechanics() {
     try {
