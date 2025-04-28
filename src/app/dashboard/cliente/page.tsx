@@ -39,6 +39,7 @@ export default function ClienteDashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const dashboardRoutes = {
+    cliente: "/dashboard/cliente", // Adicione a rota para o cliente aqui
     mecanico: "/dashboard/mecanico",
     guincho: "/dashboard/guincho",
     seguradora: "/dashboard/seguradora",
