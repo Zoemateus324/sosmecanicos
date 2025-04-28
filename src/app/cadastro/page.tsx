@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createComponentClient } from "@/models/supabase";
+import { supabase } from "@/models/supabase";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,54 +16,63 @@ import {
 import Link from "next/link";
 
 export default function Cadastro() {
-  const supabase = createComponentClient();
   const router = useRouter();
-
+  // Remove the createComponentClient call since we're importing supabase directly
+  // const supabase = createComponentClient();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [tipoUsuario, setTipoUsuario] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(""); // Update type definition here
   const [success, setSuccess] = useState(false);
 
   const handleCadastro = async () => {
-    setLoading(true);
-    setError(""); // Limpar erro ao tentar novamente
-    setSuccess(false); // Limpar sucesso ao tentar novamente
+    try {
+      setLoading(true);
+      setError(null);
 
-    const { user, error: signupError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+      const { data, error: signupError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
 
-    if (signupError) {
-      setError(signupError.message);
-      setLoading(false);
-    } else {
+      if (signupError) {
+        setError(signupError.message);
+        setLoading(false);
+        return;
+      }
+
+      const user = data?.user;
+      
       // Salvar outros dados do usuário como nome, telefone e tipo de usuário no banco de dados
-      const { data, error: insertError } = await supabase
-        .from("user") // Certifique-se de que a tabela é correta
+      const { error: insertError } = await supabase
+        .from("users") // Make sure the table name is correct
         .insert([
           {
+            id: user?.id,
             nome,
             email,
-            phoneNumber,
-            tipoUsuario,
-             // Relaciona ao ID do usuário do Supabase
-          },
+            telefone: phoneNumber,
+            tipo_usuario: tipoUsuario,
+          }
         ]);
 
       if (insertError) {
         setError(insertError.message);
         setLoading(false);
-      } else {
-        setSuccess(true);
-        setTimeout(() => {
-          router.push("/login"); // Redirecionar após sucesso
-        }, 2000);
+        return;
       }
+
+      setSuccess(true);
+      setTimeout(() => {
+        router.push("/login");
+      }, 2000);
+    } catch (err: any) {
+      setError(err.message || "Erro ao realizar cadastro");
+    } finally {
+      setLoading(false);
     }
   };
 

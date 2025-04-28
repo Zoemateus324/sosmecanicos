@@ -45,7 +45,7 @@ export default function InsurerDashboard() {
         }
 
         const user: User = session.user;
-        setUserEmail(user.email);
+        setUserEmail(user.email ?? null);
 
         // Buscar tipo de usuário
         const { data: userData, error: userError } = await supabase

@@ -14,8 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import {
   Table,
   TableBody,

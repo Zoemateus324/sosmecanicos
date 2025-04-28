@@ -4,7 +4,6 @@
 @tailwind components;
 @tailwind utilities;
 @tailwind forms;
-/* No arquivo globals.css ou styles.css */
 @import 'leaflet/dist/leaflet.css';
 
 
