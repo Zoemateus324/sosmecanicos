@@ -1,37 +1,64 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { LatLngTuple } from "leaflet";
 
-// Corrige o ícone padrão do Leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+interface Mechanic {
+  id: string;
+  nome: string;
+  latitude: number;
+  longitude: number;
+  distance: number;
+}
 
-export default function VehicleMap({ isDialogOpen, userPosition, mechanics = [] }) {
-  if (isDialogOpen) {
-    return (
-      <div className="h-96 bg-gray-200 rounded-lg flex items-center justify-center">
-        Mapa desativado enquanto o dialog ou menu está aberto
-      </div>
-    );
-  }
+interface VehicleMapProps {
+  userPosition: [number, number] | null;
+  mechanics: Mechanic[];
+  isDialogOpen: boolean;
+}
 
-  const defaultPosition = [-23.5505, -46.6333]; 
+const VehicleMap: React.FC<VehicleMapProps> = ({
+  userPosition,
+  mechanics,
+  isDialogOpen,
+}) => {
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Ensure the component only renders on the client
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Default position if userPosition is null (São Paulo, Brazil)
+  const defaultPosition: [number, number] = [-23.5505, -46.6333];
   const center = userPosition || defaultPosition;
 
+  // Fix for Leaflet marker icons
+  if (typeof window !== "undefined") {
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl:
+        "https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon-2x.png",
+      iconUrl: "https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png",
+      shadowUrl: "https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png",
+    });
+  }
+
+  // Render nothing on the server or until the component is mounted
+  if (!isMounted) {
+    return null;
+  }
+
   return (
-    <div className="h-96 relative">
-      <style jsx>{`
-        .leaflet-container {
-          z-index: 1 !important;
-        }
-      `}</style>
+    <div className="h-96 w-full">
       <MapContainer
         center={center}
         zoom={13}
-        style={{ height: "100%", width: "100%", borderRadius: "8px" }}
+        style={{ height: "100%", width: "100%" }}
+        scrollWheelZoom={false}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -39,17 +66,23 @@ export default function VehicleMap({ isDialogOpen, userPosition, mechanics = [] 
         />
         {userPosition && (
           <Marker position={userPosition}>
-            <Popup>Sua Localização</Popup>
+            <Popup>Você está aqui</Popup>
           </Marker>
         )}
-        {mechanics.map((mechanic, index) => (
-          <Marker key={index} position={[mechanic.latitude, mechanic.longitude]}>
+        {mechanics.map((mechanic) => (
+          <Marker
+            key={mechanic.id}
+            position={[mechanic.latitude, mechanic.longitude]}
+          >
             <Popup>
-              {mechanic.name} <br /> {mechanic.distance.toFixed(2)} km de distância
+              {mechanic.nome} <br />
+              Distância: {mechanic.distance.toFixed(2)} km
             </Popup>
           </Marker>
         ))}
       </MapContainer>
     </div>
   );
-}
+};
+
+export default VehicleMap;
