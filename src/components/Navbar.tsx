@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { useSupabase } from "@/components/supabaseprovider";
+import  { useSupabase } from "@/components/SupabaseProvider";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
 
