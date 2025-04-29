@@ -611,7 +611,9 @@ export default function ClienteDashboard() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-      <VehicleMap
+
+                    
+      {/* <VehicleMap
         isDialogOpen={
           
          isMechanicDialogOpen ||
@@ -620,7 +622,10 @@ export default function ClienteDashboard() {
         }
         userPosition={userPosition}
         mechanics={mechanics}
-      />
+      /> */}
+
+
+
     </CardContent>
                 </Card>
               </div>
