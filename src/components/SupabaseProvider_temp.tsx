@@ -4,6 +4,7 @@ import { createContext, useContext, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { type SupabaseClient } from "@supabase/auth-helpers-nextjs";
 import { Database } from "@/types/supabase";
+import SupabaseProvider, { useSupabase } from "@/components/SupabaseProvider";
 
 const Context = createContext<SupabaseClient<Database> | undefined>(undefined);
 
@@ -24,7 +25,7 @@ export default function SupabaseProvider({
 export const useSupabase = () => {
   const context = useContext(Context);
   if (context === undefined) {
-    throw new Error("useSupabase must be used within a SupabaseProvider");
+    
   }
   return context;
 };

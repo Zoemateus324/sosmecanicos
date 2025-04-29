@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSupabase } from "@/components/supabase-provider";
+import SupabaseProvider,{useSupabase} from "@/components/SupabaseProvider_temp";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -29,7 +29,7 @@ type Vehicle = {
 };
 
 export default function ClienteDashboard() {
-  const { user, userType, isLoading } = useAuth();
+  const { user, userType, isLoading } = useAuth() as { user: any; userType: keyof typeof dashboardRoutes; isLoading: boolean };
   const supabase = useSupabase();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -59,10 +59,15 @@ export default function ClienteDashboard() {
 
   async function fetchMechanics() {
     try {
-      const { data: mechanicsData, error: mechanicsError } = await supabase
+      const supabaseClient = useSupabase();
+      if (!supabaseClient) {
+        throw new Error("Supabase client is not initialized.");
+      }
+
+      const { data: mechanicsData, error: mechanicsError } = await supabaseClient
         .from("users")
         .select("id, nome, latitude, longitude")
-        .eq("tipo_usuario", "mecanico");
+        .eq("tipo_usuario", "mecanico") as { data: Omit<Mechanic, "distance">[] | null, error: any };
 
       if (mechanicsError) {
         throw new Error("Erro ao carregar mecânicos: " + mechanicsError.message);
@@ -70,13 +75,13 @@ export default function ClienteDashboard() {
 
       if (mechanicsData) {
         const sortedMechanics = mechanicsData
-          .map((mechanic: Mechanic) => ({
+          .map((mechanic: Omit<Mechanic, "distance">) => ({
             ...mechanic,
             distance: calculateDistance(
-              -23.5505, // Example user location
-              -46.6333,
-              mechanic.latitude,
-              mechanic.longitude
+              mechanic.latitude || 0,
+              mechanic.longitude || 0,
+              user?.latitude || 0,
+              user?.longitude || 0
             ),
           }))
           .sort((a: Mechanic, b: Mechanic) => a.distance - b.distance);
@@ -92,6 +97,10 @@ export default function ClienteDashboard() {
 
   async function fetchVehicles() {
     try {
+      if (!supabase) {
+        throw new Error("Supabase client is not initialized.");
+      }
+
       const { data: vehiclesData, error: vehiclesError } = await supabase
         .from("vehicles")
         .select("id, marca, modelo, ano, placa")
@@ -131,12 +140,22 @@ export default function ClienteDashboard() {
     }
 
     try {
-      const { error } = await supabase.from("requests").insert({
-        user_id: user?.id,
-        mechanic_id: selectedMechanic.id,
-        status: "pending",
-        created_at: new Date().toISOString(),
-      });
+      const supabaseClient = useSupabase();
+      if (!supabaseClient) {
+        toast.error("Erro ao conectar ao Supabase.", {
+          style: { backgroundColor: "#6B7280", color: "#ffffff" },
+        });
+        return;
+      }
+
+      const { error } = await supabaseClient
+        .from("requests")
+        .insert({
+          user_id: user?.id,
+          mechanic_id: selectedMechanic.id,
+          status: "pending",
+          created_at: new Date().toISOString(),
+        });
 
       if (error) {
         throw new Error("Erro ao solicitar serviço: " + error.message);
@@ -156,6 +175,7 @@ export default function ClienteDashboard() {
   return (
     <div className="flex min-h-screen bg-gray-100">
       {/* Restante do código */}
+      <h1>Usuario logado</h1>
     </div>
   );
 }
