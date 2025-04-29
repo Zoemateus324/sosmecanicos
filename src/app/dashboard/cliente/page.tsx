@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import SupabaseProvider from '@/components/SupabaseProvider';  
-
+import { useSupabase } from "@/components/SupabaseProvider"; // Adicione esta importação
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -46,8 +45,6 @@ import { Input } from "@/components/ui/input";
 import dynamic from "next/dynamic";
 import { Mechanic, Vehicle } from "@/types";
 import { LatLngTuple } from "leaflet";
-import { calculateDistance } from "@/utils/calculateDistance";
-
 
 // Dynamically import VehicleMap to avoid SSR issues with react-leaflet
 const VehicleMap = dynamic(() => import("@/components/VehicleMap"), {
@@ -68,7 +65,7 @@ export default function ClienteDashboard() {
     isLoading: boolean;
     userNome: string;
   };
-  // Initialize Supabase client
+  const supabase = useSupabase(); // Obtenha o cliente Supabase
   const router = useRouter();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -152,8 +149,14 @@ export default function ClienteDashboard() {
   async function fetchMechanics() {
     try {
       setLoading(true);
+
       if (!supabase) {
         throw new Error("Supabase client is not initialized.");
+      }
+
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        throw new Error("Usuário não autenticado ou ID do cliente não encontrado.");
       }
 
       const { data: mechanicsData, error: mechanicsError } = await supabase
@@ -199,6 +202,7 @@ export default function ClienteDashboard() {
         setMechanics(sortedMechanics);
       }
     } catch (err: any) {
+      console.error("Erro ao buscar mecânicos:", err);
       toast.error(err.message || "Erro ao carregar mecânicos.", {
         style: { backgroundColor: "#6B7280", color: "#ffffff" },
       });
@@ -207,20 +211,25 @@ export default function ClienteDashboard() {
     }
   }
 
- 
-
-
   async function fetchVehicles() {
     try {
       setLoading(true);
+
       if (!supabase) {
         throw new Error("Supabase client is not initialized.");
       }
 
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        throw new Error("Usuário não autenticado ou ID do cliente não encontrado.");
+      }
+
+      const clientId = userData.user.id;
+
       const { data: vehiclesData, error: vehiclesError } = await supabase
         .from("veiculos")
         .select("id, marca, modelo, ano, placa")
-        .eq("client_id", user?.id);
+        .eq("client_id", clientId);
 
       if (vehiclesError) {
         throw new Error("Erro ao carregar veículos: " + vehiclesError.message);
@@ -228,6 +237,7 @@ export default function ClienteDashboard() {
 
       setVehicles(vehiclesData || []);
     } catch (err: any) {
+      console.error("Erro ao buscar veículos:", err);
       toast.error(err.message || "Erro ao carregar veículos.", {
         style: { backgroundColor: "#6B7280", color: "#ffffff" },
       });
@@ -237,35 +247,81 @@ export default function ClienteDashboard() {
   }
 
   async function handleAddVehicle() {
-    const user = supabase.auth.getUser();
-    const clientId = user?.id;
+    try {
+      if (!newVehicle.marca || !newVehicle.modelo || !newVehicle.placa) {
+        toast.error("Por favor, preencha todos os campos obrigatórios (marca, modelo, placa).", {
+          style: { backgroundColor: "#6B7280", color: "#ffffff" },
+        });
+        return;
+      }
 
+      if (!newVehicle.ano || newVehicle.ano <= 1900 || newVehicle.ano > new Date().getFullYear()) {
+        toast.error("Por favor, insira um ano válido (entre 1900 e o ano atual).", {
+          style: { backgroundColor: "#6B7280", color: "#ffffff" },
+        });
+        return;
+      }
 
-    if(!clientId) {
-      console.error("Usuário não autenticado ou Id do cliente não encontrado");
-      return;
-  }
+      if (!supabase) {
+        throw new Error("Supabase client is not initialized.");
+      }
 
-  const {error} = await supabase.from("veiculos").insert([
-    {
-      nome: newVehicle.marca,
-      modelo: newVehicle.modelo,
-      ano: parseInt(newVehicle.ano.toString()),
-      placa: newVehicle.placa,
-      client_id: clientId,
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        console.error("Erro ao obter usuário:", userError?.message);
+        throw new Error("Usuário não autenticado ou ID do cliente não encontrado.");
+      }
+
+      const clientId = userData.user.id;
+      console.log("Tentando cadastrar veículo:", { ...newVehicle, client_id: clientId });
+
+      const { error: insertError } = await supabase.from("veiculos").insert([
+        {
+          marca: newVehicle.marca,
+          modelo: newVehicle.modelo,
+          ano: parseInt(newVehicle.ano.toString()),
+          placa: newVehicle.placa,
+          client_id: clientId,
+        },
+      ]);
+
+      if (insertError) {
+        console.error("Erro ao cadastrar veículo:", insertError.message);
+        throw new Error("Erro ao cadastrar veículo: " + insertError.message);
+      }
+
+      const { data: updatedVehicles, error: fetchError } = await supabase
+        .from("veiculos")
+        .select("id, marca, modelo, ano, placa")
+        .eq("client_id", clientId);
+
+      if (fetchError) {
+        throw new Error("Erro ao atualizar lista de veículos: " + fetchError.message);
+      }
+
+      setVehicles(updatedVehicles || []);
+      setNewVehicle({ id: "", marca: "", modelo: "", ano: 0, placa: "" });
+      setIsVehicleDialogOpen(false);
+      toast.success("Veículo adicionado com sucesso!", {
+        style: { backgroundColor: "#7C3AED", color: "#ffffff" },
+      });
+    } catch (err: any) {
+      console.error("Erro no handleAddVehicle:", err);
+      toast.error(err.message || "Erro ao adicionar veículo.", {
+        style: { backgroundColor: "#6B7280", color: "#ffffff" },
+      });
     }
-  ]);
-  if(error){
-    console.error("Erro ao cadastrar veículo:", error.message);
-    toast.error("Erro ao cadastrar veículo: " + error.message, {
-      style: { backgroundColor: "#6B7280", color: "#ffffff" },
-    });
   }
 
   async function handleEditVehicle() {
     try {
       if (!supabase) {
         throw new Error("Supabase client is not initialized.");
+      }
+
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        throw new Error("Usuário não autenticado ou ID do cliente não encontrado.");
       }
 
       const { error } = await supabase
@@ -282,10 +338,14 @@ export default function ClienteDashboard() {
         throw new Error("Erro ao atualizar veículo: " + error.message);
       }
 
-      const { data: updatedVehicles } = await supabase
+      const { data: updatedVehicles, error: fetchError } = await supabase
         .from("veiculos")
         .select("id, marca, modelo, ano, placa")
-        .eq("client_id", user?.id);
+        .eq("client_id", userData.user.id);
+
+      if (fetchError) {
+        throw new Error("Erro ao atualizar lista de veículos: " + fetchError.message);
+      }
 
       setVehicles(updatedVehicles || []);
       setEditVehicle({ id: "", marca: "", modelo: "", ano: 0, placa: "" });
@@ -294,6 +354,7 @@ export default function ClienteDashboard() {
         style: { backgroundColor: "#7C3AED", color: "#ffffff" },
       });
     } catch (err: any) {
+      console.error("Erro ao editar veículo:", err);
       toast.error(err.message || "Erro ao atualizar veículo.", {
         style: { backgroundColor: "#6B7280", color: "#ffffff" },
       });
@@ -306,8 +367,13 @@ export default function ClienteDashboard() {
         throw new Error("Supabase client is not initialized.");
       }
 
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        throw new Error("Usuário não autenticado ou ID do cliente não encontrado.");
+      }
+
       const { error } = await supabase.from("service_requests").insert({
-        client_id: user?.id,
+        client_id: userData.user.id,
         service_type: "mecanico",
         description: `Problema: ${mechanicRequest.description}, Localização: ${mechanicRequest.location}`,
         status: "pending",
@@ -324,6 +390,7 @@ export default function ClienteDashboard() {
         style: { backgroundColor: "#7C3AED", color: "#ffffff" },
       });
     } catch (err: any) {
+      console.error("Erro ao solicitar mecânico:", err);
       toast.error(err.message || "Erro ao solicitar mecânico.", {
         style: { backgroundColor: "#6B7280", color: "#ffffff" },
       });
@@ -336,8 +403,13 @@ export default function ClienteDashboard() {
         throw new Error("Supabase client is not initialized.");
       }
 
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        throw new Error("Usuário não autenticado ou ID do cliente não encontrado.");
+      }
+
       const { error } = await supabase.from("service_requests").insert({
-        client_id: user?.id,
+        client_id: userData.user.id,
         service_type: "guincho",
         description: `Origem: ${towRequest.origin}, Destino: ${towRequest.destination}, Observações: ${towRequest.observations || "Nenhuma"}`,
         status: "pending",
@@ -359,6 +431,7 @@ export default function ClienteDashboard() {
         style: { backgroundColor: "#7C3AED", color: "#ffffff" },
       });
     } catch (err: any) {
+      console.error("Erro ao solicitar guincho:", err);
       toast.error(err.message || "Erro ao solicitar guincho.", {
         style: { backgroundColor: "#6B7280", color: "#ffffff" },
       });
@@ -367,12 +440,18 @@ export default function ClienteDashboard() {
 
   async function handleLogout() {
     try {
+      if (!supabase) {
+        throw new Error("Supabase client is not initialized.");
+      }
+
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       router.push("/login");
     } catch (err: any) {
       console.error("Erro ao fazer logout:", err);
-      toast.error("Erro ao fazer logout. Por favor, tente novamente.");
+      toast.error("Erro ao fazer logout. Por favor, tente novamente.", {
+        style: { backgroundColor: "#6B7280", color: "#ffffff" },
+      });
     }
   }
 
@@ -520,77 +599,71 @@ export default function ClienteDashboard() {
           <div className="space-y-6">
             {/* Map and Stats Section */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-  {/* Map */}
-  <div className="md:col-span-2">
-    <Card className="border-none shadow-md">
-      <CardHeader>
-        <CardTitle className="text-purple-700">
-          Localização dos Mecânicos
-        </CardTitle>
-        <CardDescription className="text-gray-600">
-          Veja a localização dos mecânicos próximos no mapa
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {(
-         isMechanicDialogOpen || isTowDialogOpen
+              {/* Map */}
+              <div className="md:col-span-2">
+                <Card className="border-none shadow-md">
+                  <CardHeader>
+                    <CardTitle className="text-purple-700">
+                      Localização dos Mecânicos
+                    </CardTitle>
+                    <CardDescription className="text-gray-600">
+                      Veja a localização dos mecânicos próximos no mapa
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+      <VehicleMap
+        isDialogOpen={
+          
+         isMechanicDialogOpen ||
+          isTowDialogOpen
+          
+        }
+        userPosition={userPosition}
+        mechanics={mechanics}
+      />
+    </CardContent>
+                </Card>
+              </div>
 
-        ) ? (
-          <VehicleMap
-            isDialogOpen
-            userPosition={userPosition}
-            mechanics={mechanics}
-          />
-        ) : (
-          <div className="h-96 w-full bg-gray-100 flex items-center justify-center text-gray-500">
-            O mapa será exibido quando algum diálogo estiver aberto.
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  </div>
-
-  {/* Stats Cards */}
-  <div className="space-y-6">
-    <Card className="border-none shadow-md">
-      <CardHeader>
-        <CardTitle className="text-purple-700">Veículos Cadastrados</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-3xl font-bold text-gray-800">{vehicles.length}</p>
-        <Button
-          onClick={() => setIsVehicleDialogOpen(true)}
-          className="mt-4 bg-purple-600 hover:bg-purple-700 text-white"
-        >
-          Adicionar Veículo
-        </Button>
-      </CardContent>
-    </Card>
-
-    <Card className="border-none shadow-md">
-      <CardHeader>
-        <CardTitle className="text-purple-700">Ações Rápidas</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <Button
-          onClick={() => setIsMechanicDialogOpen(true)}
-          className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-          disabled={vehicles.length === 0}
-        >
-          Solicitar Mecânico
-        </Button>
-        <Button
-          onClick={() => setIsTowDialogOpen(true)}
-          className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-          disabled={vehicles.length === 0}
-        >
-          Solicitar Guincho
-        </Button>
-      </CardContent>
-    </Card>
-  </div>
-</div>
-
+              {/* Stats Cards */}
+              <div className="space-y-6">
+                <Card className="border-none shadow-md">
+                  <CardHeader>
+                    <CardTitle className="text-purple-700">Veículos Cadastrados</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-bold text-gray-800">{vehicles.length}</p>
+                    <Button
+                      onClick={() => setIsVehicleDialogOpen(true)}
+                      className="mt-4 bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      Adicionar Veículo
+                    </Button>
+                  </CardContent>
+                </Card>
+                <Card className="border-none shadow-md">
+                  <CardHeader>
+                    <CardTitle className="text-purple-700">Ações Rápidas</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <Button
+                      onClick={() => setIsMechanicDialogOpen(true)}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                      disabled={vehicles.length === 0}
+                    >
+                      Solicitar Mecânico
+                    </Button>
+                    <Button
+                      onClick={() => setIsTowDialogOpen(true)}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                      disabled={vehicles.length === 0}
+                    >
+                      Solicitar Guincho
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
 
             {/* Vehicles Table */}
             <motion.div
@@ -859,9 +932,10 @@ export default function ClienteDashboard() {
                 <Input
                   id="marca"
                   value={newVehicle.marca}
-                  onChange={(e) =>
-                    setNewVehicle({ ...newVehicle, marca: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setNewVehicle({ ...newVehicle, marca: e.target.value });
+                    console.log("Marca atualizada:", e.target.value);
+                  }}
                   className="col-span-3"
                 />
               </div>
@@ -872,9 +946,10 @@ export default function ClienteDashboard() {
                 <Input
                   id="modelo"
                   value={newVehicle.modelo}
-                  onChange={(e) =>
-                    setNewVehicle({ ...newVehicle, modelo: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setNewVehicle({ ...newVehicle, modelo: e.target.value });
+                    console.log("Modelo atualizado:", e.target.value);
+                  }}
                   className="col-span-3"
                 />
               </div>
@@ -885,13 +960,12 @@ export default function ClienteDashboard() {
                 <Input
                   id="ano"
                   type="number"
-                  value={newVehicle.ano}
-                  onChange={(e) =>
-                    setNewVehicle({
-                      ...newVehicle,
-                      ano: parseInt(e.target.value) || 0,
-                    })
-                  }
+                  value={newVehicle.ano === 0 ? "" : newVehicle.ano}
+                  onChange={(e) => {
+                    const ano = parseInt(e.target.value) || 0;
+                    setNewVehicle({ ...newVehicle, ano });
+                    console.log("Ano atualizado:", ano);
+                  }}
                   className="col-span-3"
                 />
               </div>
@@ -902,9 +976,10 @@ export default function ClienteDashboard() {
                 <Input
                   id="placa"
                   value={newVehicle.placa}
-                  onChange={(e) =>
-                    setNewVehicle({ ...newVehicle, placa: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setNewVehicle({ ...newVehicle, placa: e.target.value });
+                    console.log("Placa atualizada:", e.target.value);
+                  }}
                   className="col-span-3"
                 />
               </div>
@@ -1123,4 +1198,4 @@ export default function ClienteDashboard() {
       </div>
     </div>
   );
-}}
+}
