@@ -1,3 +1,4 @@
+
 export interface Mechanic {
   id: string;
   nome: string;
@@ -6,4 +7,16 @@ export interface Mechanic {
   distance: number;
 }
 
-export type LatLngTuple = [number, number];
+export interface Vehicle {
+  id: string;
+  marca: string;
+  modelo: string;
+  ano: number;
+  placa: string;
+}
+
+export interface AuthUser {
+  id: string;
+  latitude?: number;
+  longitude?: number;
+}
