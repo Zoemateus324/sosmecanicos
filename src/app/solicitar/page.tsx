@@ -6,7 +6,14 @@ import { useRouter } from "next/navigation";
 import { User } from '@supabase/supabase-js';
 
 export default function SolicitarServico() {
-  const { session } = useAuth();
+  const { user: session } = useAuth();
+  // Verifica se o usuário está autenticado
+  if (!session) {
+    return <div>Você precisa estar logado para solicitar um serviço.</div>;
+  }
+  // Obtém o usuário da sessão
+  // e o roteador para redirecionamento
+ 
   const user = session?.user as User | undefined;
   const router = useRouter();
   const [tipoServico, setTipoServico] = useState("");
