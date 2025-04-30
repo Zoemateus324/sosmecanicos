@@ -14,7 +14,7 @@ export default function SolicitarServico() {
   // Obtém o usuário da sessão
   // e o roteador para redirecionamento
  
-  const user = session?.user as User | undefined;
+  const user = session as User | undefined;
   const router = useRouter();
   const [tipoServico, setTipoServico] = useState("");
   const [descricao, setDescricao] = useState("");
