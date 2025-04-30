@@ -65,8 +65,7 @@ const VehicleMap: React.FC<VehicleMapProps> = ({ isDialogOpen, userPosition, mec
         shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
       });
     });
-    import('leaflet/dist/leaflet.css');
-  }, []);
+  },[]);
 
   useEffect(() => {
     return () => {
@@ -92,9 +91,14 @@ const VehicleMap: React.FC<VehicleMapProps> = ({ isDialogOpen, userPosition, mec
         scrollWheelZoom={false}
         style={{ height: '400px', width: '100%' }}
         id="leaflet-map"
-        whenReady={(map: any) => {
-          console.log('Map is ready:', map);
-          mapRef.current = map;
+        className="leaflet-container"
+        ref={(map) => {
+          if (map) {
+            mapRef.current = map;
+          }
+          if (isDialogOpen && mapRef.current) {
+            mapRef.current.invalidateSize();
+          }
         }}
       >
         <TileLayer
