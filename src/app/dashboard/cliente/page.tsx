@@ -601,11 +601,11 @@ export default function ClienteDashboard() {
                   </CardHeader>
 {userPosition&&(
                     <CardContent className="h-96">
-                      <VehicleMap
+                      {/* <VehicleMap
                         userPosition={userPosition}
                         mechanics={mechanics}
                         vehicles={vehicles}
-                      />
+                      /> */}
                     </CardContent>
                   )}
 
