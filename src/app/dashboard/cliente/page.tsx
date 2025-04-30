@@ -105,6 +105,8 @@ export default function ClienteDashboard() {
     vehicleId: '',
     description: '',
     location: '',
+    service_type:'',
+    category_type:'',
   });
   const [towRequest, setTowRequest] = useState({
     vehicleId: '',
@@ -193,27 +195,30 @@ export default function ClienteDashboard() {
   async function fetchVehicles() {
     try {
       setLoading(true);
-      if (!supabase) {
-        throw new Error('Supabase client is not initialized.');
-      }
       const { data: userData, error: userError } = await supabase.auth.getUser();
+      console.log('Usuário autenticado em fetchVehicles:', userData); // Debug user
+  
       if (userError || !userData?.user) {
-        throw new Error('Usuário não autenticado ou ID do cliente não encontrado.');
+        throw new Error('Usuário não autenticado para buscar veículos.');
       }
-      const clientId = userData.user.id;
+  
       const { data: vehiclesData, error: vehiclesError } = await supabase
         .from('veiculos')
         .select('id, marca, modelo, ano, placa')
-        .eq('client_id', clientId);
+        .eq('user_id', userData.user.id);
+  
+      console.log('Dados dos veículos retornados:', vehiclesData); // Debug vehicles
+      console.log('Erro ao buscar veículos:', vehiclesError); // Debug error
+  
       if (vehiclesError) {
         throw new Error('Erro ao carregar veículos: ' + vehiclesError.message);
       }
+  
       setVehicles(vehiclesData || []);
     } catch (err: any) {
       console.error('Erro ao buscar veículos:', err);
-      toast.error(err.message || 'Erro ao carregar veículos.', {
-        style: { backgroundColor: '#6B7280', color: '#ffffff' },
-      });
+      toast.error(err.message || 'Erro ao carregar veículos.');
+      setVehicles([]); // Reset on error
     } finally {
       setLoading(false);
     }
@@ -326,33 +331,53 @@ export default function ClienteDashboard() {
   async function handleRequestMechanic() {
     try {
       if (!supabase) {
-        throw new Error('Cliente não autenticado.');
+        throw new Error('Supabase client não inicializado.');
       }
   
       const { data: userData, error: userError } = await supabase.auth.getUser();
-      console.log(userData); // Verifique os dados do usuário
+      console.log('Dados do usuário:', userData); // Verifique os dados do usuário
   
       if (userError || !userData?.user) {
-        throw new Error('Usuário não autenticado ou ID do cliente não encontrado.');
+        throw new Error('Usuário não autenticado.');
+      }
+  
+      if (!mechanicRequest.vehicleId) {
+        throw new Error('Nenhum veículo selecionado.');
+      }
+  
+      if (!mechanicRequest.description || !mechanicRequest.location) {
+        throw new Error('Descrição e localização são obrigatórios.');
       }
   
       // Verificando os dados do pedido
-      console.log('Descrição do pedido:', mechanicRequest.description);
-      console.log('Localização:', mechanicRequest.location);
+      console.log('Dados do pedido:', {
+        cliente_id: userData.user.id,
+        vehicle_id: mechanicRequest.vehicleId,
+        description: mechanicRequest.description,
+        location: mechanicRequest.location,
+        service_type:mechanicRequest.service_type,
+        category_type: mechanicRequest.category_type,
+        status: 'pending',
+      });
   
       const { error } = await supabase.from('mechanic_requests').insert({
-        cliente_id: userData.user.id,
-        service_type: 'mecanico',
-        description: `Problema: ${mechanicRequest.description}, Localização: ${mechanicRequest.location}`,
+        cliente_id: userData.user.id, // Changed from cliente_id to user_id
+        vehicle_id: mechanicRequest.vehicleId, // UUID string, not an object
+        description: mechanicRequest.description,
+        location: mechanicRequest.location,
+        category_type: mechanicRequest.category_type, //'mecanico',
+        service_type: mechanicRequest.service_type, //'mecanico',
         status: 'pending',
-        created_at: new Date().toISOString(),
       });
   
       if (error) {
-        throw new Error('Erro ao solicitar mecânico: ' + error.message);
+        console.error('Erro ao solicitar mecânico:', error);
+        throw new Error(`Erro ao solicitar mecânico: ${error.message}`);
+      }if (!mechanicRequest.vehicleId || !mechanicRequest.description || !mechanicRequest.location || !mechanicRequest.category_type) {
+        throw new Error('Veículo, descrição, localização e tipo de serviço são obrigatórios.');
       }
   
-      setMechanicRequest({ vehicleId: '', description: '', location: '' });
+      setMechanicRequest({ vehicleId: '', description: '', location: '', service_type:'', category_type:'' });
       setIsMechanicDialogOpen(false);
       toast.success('Mecânico solicitado com sucesso!', {
         style: { backgroundColor: '#7C3AED', color: '#ffffff' },
@@ -628,7 +653,7 @@ export default function ClienteDashboard() {
                     <Button
                       onClick={() => setIsMechanicDialogOpen(true)}
                       className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                      // disabled={vehicles.length === 0}
+                      
                     >
                       Solicitar Mecânico
                     </Button>
@@ -882,7 +907,7 @@ export default function ClienteDashboard() {
                   value={newVehicle.marca}
                   onChange={(e) => {
                     setNewVehicle({ ...newVehicle, marca: e.target.value });
-                    console.log('Marca atualizada:', e.target.value);
+                    
                   }}
                   className="col-span-3"
                 />
@@ -896,7 +921,7 @@ export default function ClienteDashboard() {
                   value={newVehicle.modelo}
                   onChange={(e) => {
                     setNewVehicle({ ...newVehicle, modelo: e.target.value });
-                    console.log('Modelo atualizado:', e.target.value);
+                    
                   }}
                   className="col-span-3"
                 />
@@ -912,7 +937,7 @@ export default function ClienteDashboard() {
                   onChange={(e) => {
                     const ano = parseInt(e.target.value) || 0;
                     setNewVehicle({ ...newVehicle, ano });
-                    console.log('Ano atualizado:', ano);
+                    
                   }}
                   className="col-span-3"
                 />
@@ -926,7 +951,7 @@ export default function ClienteDashboard() {
                   value={newVehicle.placa}
                   onChange={(e) => {
                     setNewVehicle({ ...newVehicle, placa: e.target.value });
-                    console.log('Placa atualizada:', e.target.value);
+                    
                   }}
                   className="col-span-3"
                 />
@@ -951,93 +976,127 @@ export default function ClienteDashboard() {
         </Dialog>
 
         <Dialog open={isMechanicDialogOpen} onOpenChange={setIsMechanicDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle className="text-purple-700">Solicitar Mecânico</DialogTitle>
-              <DialogDescription>
-                Informe os detalhes para solicitar um mecânico.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="vehicleId" className="text-right">
-                  Veículo
-                </Label>
-                <Select
-                  onValueChange={(value) =>
-                    setMechanicRequest({ ...mechanicRequest, vehicleId: value })
-                  }
-                  value={mechanicRequest.vehicleId}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Selecione um veículo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vehicles.map((veiculo) => (
-                      <SelectItem key={veiculo.id} value={veiculo.id}>
-                        {veiculo.modelo} - {veiculo.placa}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="description" className="text-right">
-                  Problema
-                </Label>
-                <Textarea
-                  id="description"
-                  value={mechanicRequest.description}
-                  onChange={(e) =>
-                    setMechanicRequest({
-                      ...mechanicRequest,
-                      description: e.target.value,
-                    })
-                  }
-                  className="col-span-3"
-                  placeholder="Descreva o problema do veículo"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="location" className="text-right">
-                  Localização
-                </Label>
-                <Input
-                  id="location"
-                  value={mechanicRequest.location}
-                  onChange={(e) =>
-                    setMechanicRequest({
-                      ...mechanicRequest,
-                      location: e.target.value,
-                    })
-                  }
-                  className="col-span-3"
-                  placeholder="Ex.: Av. Principal, 123"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsMechanicDialogOpen(false)}
-                className="border-purple-600 text-purple-600 hover:bg-purple-50"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleRequestMechanic}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-                disabled={
-                  !mechanicRequest.vehicleId ||
-                  !mechanicRequest.description ||
-                  !mechanicRequest.location
-                }
-              >
-                Solicitar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+  <DialogContent className="sm:max-w-[425px]">
+    <DialogHeader>
+      <DialogTitle className="text-purple-700">Solicitar Mecânico</DialogTitle>
+      <DialogDescription>
+        Informe os detalhes para solicitar um mecânico.
+      </DialogDescription>
+    </DialogHeader>
+    <div className="grid gap-4 py-4">
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="vehicleId" className="text-right">
+          Veículo
+        </Label>
+        <Select
+          onValueChange={(value) =>
+            setMechanicRequest({ ...mechanicRequest, vehicleId: value })
+          }
+          value={mechanicRequest.vehicleId}
+        >
+          <SelectTrigger className="col-span-3">
+            <SelectValue placeholder="Selecione um veículo" />
+          </SelectTrigger>
+          <SelectContent>
+            {vehicles.map((veiculo) => (
+              <SelectItem key={veiculo.id} value={veiculo.id}>
+                {veiculo.modelo} - {veiculo.placa}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="category_type" className="text-left">
+          Tipo de Serviço
+        </Label>
+        <Select
+          onValueChange={(value) =>
+            setMechanicRequest({ ...mechanicRequest, category_type: value })
+          }
+          value={mechanicRequest.category_type}
+        >
+          <SelectTrigger className="col-span-3">
+          <SelectValue placeholder="Selecione o tipo de serviço" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Mecânica Geral">Mecânica Geral</SelectItem>
+            <SelectItem value="Motor e Transmissão">Motor e Transmissão</SelectItem>
+            <SelectItem value="Suspensão e Direção">Suspensão e Direção</SelectItem>
+            <SelectItem value="Elétrica e Eletrônica">Elétrica e Eletrônica</SelectItem>
+            <SelectItem value="Ar-Condicionado">Ar-Condicionado</SelectItem>
+            <SelectItem value="Funilaria e Pintura">Funilaria e Pintura</SelectItem>
+            <SelectItem value="Tuning e Personalização">Tuning e Personalização</SelectItem>
+            <SelectItem value="Engrenagens">Engrenagens</SelectItem>
+            <SelectItem value="Rodas e Pneus">Rodas e Pneus</SelectItem>
+            <SelectItem value="Freios">Freios</SelectItem>
+            <SelectItem value="Escapamento">Escapamento</SelectItem>
+            <SelectItem value="Manutenção Preventiva">Manutenção Preventiva</SelectItem>
+            <SelectItem value="Diagnóstico">Diagnóstico</SelectItem>
+            <SelectItem value="Troca de Peças">Troca de Peças</SelectItem>
+            <SelectItem value="Reparos">Reparos</SelectItem>
+            <SelectItem value="Socorro Urgente">Socorro Urgente</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="description" className="text-right">
+          Problema
+        </Label>
+        <Textarea
+          id="description"
+          value={mechanicRequest.description}
+          onChange={(e) =>
+            setMechanicRequest({
+              ...mechanicRequest,
+              description: e.target.value,
+            })
+          }
+          className="col-span-3"
+          placeholder="Descreva o problema do veículo"
+        />
+      </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="location" className="text-right">
+          Localização
+        </Label>
+        <Input
+          id="location"
+          value={mechanicRequest.location}
+          onChange={(e) =>
+            setMechanicRequest({
+              ...mechanicRequest,
+              location: e.target.value,
+            })
+          }
+          className="col-span-3"
+          placeholder="Ex.: Av. Principal, 123"
+        />
+      </div>
+    </div>
+    <DialogFooter>
+      <Button
+        variant="outline"
+        onClick={() => setIsMechanicDialogOpen(false)}
+        className="border-purple-600 text-purple-600 hover:bg-purple-50"
+      >
+        Cancelar
+      </Button>
+      <Button
+        onClick={handleRequestMechanic}
+        className="bg-purple-600 hover:bg-purple-700 text-white"
+        disabled={
+          !mechanicRequest.vehicleId ||
+          !mechanicRequest.description ||
+          !mechanicRequest.location ||
+          !mechanicRequest.category_type
+        }
+      >
+        Solicitar
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
 
         <Dialog open={isTowDialogOpen} onOpenChange={setIsTowDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
