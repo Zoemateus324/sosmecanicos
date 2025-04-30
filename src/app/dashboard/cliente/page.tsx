@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
-import { useSupabase } from "@/components/SupabaseProvider"; // Adicione esta importação
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSupabase } from '@/components/SupabaseProvider';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Dialog,
   DialogContent,
@@ -14,25 +14,25 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogDescription,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { motion } from "framer-motion";
-import { toast } from "sonner";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/select';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -40,14 +40,17 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import dynamic from "next/dynamic";
-import { Mechanic, Vehicle } from "@/types";
-import { LatLngTuple } from "leaflet";
+} from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import dynamic from 'next/dynamic';
+import { Metadata } from 'next';
+import { Mechanic, Vehicle } from '@/types';
 
-// Dynamically import VehicleMap to avoid SSR issues with react-leaflet
-const VehicleMap = dynamic(() => import("@/components/VehicleMap"), {
+// Define LatLngTuple locally
+type LatLngTuple = [number, number];
+
+// Dynamic import for VehicleMap
+const VehicleMap = dynamic(() => import('@/components/VehicleMap'), {
   ssr: false,
   loading: () => <div className="h-96 w-full bg-gray-200 animate-pulse" />,
 });
@@ -58,6 +61,11 @@ interface AuthUser {
   longitude?: number;
 }
 
+const metadata: Metadata = {
+  title: 'Dashboard - Cliente',
+  description: 'Dashboard do cliente para gerenciar veículos e solicitar serviços.',
+};
+
 export default function ClienteDashboard() {
   const { user, userType, isLoading, userNome } = useAuth() as {
     user: AuthUser | null;
@@ -65,7 +73,8 @@ export default function ClienteDashboard() {
     isLoading: boolean;
     userNome: string;
   };
-  const supabase = useSupabase(); // Obtenha o cliente Supabase
+
+  const supabase = useSupabase();
   const router = useRouter();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -79,68 +88,47 @@ export default function ClienteDashboard() {
   const [isTowDialogOpen, setIsTowDialogOpen] = useState(false);
   const [isEditVehicleDialogOpen, setIsEditVehicleDialogOpen] = useState(false);
   const [newVehicle, setNewVehicle] = useState<Vehicle>({
-    id: "",
-    marca: "",
-    modelo: "",
+    id: '',
+    marca: '',
+    modelo: '',
     ano: 0,
-    placa: "",
+    placa: '',
   });
   const [editVehicle, setEditVehicle] = useState<Vehicle>({
-    id: "",
-    marca: "",
-    modelo: "",
+    id: '',
+    marca: '',
+    modelo: '',
     ano: 0,
-    placa: "",
+    placa: '',
   });
   const [mechanicRequest, setMechanicRequest] = useState({
-    vehicleId: "",
-    description: "",
-    location: "",
+    vehicleId: '',
+    description: '',
+    location: '',
   });
   const [towRequest, setTowRequest] = useState({
-    vehicleId: "",
-    origin: "",
-    destination: "",
-    observations: "",
+    vehicleId: '',
+    origin: '',
+    destination: '',
+    observations: '',
   });
 
   const dashboardRoutes = {
-    cliente: "/dashboard/cliente",
-    mecanico: "/dashboard/mecanico",
-    guincho: "/dashboard/guincho",
-    seguradora: "/dashboard/seguradora",
+    cliente: '/dashboard/cliente',
+    mecanico: '/dashboard/mecanico',
+    guincho: '/dashboard/guincho',
+    seguradora: '/dashboard/seguradora',
   };
 
-  // Fetch user location using geolocation
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setUserPosition([latitude, longitude]);
-        },
-        (err) => {
-          toast.error("Erro ao obter localização: " + err.message, {
-            style: { backgroundColor: "#6B7280", color: "#ffffff" },
-          });
-          setUserPosition(null);
-        }
-      );
-    } else {
-      toast.error("Geolocalização não é suportada pelo navegador.", {
-        style: { backgroundColor: "#6B7280", color: "#ffffff" },
-      });
-      setUserPosition(null);
-    }
-  }, []);
+
 
   // Handle authentication and redirection
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push("/login");
-    } else if (!isLoading && userType && userType !== "cliente") {
-      router.push(dashboardRoutes[userType] || "/login");
-    } else if (!isLoading && userType === "cliente") {
+      router.push('/login');
+    } else if (!isLoading && userType && userType !== 'cliente') {
+      router.push(dashboardRoutes[userType] || '/login');
+    } else if (!isLoading && userType === 'cliente') {
       fetchMechanics();
       fetchVehicles();
     }
@@ -149,18 +137,15 @@ export default function ClienteDashboard() {
   async function fetchMechanics() {
     try {
       setLoading(true);
-
       if (!supabase) {
-        throw new Error("Supabase client is not initialized.");
+        throw new Error('Supabase client is not initialized.');
       }
-
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
-        throw new Error("Usuário não autenticado ou ID do cliente não encontrado.");
+        throw new Error('Usuário não autenticado ou ID do cliente não encontrado.');
       }
-
       const { data: mechanicsData, error: mechanicsError } = await supabase
-        .from("profiles")
+        .from('profiles')
         .select(`
           id,
           full_name,
@@ -169,12 +154,10 @@ export default function ClienteDashboard() {
             longitude
           )
         `)
-        .eq("user_type", "mecanico");
-
+        .eq('user_type', 'mecanico');
       if (mechanicsError) {
-        throw new Error("Erro ao carregar mecânicos: " + mechanicsError.message);
+        throw new Error('Erro ao carregar mecânicos: ' + mechanicsError.message);
       }
-
       if (mechanicsData && userPosition) {
         const sortedMechanics = mechanicsData
           .filter(
@@ -186,10 +169,7 @@ export default function ClienteDashboard() {
             nome: mechanic.full_name,
             latitude: mechanic.locations.latitude,
             longitude: mechanic.locations.longitude,
-            position: [
-              mechanic.locations.latitude,
-              mechanic.locations.longitude,
-            ] as LatLngTuple,
+            position: [mechanic.locations.latitude, mechanic.locations.longitude] as LatLngTuple,
             distance: calculateDistance(
               userPosition[0],
               userPosition[1],
@@ -198,13 +178,12 @@ export default function ClienteDashboard() {
             ),
           }))
           .sort((a: Mechanic, b: Mechanic) => a.distance - b.distance);
-
         setMechanics(sortedMechanics);
       }
     } catch (err: any) {
-      console.error("Erro ao buscar mecânicos:", err);
-      toast.error(err.message || "Erro ao carregar mecânicos.", {
-        style: { backgroundColor: "#6B7280", color: "#ffffff" },
+      console.error('Erro ao buscar mecânicos:', err);
+      toast.error(err.message || 'Erro ao carregar mecânicos.', {
+        style: { backgroundColor: '#6B7280', color: '#ffffff' },
       });
     } finally {
       setLoading(false);
@@ -214,32 +193,26 @@ export default function ClienteDashboard() {
   async function fetchVehicles() {
     try {
       setLoading(true);
-
       if (!supabase) {
-        throw new Error("Supabase client is not initialized.");
+        throw new Error('Supabase client is not initialized.');
       }
-
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
-        throw new Error("Usuário não autenticado ou ID do cliente não encontrado.");
+        throw new Error('Usuário não autenticado ou ID do cliente não encontrado.');
       }
-
       const clientId = userData.user.id;
-
       const { data: vehiclesData, error: vehiclesError } = await supabase
-        .from("veiculos")
-        .select("id, marca, modelo, ano, placa")
-        .eq("client_id", clientId);
-
+        .from('veiculos')
+        .select('id, marca, modelo, ano, placa')
+        .eq('client_id', clientId);
       if (vehiclesError) {
-        throw new Error("Erro ao carregar veículos: " + vehiclesError.message);
+        throw new Error('Erro ao carregar veículos: ' + vehiclesError.message);
       }
-
       setVehicles(vehiclesData || []);
     } catch (err: any) {
-      console.error("Erro ao buscar veículos:", err);
-      toast.error(err.message || "Erro ao carregar veículos.", {
-        style: { backgroundColor: "#6B7280", color: "#ffffff" },
+      console.error('Erro ao buscar veículos:', err);
+      toast.error(err.message || 'Erro ao carregar veículos.', {
+        style: { backgroundColor: '#6B7280', color: '#ffffff' },
       });
     } finally {
       setLoading(false);
@@ -249,66 +222,61 @@ export default function ClienteDashboard() {
   async function handleAddVehicle() {
     try {
       if (!newVehicle.marca || !newVehicle.modelo || !newVehicle.placa) {
-        toast.error("Por favor, preencha todos os campos obrigatórios (marca, modelo, placa).", {
-          style: { backgroundColor: "#6B7280", color: "#ffffff" },
+        toast.error('Por favor, preencha todos os campos obrigatórios (marca, modelo, placa).', {
+          style: { backgroundColor: '#6B7280', color: '#ffffff' },
         });
         return;
       }
-
-      if (!newVehicle.ano || newVehicle.ano <= 1900 || newVehicle.ano > new Date().getFullYear()) {
-        toast.error("Por favor, insira um ano válido (entre 1900 e o ano atual).", {
-          style: { backgroundColor: "#6B7280", color: "#ffffff" },
+      if (
+        !newVehicle.ano ||
+        newVehicle.ano <= 1900 ||
+        newVehicle.ano > new Date().getFullYear()
+      ) {
+        toast.error('Por favor, insira um ano válido (entre 1900 e o ano atual).', {
+          style: { backgroundColor: '#6B7280', color: '#ffffff' },
         });
         return;
       }
-
       if (!supabase) {
-        throw new Error("Supabase client is not initialized.");
+        throw new Error('Supabase client is not initialized.');
       }
-
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
-        console.error("Erro ao obter usuário:", userError?.message);
-        throw new Error("Usuário não autenticado ou ID do cliente não encontrado.");
+        console.error('Erro ao obter usuário:', userError?.message);
+        throw new Error('Usuário não autenticado ou ID do cliente não encontrado.');
       }
-
       const clientId = userData.user.id;
-      console.log("Tentando cadastrar veículo:", { ...newVehicle, client_id: clientId });
-
-      const { error: insertError } = await supabase.from("veiculos").insert([
+      console.log('Tentando cadastrar veículo:', { ...newVehicle, client_id: clientId });
+      const { error: insertError } = await supabase.from('veiculos').insert([
         {
           marca: newVehicle.marca,
           modelo: newVehicle.modelo,
           ano: parseInt(newVehicle.ano.toString()),
           placa: newVehicle.placa,
-          client_id: clientId,
+          user_id: userData.user.id,
         },
       ]);
-
       if (insertError) {
-        console.error("Erro ao cadastrar veículo:", insertError.message);
-        throw new Error("Erro ao cadastrar veículo: " + insertError.message);
+        console.error('Erro ao cadastrar veículo:', insertError.message);
+        throw new Error('Erro ao cadastrar veículo: ' + insertError.message);
       }
-
       const { data: updatedVehicles, error: fetchError } = await supabase
-        .from("veiculos")
-        .select("id, marca, modelo, ano, placa")
-        .eq("client_id", clientId);
-
+        .from('veiculos')
+        .select('id, marca, modelo, ano, placa')
+        .eq('user_id', clientId);
       if (fetchError) {
-        throw new Error("Erro ao atualizar lista de veículos: " + fetchError.message);
+        throw new Error('Erro ao atualizar lista de veículos: ' + fetchError.message);
       }
-
       setVehicles(updatedVehicles || []);
-      setNewVehicle({ id: "", marca: "", modelo: "", ano: 0, placa: "" });
+      setNewVehicle({ id: '', marca: '', modelo: '', ano: 0, placa: '' });
       setIsVehicleDialogOpen(false);
-      toast.success("Veículo adicionado com sucesso!", {
-        style: { backgroundColor: "#7C3AED", color: "#ffffff" },
+      toast.success('Veículo adicionado com sucesso!', {
+        style: { backgroundColor: '#7C3AED', color: '#ffffff' },
       });
     } catch (err: any) {
-      console.error("Erro no handleAddVehicle:", err);
-      toast.error(err.message || "Erro ao adicionar veículo.", {
-        style: { backgroundColor: "#6B7280", color: "#ffffff" },
+      console.error('Erro no handleAddVehicle:', err);
+      toast.error(err.message || 'Erro ao adicionar veículo.', {
+        style: { backgroundColor: '#6B7280', color: '#ffffff' },
       });
     }
   }
@@ -316,47 +284,41 @@ export default function ClienteDashboard() {
   async function handleEditVehicle() {
     try {
       if (!supabase) {
-        throw new Error("Supabase client is not initialized.");
+        throw new Error('Supabase client is not initialized.');
       }
-
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
-        throw new Error("Usuário não autenticado ou ID do cliente não encontrado.");
+        throw new Error('Usuário não autenticado ou ID do cliente não encontrado.');
       }
-
       const { error } = await supabase
-        .from("veiculos")
+        .from('veiculos')
         .update({
           marca: editVehicle.marca,
           modelo: editVehicle.modelo,
           ano: parseInt(editVehicle.ano.toString()),
           placa: editVehicle.placa,
         })
-        .eq("id", editVehicle.id);
-
+        .eq('id', editVehicle.id);
       if (error) {
-        throw new Error("Erro ao atualizar veículo: " + error.message);
+        throw new Error('Erro ao atualizar veículo: ' + error.message);
       }
-
       const { data: updatedVehicles, error: fetchError } = await supabase
-        .from("veiculos")
-        .select("id, marca, modelo, ano, placa")
-        .eq("client_id", userData.user.id);
-
+        .from('veiculos')
+        .select('id, marca, modelo, ano, placa')
+        .eq('user_id', userData.user.id);
       if (fetchError) {
-        throw new Error("Erro ao atualizar lista de veículos: " + fetchError.message);
+        throw new Error('Erro ao atualizar lista de veículos: ' + fetchError.message);
       }
-
       setVehicles(updatedVehicles || []);
-      setEditVehicle({ id: "", marca: "", modelo: "", ano: 0, placa: "" });
+      setEditVehicle({ id: '', marca: '', modelo: '', ano: 0, placa: '' });
       setIsEditVehicleDialogOpen(false);
-      toast.success("Veículo atualizado com sucesso!", {
-        style: { backgroundColor: "#7C3AED", color: "#ffffff" },
+      toast.success('Veículo atualizado com sucesso!', {
+        style: { backgroundColor: '#7C3AED', color: '#ffffff' },
       });
     } catch (err: any) {
-      console.error("Erro ao editar veículo:", err);
-      toast.error(err.message || "Erro ao atualizar veículo.", {
-        style: { backgroundColor: "#6B7280", color: "#ffffff" },
+      console.error('Erro ao editar veículo:', err);
+      toast.error(err.message || 'Erro ao atualizar veículo.', {
+        style: { backgroundColor: '#6B7280', color: '#ffffff' },
       });
     }
   }
@@ -364,93 +326,110 @@ export default function ClienteDashboard() {
   async function handleRequestMechanic() {
     try {
       if (!supabase) {
-        throw new Error("Supabase client is not initialized.");
+        throw new Error('Cliente não autenticado.');
       }
-
+  
       const { data: userData, error: userError } = await supabase.auth.getUser();
+      console.log(userData); // Verifique os dados do usuário
+  
       if (userError || !userData?.user) {
-        throw new Error("Usuário não autenticado ou ID do cliente não encontrado.");
+        throw new Error('Usuário não autenticado ou ID do cliente não encontrado.');
       }
-
-      const { error } = await supabase.from("service_requests").insert({
-        client_id: userData.user.id,
-        service_type: "mecanico",
+  
+      // Verificando os dados do pedido
+      console.log('Descrição do pedido:', mechanicRequest.description);
+      console.log('Localização:', mechanicRequest.location);
+  
+      const { error } = await supabase.from('mechanic_requests').insert({
+        cliente_id: userData.user.id,
+        service_type: 'mecanico',
         description: `Problema: ${mechanicRequest.description}, Localização: ${mechanicRequest.location}`,
-        status: "pending",
+        status: 'pending',
         created_at: new Date().toISOString(),
       });
-
+  
       if (error) {
-        throw new Error("Erro ao solicitar mecânico: " + error.message);
+        throw new Error('Erro ao solicitar mecânico: ' + error.message);
       }
-
-      setMechanicRequest({ vehicleId: "", description: "", location: "" });
+  
+      setMechanicRequest({ vehicleId: '', description: '', location: '' });
       setIsMechanicDialogOpen(false);
-      toast.success("Mecânico solicitado com sucesso!", {
-        style: { backgroundColor: "#7C3AED", color: "#ffffff" },
+      toast.success('Mecânico solicitado com sucesso!', {
+        style: { backgroundColor: '#7C3AED', color: '#ffffff' },
       });
     } catch (err: any) {
-      console.error("Erro ao solicitar mecânico:", err);
-      toast.error(err.message || "Erro ao solicitar mecânico.", {
-        style: { backgroundColor: "#6B7280", color: "#ffffff" },
+      console.error('Erro ao solicitar mecânico:', err);
+      toast.error(err.message || 'Erro ao solicitar mecânico.', {
+        style: { backgroundColor: '#6B7280', color: '#ffffff' },
       });
     }
   }
+  
 
   async function handleRequestTow() {
     try {
+      // Verifica se o cliente do Supabase está inicializado
       if (!supabase) {
-        throw new Error("Supabase client is not initialized.");
+        throw new Error('Supabase client is not initialized.');
       }
-
+  
+      // Obtém os dados do usuário autenticado
       const { data: userData, error: userError } = await supabase.auth.getUser();
+      console.log('Dados do usuário:', userData); // Verifique os dados do usuário
+  
       if (userError || !userData?.user) {
-        throw new Error("Usuário não autenticado ou ID do cliente não encontrado.");
+        throw new Error('Usuário não autenticado ou ID do cliente não encontrado.');
       }
-
-      const { error } = await supabase.from("service_requests").insert({
-        client_id: userData.user.id,
-        service_type: "guincho",
-        description: `Origem: ${towRequest.origin}, Destino: ${towRequest.destination}, Observações: ${towRequest.observations || "Nenhuma"}`,
-        status: "pending",
+  
+      // Verifica os dados da solicitação de guincho
+      console.log('Solicitação de guincho:', towRequest); // Verifique se os dados do pedido estão corretos
+  
+      const { error } = await supabase.from('service_requests').insert({
+        user_id: userData.user.id,
+        service_type: 'guincho',
+        description: `Origem: ${towRequest.origin}, Destino: ${towRequest.destination}, Observações: ${towRequest.observations || 'Nenhuma'}`,
+        status: 'pending',
         created_at: new Date().toISOString(),
       });
-
+  
       if (error) {
-        throw new Error("Erro ao solicitar guincho: " + error.message);
+        throw new Error('Erro ao solicitar guincho: ' + error.message);
       }
-
+  
+      // Reseta os campos após a solicitação
       setTowRequest({
-        vehicleId: "",
-        origin: "",
-        destination: "",
-        observations: "",
+        vehicleId: '',
+        origin: '',
+        destination: '',
+        observations: '',
       });
       setIsTowDialogOpen(false);
-      toast.success("Guincho solicitado com sucesso!", {
-        style: { backgroundColor: "#7C3AED", color: "#ffffff" },
+  
+      // Exibe mensagem de sucesso
+      toast.success('Guincho solicitado com sucesso!', {
+        style: { backgroundColor: '#7C3AED', color: '#ffffff' },
       });
     } catch (err: any) {
-      console.error("Erro ao solicitar guincho:", err);
-      toast.error(err.message || "Erro ao solicitar guincho.", {
-        style: { backgroundColor: "#6B7280", color: "#ffffff" },
+      console.error('Erro ao solicitar guincho:', err);
+      toast.error(err.message || 'Erro ao solicitar guincho.', {
+        style: { backgroundColor: '#6B7280', color: '#ffffff' },
       });
     }
   }
+  
 
   async function handleLogout() {
     try {
       if (!supabase) {
-        throw new Error("Supabase client is not initialized.");
+        throw new Error('Supabase client is not initialized.');
       }
-
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      router.push("/login");
+      router.push('/login');
     } catch (err: any) {
-      console.error("Erro ao fazer logout:", err);
-      toast.error("Erro ao fazer logout. Por favor, tente novamente.", {
-        style: { backgroundColor: "#6B7280", color: "#ffffff" },
+      console.error('Erro ao fazer logout:', err);
+      toast.error('Erro ao fazer logout. Por favor, tente novamente.', {
+        style: { backgroundColor: '#6B7280', color: '#ffffff' },
       });
     }
   }
@@ -459,12 +438,7 @@ export default function ClienteDashboard() {
     setIsSidebarOpen(!isSidebarOpen);
   }
 
-  function calculateDistance(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ) {
+  function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371; // Radius of the Earth in km
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
@@ -487,9 +461,7 @@ export default function ClienteDashboard() {
         className="md:w-64 md:static md:flex md:flex-col bg-white shadow-lg h-full z-50"
       >
         <div className="p-4 flex items-center space-x-2">
-          <h2 className="text-xl md:text-2xl font-bold text-purple-600">
-            SOS Mecânicos
-          </h2>
+          <h2 className="text-xl md:text-2xl font-bold text-purple-600">SOS Mecânicos</h2>
         </div>
         <nav className="mt-6">
           <a
@@ -527,37 +499,30 @@ export default function ClienteDashboard() {
         <header className="bg-white shadow-md p-4 mb-6 rounded-lg flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <button className="md:hidden text-gray-600" onClick={toggleSidebar}>
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth="2"
                   d={
                     isSidebarOpen
-                      ? "M6 18L18 6M6 6l12 12"
-                      : "M4 6h16M4 12h16m-7 6h7"
+                      ? 'M6 18L18 6M6 6l12 12'
+                      : 'M4 6h16M4 12h16m-7 6h7'
                   }
                 />
               </svg>
             </button>
-            <h1 className="text-xl md:text-2xl font-semibold text-purple-700">
-              Dashboard
-            </h1>
+            <h1 className="text-xl md:text-2xl font-semibold text-purple-700">Dashboard</h1>
           </div>
           <div className="flex items-center space-x-4">
             <Avatar>
               <AvatarImage src="https://github.com/shadcn.png" alt="User Avatar" />
               <AvatarFallback>
-                {userNome ? userNome.charAt(0).toUpperCase() : "US"}
+                {userNome ? userNome.charAt(0).toUpperCase() : 'US'}
               </AvatarFallback>
             </Avatar>
             <span className="text-gray-600 text-sm md:text-base">
-              {userNome || "Carregando..."}
+              {userNome || 'Carregando...'}
             </span>
             <Button
               variant="outline"
@@ -573,7 +538,8 @@ export default function ClienteDashboard() {
         {loading ? (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[...Array(3)].map((_, index) => (
+              {[...Array(3)]
+              .map((_, index) => (
                 <Card key={index} className="animate-pulse">
                   <CardHeader>
                     <div className="h-6 bg-gray-200 rounded w-3/4"></div>
@@ -603,30 +569,38 @@ export default function ClienteDashboard() {
               <div className="md:col-span-2">
                 <Card className="border-none shadow-md">
                   <CardHeader>
-                    <CardTitle className="text-purple-700">
-                      Localização dos Mecânicos
-                    </CardTitle>
+                    <CardTitle className="text-purple-700">Localização dos Mecânicos</CardTitle>
                     <CardDescription className="text-gray-600">
                       Veja a localização dos mecânicos próximos no mapa
                     </CardDescription>
                   </CardHeader>
+{userPosition&&(
+                    <CardContent className="h-96">
+                      <VehicleMap
+                        userPosition={userPosition}
+                        mechanics={mechanics}
+                        vehicles={vehicles}
+                      />
+                    </CardContent>
+                  )}
+
+                  {userPosition && (
+                    <div className="p-4 bg-gray-50 rounded-lg shadow-md mt-4">
+                      <h3 className="text-lg font-semibold text-purple-700">Sua Localização</h3>
+                      <p className="text-gray-600">
+                        Latitude: {userPosition[0]}, Longitude: {userPosition[1]}
+                      </p>
+                    </div>
+)}
+
                   <CardContent>
+                  
 
-                    
-      {/* <VehicleMap
-        isDialogOpen={
-          
-         isMechanicDialogOpen ||
-          isTowDialogOpen
-          
-        }
-        userPosition={userPosition}
-        mechanics={mechanics}
-      /> */}
+                  </CardContent>
 
 
 
-    </CardContent>
+
                 </Card>
               </div>
 
@@ -654,14 +628,17 @@ export default function ClienteDashboard() {
                     <Button
                       onClick={() => setIsMechanicDialogOpen(true)}
                       className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                      disabled={vehicles.length === 0}
+                      // disabled={vehicles.length === 0}
                     >
                       Solicitar Mecânico
                     </Button>
+                    <Dialog
+                      open={isMechanicDialogOpen}
+                      onOpenChange={setIsMechanicDialogOpen}/>
                     <Button
                       onClick={() => setIsTowDialogOpen(true)}
                       className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                      disabled={vehicles.length === 0}
+                      
                     >
                       Solicitar Guincho
                     </Button>
@@ -678,9 +655,7 @@ export default function ClienteDashboard() {
             >
               <Card className="border-none shadow-md">
                 <CardHeader>
-                  <CardTitle className="text-purple-700">
-                    Veículos Cadastrados
-                  </CardTitle>
+                  <CardTitle className="text-purple-700">Veículos Cadastrados</CardTitle>
                   <CardDescription className="text-gray-600">
                     Gerencie os veículos associados à sua conta
                   </CardDescription>
@@ -701,18 +676,10 @@ export default function ClienteDashboard() {
                         <TableBody>
                           {vehicles.map((veiculo) => (
                             <TableRow key={veiculo.id} className="hover:bg-gray-50">
-                              <TableCell className="text-gray-800">
-                                {veiculo.marca}
-                              </TableCell>
-                              <TableCell className="text-gray-800">
-                                {veiculo.modelo}
-                              </TableCell>
-                              <TableCell className="text-gray-800">
-                                {veiculo.placa}
-                              </TableCell>
-                              <TableCell className="text-gray-800">
-                                {veiculo.ano}
-                              </TableCell>
+                              <TableCell className="text-gray-800">{veiculo.marca}</TableCell>
+                              <TableCell className="text-gray-800">{veiculo.modelo}</TableCell>
+                              <TableCell className="text-gray-800">{veiculo.placa}</TableCell>
+                              <TableCell className="text-gray-800">{veiculo.ano}</TableCell>
                               <TableCell>
                                 <Dialog
                                   open={isEditVehicleDialogOpen}
@@ -747,10 +714,7 @@ export default function ClienteDashboard() {
                                     </DialogHeader>
                                     <div className="grid gap-4 py-4">
                                       <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label
-                                          htmlFor="edit-marca"
-                                          className="text-right"
-                                        >
+                                        <Label htmlFor="edit-marca" className="text-right">
                                           Marca
                                         </Label>
                                         <Input
@@ -766,10 +730,7 @@ export default function ClienteDashboard() {
                                         />
                                       </div>
                                       <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label
-                                          htmlFor="edit-modelo"
-                                          className="text-right"
-                                        >
+                                        <Label htmlFor="edit-modelo" className="text-right">
                                           Modelo
                                         </Label>
                                         <Input
@@ -785,10 +746,7 @@ export default function ClienteDashboard() {
                                         />
                                       </div>
                                       <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label
-                                          htmlFor="edit-ano"
-                                          className="text-right"
-                                        >
+                                        <Label htmlFor="edit-ano" className="text-right">
                                           Ano
                                         </Label>
                                         <Input
@@ -805,10 +763,7 @@ export default function ClienteDashboard() {
                                         />
                                       </div>
                                       <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label
-                                          htmlFor="edit-placa"
-                                          className="text-right"
-                                        >
+                                        <Label htmlFor="edit-placa" className="text-right">
                                           Placa
                                         </Label>
                                         <Input
@@ -827,9 +782,7 @@ export default function ClienteDashboard() {
                                     <DialogFooter>
                                       <Button
                                         variant="outline"
-                                        onClick={() =>
-                                          setIsEditVehicleDialogOpen(false)
-                                        }
+                                        onClick={() => setIsEditVehicleDialogOpen(false)}
                                         className="border-purple-600 text-purple-600 hover:bg-purple-50"
                                       >
                                         Cancelar
@@ -849,32 +802,24 @@ export default function ClienteDashboard() {
                                   className="border-red-500 text-red-500 hover:bg-red-50"
                                   onClick={async () => {
                                     const { error } = await supabase
-                                      .from("veiculos")
+                                      .from('veiculos')
                                       .delete()
-                                      .eq("id", veiculo.id);
+                                      .eq('id', veiculo.id);
                                     if (!error) {
-                                      setVehicles(
-                                        vehicles.filter((v) => v.id !== veiculo.id)
-                                      );
-                                      toast.success(
-                                        "Veículo removido com sucesso!",
-                                        {
-                                          style: {
-                                            backgroundColor: "#7C3AED",
-                                            color: "#ffffff",
-                                          },
-                                        }
-                                      );
+                                      setVehicles(vehicles.filter((v) => v.id !== veiculo.id));
+                                      toast.success('Veículo removido com sucesso!', {
+                                        style: {
+                                          backgroundColor: '#7C3AED',
+                                          color: '#ffffff',
+                                        },
+                                      });
                                     } else {
-                                      toast.error(
-                                        "Erro ao remover veículo: " + error.message,
-                                        {
-                                          style: {
-                                            backgroundColor: "#6B7280",
-                                            color: "#ffffff",
-                                          },
-                                        }
-                                      );
+                                      toast.error('Erro ao remover veículo: ' + error.message, {
+                                        style: {
+                                          backgroundColor: '#6B7280',
+                                          color: '#ffffff',
+                                        },
+                                      });
                                     }
                                   }}
                                 >
@@ -913,7 +858,7 @@ export default function ClienteDashboard() {
             transition={{ duration: 0.5, delay: 1.0 }}
             className="mt-6 text-lg text-gray-600"
           >
-            Tipo de usuário:{" "}
+            Tipo de usuário:{' '}
             <span className="font-semibold text-purple-700">{userType}</span>
           </motion.p>
         )}
@@ -922,9 +867,7 @@ export default function ClienteDashboard() {
         <Dialog open={isVehicleDialogOpen} onOpenChange={setIsVehicleDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle className="text-purple-700">
-                Cadastrar Novo Veículo
-              </DialogTitle>
+              <DialogTitle className="text-purple-700">Cadastrar Novo Veículo</DialogTitle>
               <DialogDescription>
                 Preencha os dados do veículo para adicioná-lo à sua conta.
               </DialogDescription>
@@ -939,7 +882,7 @@ export default function ClienteDashboard() {
                   value={newVehicle.marca}
                   onChange={(e) => {
                     setNewVehicle({ ...newVehicle, marca: e.target.value });
-                    console.log("Marca atualizada:", e.target.value);
+                    console.log('Marca atualizada:', e.target.value);
                   }}
                   className="col-span-3"
                 />
@@ -953,7 +896,7 @@ export default function ClienteDashboard() {
                   value={newVehicle.modelo}
                   onChange={(e) => {
                     setNewVehicle({ ...newVehicle, modelo: e.target.value });
-                    console.log("Modelo atualizado:", e.target.value);
+                    console.log('Modelo atualizado:', e.target.value);
                   }}
                   className="col-span-3"
                 />
@@ -965,11 +908,11 @@ export default function ClienteDashboard() {
                 <Input
                   id="ano"
                   type="number"
-                  value={newVehicle.ano === 0 ? "" : newVehicle.ano}
+                  value={newVehicle.ano === 0 ? '' : newVehicle.ano}
                   onChange={(e) => {
                     const ano = parseInt(e.target.value) || 0;
                     setNewVehicle({ ...newVehicle, ano });
-                    console.log("Ano atualizado:", ano);
+                    console.log('Ano atualizado:', ano);
                   }}
                   className="col-span-3"
                 />
@@ -983,7 +926,7 @@ export default function ClienteDashboard() {
                   value={newVehicle.placa}
                   onChange={(e) => {
                     setNewVehicle({ ...newVehicle, placa: e.target.value });
-                    console.log("Placa atualizada:", e.target.value);
+                    console.log('Placa atualizada:', e.target.value);
                   }}
                   className="col-span-3"
                 />
@@ -1007,15 +950,10 @@ export default function ClienteDashboard() {
           </DialogContent>
         </Dialog>
 
-        <Dialog
-          open={isMechanicDialogOpen}
-          onOpenChange={setIsMechanicDialogOpen}
-        >
+        <Dialog open={isMechanicDialogOpen} onOpenChange={setIsMechanicDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle className="text-purple-700">
-                Solicitar Mecânico
-              </DialogTitle>
+              <DialogTitle className="text-purple-700">Solicitar Mecânico</DialogTitle>
               <DialogDescription>
                 Informe os detalhes para solicitar um mecânico.
               </DialogDescription>
@@ -1190,9 +1128,7 @@ export default function ClienteDashboard() {
                 onClick={handleRequestTow}
                 className="bg-purple-600 hover:bg-purple-700 text-white"
                 disabled={
-                  !towRequest.vehicleId ||
-                  !towRequest.origin ||
-                  !towRequest.destination
+                  !towRequest.vehicleId || !towRequest.origin || !towRequest.destination
                 }
               >
                 Solicitar

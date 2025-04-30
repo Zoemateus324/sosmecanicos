@@ -1,44 +1,57 @@
-"use client";
+'use client';
 
-import { createContext, useContext, useEffect, useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { User } from "@supabase/supabase-js";
+import { createContext, useContext, useEffect, useState } from 'react';
+import { useSupabase } from '@/components/SupabaseProvider'; // Import useSupabase
+import { User } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
   userType: string | null;
+  userNome: string | null;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   userType: null,
+  userNome: null,
   isLoading: true,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userType, setUserType] = useState<string | null>(null);
+  const [userNome, setUserNome] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClientComponentClient();
+  const supabase = useSupabase(); // Use provided client
 
   useEffect(() => {
     const getUser = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        
+        if (error) {
+          console.error('Session error:', error);
+          throw error;
+        }
+
         if (session?.user) {
           setUser(session.user);
-          const { data: userData } = await supabase
-            .from("users")
-            .select("tipo_usuario")
-            .eq("id", session.user.id)
+          const { data: userData, error: profileError } = await supabase
+            .from('profiles')
+            .select('user_type, full_name')
+            .eq('id', session.user.id)
             .single();
-          setUserType(userData?.tipo_usuario || null);
+
+          if (profileError) {
+            console.error('Profile query error:', profileError);
+            throw profileError;
+          }
+
+          setUserType(userData?.user_type || null);
+          setUserNome(userData?.full_name || null);
         }
       } catch (error) {
-        console.error("Error:", error);
+        console.error('Error fetching user:', error);
       } finally {
         setIsLoading(false);
       }
@@ -48,6 +61,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        supabase
+          .from('profiles')
+          .select('user_type, full_name')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data, error }) => {
+            if (error) {
+              console.error('Profile query error on auth change:', error);
+            } else {
+              setUserType(data?.user_type || null);
+              setUserNome(data?.full_name || null);
+            }
+          });
+      } else {
+        setUserType(null);
+        setUserNome(null);
+      }
     });
 
     return () => {
@@ -56,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   return (
-    <AuthContext.Provider value={{ user, userType, isLoading }}>
+    <AuthContext.Provider value={{ user, userType, userNome, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
@@ -65,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
