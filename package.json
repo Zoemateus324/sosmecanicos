@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@onesignal/node-onesignal": "^5.0.0-alpha-02",
     "@radix-ui/react-avatar": "^1.1.0",
     "@radix-ui/react-dialog": "^1.1.1",
     "@radix-ui/react-select": "^2.1.1",
