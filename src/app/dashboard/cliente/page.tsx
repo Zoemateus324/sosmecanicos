@@ -446,11 +446,11 @@ export default function ClienteDashboard() {
   async function handleLogout() {
     try {
       if (!supabase) {
-        throw new Error('Supabase client is not initialized.');
+        throw new Error('Cliente não inicializado.');
       }
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      router.push('/login');
+      router.push('/');
     } catch (err: any) {
       console.error('Erro ao fazer logout:', err);
       toast.error('Erro ao fazer logout. Por favor, tente novamente.', {

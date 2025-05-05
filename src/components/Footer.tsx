@@ -27,13 +27,14 @@ export default function Footer() {
           <h3 className="text-lg font-semibold mb-4">Redes Sociais</h3>
           <ul className="space-y-2">
             <li><a href="#" className="hover:underline">Facebook</a></li>
-            <li><a href="#" className="hover:underline">Instagram</a></li>
+            <li><a href="https://instagram.com/sosmecanico_of" className="hover:underline">Instagram</a></li>
             <li><a href="#" className="hover:underline">LinkedIn</a></li>
           </ul>
         </div>
       </div>
       <div className="text-center mt-8">
         <p>&copy; 2025 SOS Mecânicos. Todos os direitos reservados.</p>
+        <p className="text-sm font-bold">Desenvolvido por <a href="https://github.com/Zoemateus324" className="text-blue-500 hover:underline">Zoé Mateus</a></p>
       </div>
     </footer>
   );
