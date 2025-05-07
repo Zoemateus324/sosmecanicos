@@ -73,7 +73,11 @@ export default function ClienteDashboard() {
     isLoading: boolean;
     userNome: string;
   };
-
+  const { user: authUser } = useAuth() as { user: AuthUser | null };
+  const userId = authUser?.id || null;
+  const userLatitude = authUser?.latitude || null;
+  const userLongitude = authUser?.longitude || null;
+ 
   const supabase = useSupabase();
   const router = useRouter();
 
@@ -120,7 +124,14 @@ export default function ClienteDashboard() {
     mecanico: '/dashboard/mecanico',
     guincho: '/dashboard/guincho',
     seguradora: '/dashboard/seguradora',
+    admin: '/dashboard/admin',
+    perfil: '/dashboard/perfil',
+    solicitacoes: '/dashboard/solicitacoes',
+    ajuda: '/dashboard/ajuda',
   };
+
+ 
+
 
 
 
@@ -477,15 +488,15 @@ export default function ClienteDashboard() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen bg-gray-100 relative overflow-hidden md:flex-row flex-col ">
       {/* Sidebar */}
       <motion.div
         initial={{ x: -256 }}
         animate={{ x: isSidebarOpen ? 0 : -256 }}
         transition={{ duration: 0.3 }}
-        className="md:w-64 md:static md:flex md:flex-col bg-white shadow-lg h-full z-50"
+        className="md:w-64 md:static md:flex md:flex-col bg-white shadow-lg h-full z-50 overflow-y-auto md:overflow-hidden fixed md:relative"
       >
-        <div className="p-4 flex items-center space-x-2">
+        <div className="p-4 flex items-center space-x-2 border-b border-gray-200 md:mb-4 ">
           <h2 className="text-xl md:text-2xl font-bold text-purple-600">SOS Mecânicos</h2>
         </div>
         <nav className="mt-6">
@@ -502,24 +513,44 @@ export default function ClienteDashboard() {
             Solicitações
           </a>
           <a
-            href="/perfil"
+            href="/dashboard/perfil"
             className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 rounded font-semibold hover:text-purple-700"
           >
             Perfil
           </a>
+          <a
+            href="/ajuda"
+            className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 rounded font-semibold hover:text-purple-700"
+        
+          >
+            Ajuda
+          </a>
+          
+        
         </nav>
+        <div className="absolute bottom-0 left-0 w-full p-2 bg-white border-t  md:hidden z-50  ">
+          <Button
+            variant="outline"
+            className="w-full mt-4 text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700"
+            onClick={handleLogout}
+          >
+            Sair
+          </Button>
+          <p className="text-center text-sm text-gray-500">© 2024 SOS Mecânicos</p>
+        </div>
+
       </motion.div>
 
       {/* Overlay for mobile sidebar */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black opacity-50 z-50 md:hidden"
+          className="fixed inset-0 bg-black opacity-5 z-50 md:hidden"
           onClick={toggleSidebar}
         />
       )}
 
       {/* Main Content */}
-      <div className="flex-1 p-4 md:p-6 w-full">
+      <div className="flex-1 p-4 md:p-6 w-full container mx-auto">
         {/* Header */}
         <header className="bg-white shadow-md p-4 mb-6 rounded-lg flex justify-between items-center">
           <div className="flex items-center space-x-4">
@@ -539,33 +570,37 @@ export default function ClienteDashboard() {
             </button>
             <h1 className="text-xl md:text-2xl font-semibold text-purple-700">Dashboard</h1>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 md:space-x-6">
             <Avatar>
-              <AvatarImage src="https://github.com/shadcn.png" alt="User Avatar" />
+              <AvatarImage src="https://github.com/shadcn.png" alt="User Avatar"/>
               <AvatarFallback>
                 {userNome ? userNome.charAt(0).toUpperCase() : 'US'}
               </AvatarFallback>
             </Avatar>
-            <span className="text-gray-600 text-sm md:text-base">
-              {userNome || 'Carregando...'}
-            </span>
-            <Button
-              variant="outline"
-              onClick={handleLogout}
-              className="border-purple-600 text-purple-600 hover:bg-purple-50 text-sm md:text-base"
-            >
-              Sair
-            </Button>
+           
+           
           </div>
         </header>
+        
+
+          
+          {/* Welcome Message */}
+        <motion.h2
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-2xl font-semibold text-purple-700 mb-4"
+        >
+          Bem-vindo(a), {userNome || 'Carregando....'}!
+        </motion.h2>
 
         {/* Dashboard Content */}
         {loading ? (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="space-y-6  animate-pulse">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6  ">
               {[...Array(3)]
               .map((_, index) => (
-                <Card key={index} className="animate-pulse">
+                <Card key={index} className="animate-pulse  border-none shadow-md">
                   <CardHeader>
                     <div className="h-6 bg-gray-200 rounded w-3/4"></div>
                     <div className="h-4 bg-gray-200 rounded w-1/2 mt-2"></div>
