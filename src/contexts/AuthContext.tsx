@@ -1,102 +1,167 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import { useSupabase } from '@/components/SupabaseProvider'; // Import useSupabase
-import { User } from '@supabase/supabase-js';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { useSupabase } from '@/components/SupabaseProvider';
+import { toast } from 'sonner';
 
-interface AuthContextType {
-  user: User | null;
-  userType: string | null;
-  userNome: string | null;
-  isLoading: boolean;
+// Define interfaces
+interface AuthUser {
+  id: string;
+  email?: string;
 }
 
+interface AuthContextType {
+  user: AuthUser | null;
+  userNome: string | null;
+  userType: string | null;
+  loading: boolean;
+}
+
+// Create context
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  userType: null,
   userNome: null,
-  isLoading: true,
+  userType: null,
+  loading: true,
 });
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [userType, setUserType] = useState<string | null>(null);
+// Type guard for Supabase client
+function isSupabaseInitialized(
+  supabase: SupabaseClient | null
+): supabase is SupabaseClient {
+  return supabase !== null;
+}
+
+// Auth provider component
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const supabase = useSupabase();
+  const router = useRouter();
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [userNome, setUserNome] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const supabase = useSupabase(); // Use provided client
+  const [userType, setUserType] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // Fetch user profile
+  const getUser = async (userId: string) => {
+    if (!isSupabaseInitialized(supabase)) {
+      console.error('Supabase client is not initialized');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_type, full_name')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Profile query error:', error);
+        throw error;
+      }
+
+      if (data) {
+        setUserNome(data.full_name || 'Usuário');
+        setUserType(data.user_type || null);
+      } else {
+        console.warn('No user found with ID:', userId);
+        setUserNome('Usuário');
+        setUserType(null);
+      }
+    } catch (error: any) {
+      console.error('Error fetching user:', error.message);
+      toast.error('Erro ao carregar perfil do usuário: ' + error.message, {
+        style: { backgroundColor: '#EF4444', color: '#ffffff' },
+      });
+    }
+  };
+
+  // Handle auth state changes
   useEffect(() => {
-    const getUser = async () => {
+    if (!isSupabaseInitialized(supabase)) {
+      console.error('Supabase client is not initialized');
+      setLoading(false);
+      return;
+    }
+
+    const checkSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('Session error:', error);
-          throw error;
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          console.error('Error checking session:', sessionError.message);
+          throw sessionError;
         }
 
-        if (session?.user) {
-          setUser(session.user);
-          const { data: userData, error: profileError } = await supabase
-            .from('profiles')
-            .select('user_type, full_name')
-            .eq('id', session.user.id)
-            .single();
-
-          if (profileError) {
-            console.error('Profile query error:', profileError);
-            throw profileError;
-          }
-
-          setUserType(userData?.user_type || null);
-          setUserNome(userData?.full_name || null);
+        if (sessionData.session) {
+          const authUser = sessionData.session.user;
+          setUser({
+            id: authUser.id,
+            email: authUser.email,
+          });
+          await getUser(authUser.id);
+        } else {
+          setUser(null);
+          setUserNome(null);
+          setUserType(null);
+          router.push('/login');
         }
-      } catch (error) {
-        console.error('Error fetching user:', error);
+      } catch (error: any) {
+        console.error('Error in auth check:', error.message);
+        setUser(null);
+        setUserNome(null);
+        setUserType(null);
+        router.push('/login');
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
-    getUser();
+    checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        supabase
-          .from('profiles')
-          .select('user_type, full_name')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data, error }) => {
-            if (error) {
-              console.error('Profile query error on auth change:', error);
-            } else {
-              setUserType(data?.user_type || null);
-              setUserNome(data?.full_name || null);
-            }
+    // Listen for auth state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth event:', event);
+      try {
+        if (session) {
+          const authUser = session.user;
+          setUser({
+            id: authUser.id,
+            email: authUser.email,
           });
-      } else {
-        setUserType(null);
-        setUserNome(null);
+          await getUser(authUser.id);
+        } else {
+          setUser(null);
+          setUserNome(null);
+          setUserType(null);
+          router.push('/login');
+        }
+      } catch (error: any) {
+        console.error('Profile query error on auth change:', error);
+        toast.error('Erro ao atualizar perfil: ' + error.message, {
+          style: { backgroundColor: '#EF4444', color: '#ffffff' },
+        });
       }
     });
 
     return () => {
-      subscription.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [supabase, router]);
 
   return (
-    <AuthContext.Provider value={{ user, userType, userNome, isLoading }}>
+    <AuthContext.Provider value={{ user, userNome, userType, loading }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => {
+// Hook to use auth context
+export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
+}

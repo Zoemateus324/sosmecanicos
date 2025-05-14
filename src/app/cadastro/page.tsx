@@ -17,7 +17,7 @@ import Link from "next/link";
 
 export default function Cadastro() {
   const router = useRouter();
-  // Remove the createComponentClient call since we're importing supabase directly
+ 
   // const supabase = createComponentClient();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -75,6 +75,7 @@ export default function Cadastro() {
       setLoading(false);
     }
   };
+  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 to-gray-200 p-4">

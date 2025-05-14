@@ -3,44 +3,119 @@
 import { useState } from "react";
 import { supabase } from "@/models/supabase";
 import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Link from "next/link";
+import { User } from "@supabase/supabase-js";
 
 export default function Login() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+ const handleLogin = async () => {
+  try {
+    setLoading(true);
+    setError("");
+
+    if (!supabase || !supabase.auth) {
+      toast.error('Conexão com o banco de dados não está disponível', {
+        style: { backgroundColor: '#EF4444', color: '#ffffff' },
       });
-
-      if (error) {
-        setError(error.message);
-        console.error("Login error:", error.message);
-        return;
-      }
-
-      if (!data.user) {
-        setError("Falha no login. Usuário não encontrado.");
-        return;
-      }
-
-      router.push("/dashboard/cliente");
-    } catch (err: any) {
-      setError(err.message || "Erro ao fazer login");
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      toast.error(`Erro ao fazer login: ${error.message}`, {
+        style: { backgroundColor: '#EF4444', color: '#ffffff' },
+      });
+      setError(error.message);
+      console.error('Login error:', error.message);
+      return;
+    }
+
+    if (!data.user || !data.session) {
+      toast.error('Falha no login: Usuário ou sessão não encontrados.', {
+        style: { backgroundColor: '#EF4444', color: '#ffffff' },
+      });
+      setError('Falha no login. Usuário não encontrado.');
+      return;
+    }
+
+    // Buscar tipo de usuário na tabela profiles
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('tipo_usuario, nome')
+      .eq('id', data.user.id)
+      .single();
+
+    if (profileError) {
+      toast.error(`Erro ao buscar perfil: ${profileError.message}`, {
+        style: { backgroundColor: '#EF4444', color: '#ffffff' },
+      });
+      setError('Erro ao carregar dados do perfil.');
+      console.error('Profile error:', profileError.message);
+      return;
+    }
+
+    if (!profileData) {
+      toast.error('Perfil do usuário não encontrado.', {
+        style: { backgroundColor: '#EF4444', color: '#ffffff' },
+      });
+      setError('Perfil do usuário não encontrado.');
+      return;
+    }
+
+    const tipoUsuario = profileData.tipo_usuario;
+    const nomeUsuario = profileData.nome || data.user.email?.split('@')[0];
+
+    // Atualizar contexto useAuth (assumindo que existe um método setAuth)
+    setAuth({
+      user: data.user,
+      userNome: nomeUsuario,
+      userType: tipoUsuario,
+    });
+
+    // Redirecionar com base no tipo de usuário
+    switch (tipoUsuario) {
+      case 'cliente':
+        router.push('/dashboard/cliente');
+        break;
+      case 'mecanico':
+        router.push('/dashboard/mecanico');
+        break;
+      case 'guincho':
+        router.push('/dashboard/guincho');
+        break;
+      case 'seguradora':
+        router.push('/dashboard/seguradora');
+        break;
+      default:
+        toast.error('Tipo de usuário desconhecido.', {
+          style: { backgroundColor: '#EF4444', color: '#ffffff' },
+        });
+        setError('Tipo de usuário desconhecido.');
+    }
+  } catch (err: any) {
+    const errorMessage = err.message || 'Erro desconhecido ao fazer login';
+    toast.error(errorMessage, {
+      style: { backgroundColor: '#EF4444', color: '#ffffff' },
+    });
+    setError(errorMessage);
+    console.error('Unexpected error:', err);
+  } finally {
+    setLoading(false);
+  }
+};
 
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 to-gray-200 p-4">
@@ -109,4 +184,8 @@ export default function Login() {
         </Card>
       </div>
     );
+}
+
+function setAuth(arg0: { user: User; userNome: any; userType: any; }) {
+  throw new Error("Function not implemented.");
 }
