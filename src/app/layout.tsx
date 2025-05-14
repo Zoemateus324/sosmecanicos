@@ -1,24 +1,22 @@
-import Navbar from "@/components/Navbar";
-import { AuthProvider } from "@/contexts/AuthContext";
-import './globals.css'
-import { SpeedInsights } from "@vercel/speed-insights/next"
-import Footer from "@/components/Footer";
-import "leaflet/dist/leaflet.css";
-import SupabaseProvider, {useSupabase} from "@/components/SupabaseProvider";
-import { Toaster } from "sonner"; // Importamos Toaster diretamente de sonner
-import { Metadata } from "next";
-import { Inter } from "next/font/google";
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+'use client';
+
+import SupabaseProvider from '@/components/SupabaseProvider';
+import { AuthProvider } from '@/contexts/AuthContext';
+import '@/styles/globals.css';
+import { Inter } from 'next/font/google';
+import { Toaster } from 'sonner';
+
+// Configurar fonte (opcional)
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
-      <body>
+    <html lang="pt-BR" className={inter.className}>
+      <body className="min-h-screen bg-gray-100 text-gray-900">
         <SupabaseProvider>
           <AuthProvider>
             {children}
+            <Toaster position="top-right" richColors />
           </AuthProvider>
         </SupabaseProvider>
       </body>

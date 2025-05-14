@@ -7,7 +7,7 @@ export type Database = {
           nome: string
           email: string
           telefone: string
-          tipo_usuario: string
+          user_type: string
           created_at?: string
         }
         Insert: {
@@ -15,7 +15,7 @@ export type Database = {
           nome: string
           email: string
           telefone: string
-          tipo_usuario: string
+          user_type: string
           created_at?: string
         }
         Update: {
@@ -23,7 +23,7 @@ export type Database = {
           nome?: string
           email?: string
           telefone?: string
-          tipo_usuario?: string
+          user_type?: string
           created_at?: string
         }
       }

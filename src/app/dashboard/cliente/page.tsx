@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupabase } from '@/components/SupabaseProvider';
 import { Button } from '@/components/ui/button';
@@ -44,21 +43,14 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { TooltipTrigger, Tooltip } from '@radix-ui/react-tooltip';
 import { Sidebar } from '@/components/sidebar/Sidebar';
+import { Plus, Circle, CircleCheck, CircleX } from 'lucide-react';
+import Link from 'next/link';
 
 // Define LatLngTuple
 type LatLngTuple = [number, number];
 
 // Define interfaces
-interface Mechanic {
-  id: string;
-  nome: string;
-  latitude?: number;
-  longitude?: number;
-}
-
 interface Vehicle {
   id: string;
   user_id: string;
@@ -68,10 +60,21 @@ interface Vehicle {
   placa: string;
 }
 
-interface AuthUser {
+interface ServiceRequest {
   id: string;
-  latitude?: number;
-  longitude?: number;
+  user_id: string;
+  vehicle_id: string;
+  problem_description: string;
+  status: string;
+  type: 'mechanic' | 'tow';
+  created_at: string;
+}
+
+// Status info type
+interface StatusInfo {
+  icon: React.ComponentType<{ className?: string }>;
+  text: string;
+  color: string;
 }
 
 // Fallback UI component for critical errors
@@ -101,18 +104,47 @@ function isSupabaseInitialized(
   return supabase !== null;
 }
 
+// Function to get status info
+const getStatusInfo = (status: string): StatusInfo => {
+  switch (status.toLowerCase()) {
+    case 'Pendente':
+      return {
+        icon: Circle,
+        text: 'Pendente',
+        color: 'text-yellow-600',
+      };
+    case 'aceito':
+      return {
+        icon: CircleCheck,
+        text: 'Aceito',
+        color: 'text-green-600',
+      };
+    case 'recusado':
+      return {
+        icon: CircleX,
+        text: 'Recusado',
+        color: 'text-red-600',
+      };
+    default:
+      return {
+        icon: Circle,
+        text: 'Desconhecido',
+        color: 'text-gray-600',
+      };
+  }
+};
+
 export default function ClienteDashboard() {
-  const { user, userNome } = useAuth();
+  const { user, userNome, userType } = useAuth(); // userType obtido do AuthContext
   const supabase = useSupabase();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [criticalError, setCriticalError] = useState<string | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<ServiceRequest[]>([]);
   const [userPosition, setUserPosition] = useState<LatLngTuple | null>(null);
-  const [userType, setUserType] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isVehicleDialogOpen, setIsVehicleDialogOpen] = useState(false);
-  const [mechanics, setMechanics] = useState<Mechanic[]>([]);
   const [isTowDialogOpen, setIsTowDialogOpen] = useState(false);
   const [isMechanicDialogOpen, setIsMechanicDialogOpen] = useState(false);
 
@@ -148,50 +180,6 @@ export default function ClienteDashboard() {
     placa: '',
   });
   const [isEditVehicleDialogOpen, setIsEditVehicleDialogOpen] = useState(false);
-
-  // Fetch user type
-  async function fetchUserData() {
-    if (!isSupabaseInitialized(supabase)) {
-      toast.error('Conexão com o banco de dados não está disponível', {
-        style: { backgroundColor: '#EF4444', color: '#ffffff' },
-      });
-      setUserType(null);
-      return;
-    }
-    if (!user?.id) {
-      toast.error('Usuário não autenticado', {
-        style: { backgroundColor: '#EF4444', color: '#ffffff' },
-      });
-      setUserType(null);
-      return;
-    }
-
-    console.log('Fetching user type for ID:', user.id); // Debug log
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('tipo_usuario, full_name')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Erro ao obter tipo de usuário:', error.message);
-      toast.error('Erro ao obter tipo de usuário: ' + error.message, {
-        style: { backgroundColor: '#EF4444', color: '#ffffff' },
-      });
-      setUserType(null);
-      return;
-    }
-
-    if (data) {
-      setUserType(data.tipo_usuario);
-    } else {
-      console.warn('Nenhum usuário encontrado com o ID:', user.id);
-      toast.warning('Nenhum usuário encontrado. Por favor, contate o suporte.', {
-        style: { backgroundColor: '#FBBF24', color: '#ffffff' },
-      });
-      setUserType(null);
-    }
-  }
 
   // Toggle sidebar visibility
   const toggleSidebar = () => {
@@ -313,17 +301,22 @@ export default function ClienteDashboard() {
       });
       return;
     }
-    const { error } = await supabase.from('mechanic_requests').insert([
+    const { error } = await supabase
+    .from('mechanic_requests')
+    .insert([
       {
         user_id: user.id,
         vehicle_id: mechanicRequest.vehicleId,
         description: mechanicRequest.description,
         location: mechanicRequest.location,
         category_type: mechanicRequest.category_type,
-        status: 'pendentes', // Default status
+        status: 'pendentes',
+        // Adicionando cliente_id
       },
-    ]);
-    if (error) {
+    ]);if(error){
+      console.log(error)
+    }
+    else if (error) {
       toast.error('Erro ao solicitar mecânico: ' + error.message, {
         style: { backgroundColor: '#EF4444', color: '#ffffff' },
       });
@@ -338,6 +331,8 @@ export default function ClienteDashboard() {
       toast.success('Solicitação de mecânico enviada com sucesso!', {
         style: { backgroundColor: '#4ADE80', color: '#ffffff' },
       });
+      // Refresh pending requests
+      await fetchPendingRequests();
     }
   };
 
@@ -362,7 +357,7 @@ export default function ClienteDashboard() {
         origin: towRequest.origin,
         destination: towRequest.destination,
         observations: towRequest.observations,
-        status: 'pendentes', // Default status
+        status: 'pendentes',
       },
     ]);
     if (error) {
@@ -380,6 +375,8 @@ export default function ClienteDashboard() {
       toast.success('Solicitação de guincho enviada com sucesso!', {
         style: { backgroundColor: '#4ADE80', color: '#ffffff' },
       });
+      // Refresh pending requests
+      await fetchPendingRequests();
     }
   };
 
@@ -448,24 +445,67 @@ export default function ClienteDashboard() {
     }
   };
 
-  // Get mechanics
-  const getMechanics = async () => {
+  // Fetch pending requests (mechanic and tow)
+  const fetchPendingRequests = async () => {
     if (!isSupabaseInitialized(supabase)) {
-      toast.warning('Não foi possível carregar mecânicos: conexão com o banco de dados não está disponível', {
+      toast.warning('Não foi possível carregar solicitações: conexão com o banco de dados não está disponível', {
         style: { backgroundColor: '#FBBF24', color: '#ffffff' },
       });
       return;
     }
-    const { data, error } = await supabase.from('mecanicos').select('*');
-    if (error) {
-      console.error('Error fetching mechanics:', error.message);
-      toast.warning('Erro ao obter mecânicos: ' + error.message, {
+    if (!user?.id) {
+      toast.warning('Usuário não autenticado', {
         style: { backgroundColor: '#FBBF24', color: '#ffffff' },
       });
-      setMechanics([]);
-    } else {
-      setMechanics(data || []);
+      return;
     }
+
+    // Fetch mechanic requests
+    const { data: mechanicData, error: mechanicError } = await supabase
+      .from('mechanic_requests')
+      .select('user_id, vehicle_id, description, location, category_type, status, veiculos(id, marca, modelo, placa, ano)')
+      .eq('user_id', user.id)
+      .in('status', ['pendentes', 'aceito', 'recusado']);
+
+    if (mechanicError) {
+      console.error('Error fetching mechanic requests:', mechanicError.message);
+      toast.warning('Erro ao obter solicitações de mecânico: ' + mechanicError.message, {
+        style: { backgroundColor: '#FBBF24', color: '#ffffff' },
+      });
+    }
+
+    // Fetch tow requests
+    const { data: towData, error: towError } = await supabase
+      .from('guinchos')
+      .select('id, user_id, vehicle_id, observations, status, created_at')
+      .eq('user_id', user.id)
+      .in('status', ['Pendente', 'Aceita', 'Em andamento', 'Concluído', 'Rejeitado']);
+
+    if (towError) {
+      console.error('Error fetching tow requests:', towError.message);
+      toast.warning('Erro ao obter solicitações de guincho: ' + towError.message, {
+        style: { backgroundColor: '#FBBF24', color: '#ffffff' },
+      });
+    }
+
+    // Combine and format requests
+    const mechanicRequests: ServiceRequest[] = mechanicData?.map((req) => ({
+      ...req,
+      problem_description: req.description,
+      type: 'mechanic' as const,
+    })) || [];
+
+    const towRequests: ServiceRequest[] = towData?.map((req) => ({
+      ...req,
+      problem_description: req.observations || 'Solicitação de guincho',
+      type: 'tow' as const,
+    })) || [];
+
+    const combinedRequests = [...mechanicRequests, ...towRequests].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    setPendingRequests(combinedRequests);
   };
 
   // Combined useEffect for data fetching
@@ -490,11 +530,8 @@ export default function ClienteDashboard() {
             getVehicles().catch((err) => {
               console.warn('Failed to get vehicles:', err.message);
             }),
-            fetchUserData().catch((err) => {
-              console.warn('Failed to fetch user data:', err.message);
-            }),
-            getMechanics().catch((err) => {
-              console.warn('Failed to get mechanics:', err.message);
+            fetchPendingRequests().catch((err) => {
+              console.warn('Failed to fetch pending requests:', err.message);
             }),
           ]);
         }
@@ -527,70 +564,7 @@ export default function ClienteDashboard() {
 
   return (
     <div className="flex min-h-screen bg-gray-100 relative overflow-hidden md:flex-row flex-col">
-      {/* Sidebar */}
-      {/* <motion.div
-        initial={{ x: -256 }}
-        animate={{ x: isSidebarOpen ? 0 : -256 }}
-        transition={{ duration: 0.3 }}
-        className="md:w-64 md:static md:flex md:flex-col bg-white shadow-lg h-full z-50 overflow-y-auto md:overflow-hidden fixed md:relative"
-      >
-        <div className="p-4 flex items-center space-x-2 border-b border-gray-200 md:mb-4">
-          <h2 className="text-xl md:text-2xl font-bold text-purple-600">SOS Mecânicos</h2>
-        </div>
-        <aside className="hidden md:block">
-           <nav className="mt-6">
-          <TooltipProvider
-            delayDuration={100}
-            skipDelayDuration={200}
-          >
-            <Tooltip>
-              <TooltipTrigger>
-
-
-          <Link
-            href="/dashboard/cliente"
-            className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 rounded font-semibold text-purple-700 bg-purple-50"
-            >
-            Dashboard
-          </Link>
-              </TooltipTrigger>
-            </Tooltip>
-          <Link
-            href="/dashboard/solicitacoes"
-            className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 rounded font-semibold hover:text-purple-700"
-          >
-            Solicitações
-          </Link>
-          <Link
-            href="/dashboard/perfil"
-            className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 rounded font-semibold hover:text-purple-700"
-          >
-            Perfil
-          </Link>
-          <Link
-            href="/ajuda"
-            className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 rounded font-semibold hover:text-purple-700"
-          >
-            Ajuda
-          </Link>
-          </TooltipProvider>
-        </nav>
-        </aside>
-
-       
-        <div className="absolute bottom-0 left-0 w-full p-2 bg-white border-t md:hidden z-50">
-          <Button
-            variant="outline"
-            className="w-full mt-4 text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700"
-            onClick={handleLogout}
-          >
-            Sair
-          </Button>
-          <p className="text-center text-sm text-gray-500">© 2024 SOS Mecânicos</p>
-        </div>
-      </motion.div> */}
-
-      <Sidebar/>
+      <Sidebar />
 
       {/* Overlay for mobile sidebar */}
       {isSidebarOpen && (
@@ -624,6 +598,12 @@ export default function ClienteDashboard() {
                 {userNome ? userNome.charAt(0).toUpperCase() : 'US'}
               </AvatarFallback>
             </Avatar>
+            <Button
+              onClick={handleLogout}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Logout
+            </Button>
           </div>
         </header>
 
@@ -662,30 +642,54 @@ export default function ClienteDashboard() {
           <div className="space-y-6">
             {/* Map and Stats Section */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Map Placeholder */}
+              {/* Pending Requests */}
               <div className="md:col-span-2">
-                <Card className="border-none shadow-md">
-                  <CardHeader>
-                    <CardTitle className="text-purple-700">Localização dos Mecânicos</CardTitle>
-                    <CardDescription className="text-gray-600">
-                      Veja a localização dos mecânicos próximos no mapa
-                    </CardDescription>
+                <Card className="overflow-hidden">
+                  <CardHeader className="p-6 bg-gray-50 border-b">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg font-bold">Solicitações Pendentes</CardTitle>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href="/dashboard/solicitacoes">Ver Todas</Link>
+                      </Button>
+                    </div>
                   </CardHeader>
-                  <CardContent className="h-96">
-                    <div className="h-full w-full bg-gray-200 flex items-center justify-center">
-                      <p className="text-gray-600">
-                        Mapa indisponível no momento. Tente novamente mais tarde.
-                      </p>
-                    </div>
+                  <CardContent className="p-0">
+                    {pendingRequests.length > 0 ? (
+                      <div className="divide-y">
+                        {pendingRequests.map((request) => {
+                          const { icon: StatusIcon, text, color } = getStatusInfo(request.status);
+                          return (
+                            <div key={request.id} className="p-4 hover:bg-gray-50">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="font-medium">
+                                    {request.problem_description.substring(0, 50)}...
+                                  </p>
+                                  <p className="text-sm text-gray-500">ID: {request.id.substring(0, 8)}</p>
+                                </div>
+                                <div className={`flex items-center ${color}`}>
+                                  <StatusIcon className="h-4 w-4 mr-1" />
+                                  <span className="text-sm">{text}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="p-6 text-center">
+                        <p className="text-gray-500">Nenhuma solicitação pendente.</p>
+                        <Button
+                          onClick={() => setIsMechanicDialogOpen(true)}
+                          className="mt-2 bg-purple-600 hover:bg-purple-700 text-white"
+                          disabled={!isSupabaseInitialized(supabase)}
+                        >
+                          <Plus className="mr-1 h-4 w-4" />
+                          Criar Solicitação
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
-                  {userPosition && (
-                    <div className="p-4 bg-gray-50 rounded-lg shadow-md mt-4">
-                      <h3 className="text-lg font-semibold text-purple-700">Sua Localização</h3>
-                      <p className="text-gray-600">
-                        Latitude: {userPosition[0]}, Longitude: {userPosition[1]}
-                      </p>
-                    </div>
-                  )}
                 </Card>
               </div>
 

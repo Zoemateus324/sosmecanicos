@@ -9,19 +9,19 @@ import Footer from "@/components/Footer";
 export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar/>
+      <Navbar />
       {/* Hero Section */}
       <section className="pt-32 pb-20 bg-gradient-to-r from-blue-900 to-orange-500 text-white">
         <div className="container mx-auto px-4 flex flex-col md:flex-row items-center relative">
           {/* Floating Elements */}
-         
+
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.7 }}
             className="absolute bottom-10 right-10"
           >
-            
+
           </motion.div>
 
           <motion.div
@@ -51,12 +51,13 @@ export default function Home() {
           >
             <Image
               src="/assets/hero-car.png"
-              alt="Carro"
-              width={600}
-              height={400}
-              className="object-cover rounded-lg shadow-lg"
+              width={500}
+              height={300}
+              style={{ width: "auto", height: "auto" }}
+              alt="Carro em destaque"
             />
-            
+
+
           </motion.div>
         </div>
       </section>
@@ -177,7 +178,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <Footer/>
+      <Footer />
     </div>
   );
 }

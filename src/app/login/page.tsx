@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Link from "next/link";
-import { User } from "@supabase/supabase-js";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Login() {
   const router = useRouter();
+  const { setAuth } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>("");
@@ -39,7 +40,6 @@ export default function Login() {
           style: { backgroundColor: '#EF4444', color: '#ffffff' },
         });
         setError(error.message);
-        console.error('Login error:', error.message);
         return;
       }
 
@@ -51,10 +51,9 @@ export default function Login() {
         return;
       }
 
-      // Buscar tipo de usuário na tabela profiles
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('tipo_usuario, full_name,nome')
+        .select('user_type, full_name')
         .eq('id', data.user.id)
         .single();
 
@@ -63,7 +62,6 @@ export default function Login() {
           style: { backgroundColor: '#EF4444', color: '#ffffff' },
         });
         setError('Erro ao carregar dados do perfil.');
-        console.error('Profile error:', profileError.message);
         return;
       }
 
@@ -75,17 +73,15 @@ export default function Login() {
         return;
       }
 
-      const tipoUsuario = profileData.tipo_usuario;
-      const nomeUsuario = profileData.nome || data.user.email?.split('@')[0];
+      const tipoUsuario = profileData.user_type.toLowerCase();
+      const nomeUsuario = profileData.full_name || data.user.email?.split('@')[0];
 
-      // Atualizar contexto useAuth (assumindo que existe um método setAuth)
       setAuth({
         user: data.user,
         userNome: nomeUsuario,
         userType: tipoUsuario,
       });
 
-      // Redirecionar com base no tipo de usuário
       switch (tipoUsuario) {
         case 'cliente':
           router.push('/dashboard/cliente');
@@ -111,7 +107,6 @@ export default function Login() {
         style: { backgroundColor: '#EF4444', color: '#ffffff' },
       });
       setError(errorMessage);
-      console.error('Unexpected error:', err);
     } finally {
       setLoading(false);
     }
@@ -126,9 +121,7 @@ export default function Login() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium text-gray-700">
-              Email
-            </label>
+            <label htmlFor="email" className="text-sm font-medium text-gray-700">Email</label>
             <Input
               id="email"
               type="email"
@@ -137,13 +130,10 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={loading}
-              className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium text-gray-700">
-              Senha
-            </label>
+            <label htmlFor="password" className="text-sm font-medium text-gray-700">Senha</label>
             <Input
               id="password"
               type="password"
@@ -153,31 +143,20 @@ export default function Login() {
               required
               disabled={loading}
               minLength={6}
-              className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
             />
           </div>
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
+          {error && <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm">{error}</div>}
           <Button
             onClick={handleLogin}
             disabled={loading || !email || !password}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white transition-colors"
+            className="w-full bg-purple-600 text-white"
           >
             {loading ? "Entrando..." : "Entrar"}
           </Button>
-
           <div className="flex flex-col space-y-2 text-center text-sm">
-            <Link href="/esqueci-senha" className="text-purple-600 hover:underline">
-              Esqueceu sua senha?
-            </Link>
+            <Link href="/esqueci-senha" className="text-purple-600 hover:underline">Esqueceu sua senha?</Link>
             <p className="text-gray-600">
-              Ainda não tem uma conta?{" "}
-              <Link href="/cadastro" className="text-purple-600 hover:underline">
-                Cadastre-se
-              </Link>
+              Ainda não tem uma conta? <Link href="/cadastro" className="text-purple-600 hover:underline">Cadastre-se</Link>
             </p>
           </div>
         </CardContent>
@@ -185,10 +164,3 @@ export default function Login() {
     </div>
   );
 }
-
-// Implement the setAuth function or remove it if unused
-function setAuth(arg0: { user: User; userNome: string; userType: string; }) {
-  // Example implementation: Update global state or context
-  console.log("Auth updated:", arg0);
-}
-

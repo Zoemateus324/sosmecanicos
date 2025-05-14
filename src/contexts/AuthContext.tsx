@@ -1,31 +1,26 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
-import { SupabaseClient } from '@supabase/supabase-js';
+import { User, SupabaseClient } from '@supabase/supabase-js';
 import { useSupabase } from '@/components/SupabaseProvider';
 import { toast } from 'sonner';
 
 // Define interfaces
-interface AuthUser {
-  id: string;
-  email?: string;
-}
-
-interface AuthContextType {
-  user: AuthUser | null;
+interface AuthContextProps {
+  user: User | null;
   userNome: string | null;
   userType: string | null;
-  loading: boolean;
+  setAuth: (authData: AuthState) => void;
+}
+
+interface AuthState {
+  user: User | null;
+  userNome: string | null;
+  userType: string | null;
 }
 
 // Create context
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  userNome: null,
-  userType: null,
-  loading: true,
-});
+const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
 // Type guard for Supabase client
 function isSupabaseInitialized(
@@ -34,134 +29,121 @@ function isSupabaseInitialized(
   return supabase !== null;
 }
 
-// Auth provider component
+// AuthProvider component
 export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = useSupabase();
-  const router = useRouter();
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [userNome, setUserNome] = useState<string | null>(null);
-  const [userType, setUserType] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [auth, setAuth] = useState<AuthState>({
+    user: null,
+    userNome: null,
+    userType: null,
+  });
 
-  // Fetch user profile
-  const getUser = async (userId: string) => {
+  // Fetch user profile from profiles table
+  const fetchProfile = async (userId: string) => {
     if (!isSupabaseInitialized(supabase)) {
-      console.error('Supabase client is not initialized');
+      toast.error('Conexão com o banco de dados não está disponível', {
+        style: { backgroundColor: '#EF4444', color: '#ffffff' },
+      });
       return;
     }
 
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_type, full_name')
+        .select('full_name, tipo_usuario')
         .eq('id', userId)
-        .maybeSingle();
+        .single();
 
       if (error) {
-        console.error('Profile query error:', error);
-        throw error;
+        console.error('Erro ao buscar perfil:', error.message);
+        toast.error('Erro ao carregar perfil: ' + error.message, {
+          style: { backgroundColor: '#EF4444', color: '#ffffff' },
+        });
+        return;
       }
 
       if (data) {
-        setUserNome(data.full_name || 'Usuário');
-        setUserType(data.user_type || null);
-      } else {
-        console.warn('No user found with ID:', userId);
-        setUserNome('Usuário');
-        setUserType(null);
+        setAuth((prev) => ({
+          ...prev,
+          userNome: data.full_name || null,
+          userType: data.tipo_usuario || null,
+        }));
       }
-    } catch (error: any) {
-      console.error('Error fetching user:', error.message);
-      toast.error('Erro ao carregar perfil do usuário: ' + error.message, {
+    } catch (err: any) {
+      console.error('Erro inesperado ao buscar perfil:', err.message);
+      toast.error('Erro inesperado: ' + err.message, {
         style: { backgroundColor: '#EF4444', color: '#ffffff' },
       });
     }
   };
 
-  // Handle auth state changes
+  // Initialize auth state and listen for auth changes
   useEffect(() => {
     if (!isSupabaseInitialized(supabase)) {
       console.error('Supabase client is not initialized');
-      setLoading(false);
       return;
     }
 
-    const checkSession = async () => {
+    // Check initial session
+    const initializeAuth = async () => {
       try {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) {
-          console.error('Error checking session:', sessionError.message);
-          throw sessionError;
+        const { data: sessionData, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Erro ao verificar sessão:', error.message);
+          toast.error('Erro ao verificar sessão: ' + error.message, {
+            style: { backgroundColor: '#EF4444', color: '#ffffff' },
+          });
+          return;
         }
 
-        if (sessionData.session) {
-          const authUser = sessionData.session.user;
-          setUser({
-            id: authUser.id,
-            email: authUser.email,
-          });
-          await getUser(authUser.id);
-        } else {
-          setUser(null);
-          setUserNome(null);
-          setUserType(null);
-          router.push('/login');
+        if (sessionData.session?.user) {
+          setAuth((prev) => ({
+            ...prev,
+            user: sessionData.session.user,
+          }));
+          await fetchProfile(sessionData.session.user.id);
         }
-      } catch (error: any) {
-        console.error('Error in auth check:', error.message);
-        setUser(null);
-        setUserNome(null);
-        setUserType(null);
-        router.push('/login');
-      } finally {
-        setLoading(false);
+      } catch (err: any) {
+        console.error('Erro inesperado ao inicializar autenticação:', err.message);
+        toast.error('Erro inesperado: ' + err.message, {
+          style: { backgroundColor: '#EF4444', color: '#ffffff' },
+        });
       }
     };
 
-    checkSession();
+    initializeAuth();
 
     // Listen for auth state changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth event:', event);
-      try {
-        if (session) {
-          const authUser = session.user;
-          setUser({
-            id: authUser.id,
-            email: authUser.email,
-          });
-          await getUser(authUser.id);
-        } else {
-          setUser(null);
-          setUserNome(null);
-          setUserType(null);
-          router.push('/login');
-        }
-      } catch (error: any) {
-        console.error('Profile query error on auth change:', error);
-        toast.error('Erro ao atualizar perfil: ' + error.message, {
-          style: { backgroundColor: '#EF4444', color: '#ffffff' },
-        });
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      setAuth((prev) => ({
+        ...prev,
+        user: session?.user || null,
+        userNome: session?.user ? prev.userNome : null,
+        userType: session?.user ? prev.userType : null,
+      }));
+
+      if (session?.user) {
+        fetchProfile(session.user.id);
       }
     });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [supabase, router]);
+  }, [supabase]);
 
   return (
-    <AuthContext.Provider value={{ user, userNome, userType, loading }}>
+    <AuthContext.Provider value={{ ...auth, setAuth }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-// Hook to use auth context
+// Custom hook to use auth context
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
   }
   return context;
 }
