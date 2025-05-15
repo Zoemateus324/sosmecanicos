@@ -61,6 +61,12 @@ export function Sidebar() {
                   <Package className='w-5 h-5' />
                   Perfil
                 </Link>
+<Button
+              onClick={handleLogout}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Logout
+            </Button>
 
               </nav>
             </SheetContent>
