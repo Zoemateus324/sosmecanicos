@@ -9,23 +9,7 @@ import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet'
 
 
 
-  // Handle logout
-  const handleLogout = async () => {
-    if (!isSupabaseInitialized(supabase)) {
-      toast.error('Não é possível fazer logout: conexão com o banco de dados não está disponível', {
-        style: { backgroundColor: '#EF4444', color: '#ffffff' },
-      });
-      return;
-    }
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error('Erro ao sair: ' + error.message, {
-        style: { backgroundColor: '#EF4444', color: '#ffffff' },
-      });
-    } else {
-      router.push('/login');
-    }
-  };
+  
 
 
 
@@ -88,12 +72,7 @@ export function Sidebar() {
 
 
               </nav>
-<Button
-              onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Logout
-            </Button>
+
             </SheetContent>
           </Sheet>
         </header>
