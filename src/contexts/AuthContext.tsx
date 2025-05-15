@@ -32,29 +32,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userNome, setUserNome] = useState<string | null>(null);
   const [userType, setUserType] = useState<string | null>(null);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string | null) => {
+    if (!userId) return;
+
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("*")
+        .select("id, name, email, user_type")
         .eq("id", userId)
         .single();
 
       if (error) {
-        throw error;
+        console.error("Error fetching profile:", error);
+        return;
       }
 
       setProfile(data as Profile);
       setUserNome(data.name);
       setUserType(data.user_type);
     } catch (error) {
-      console.error("Error fetching profile:", error);
+      console.error("Unexpected error in fetchProfile:", error);
     }
   };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
+        setLoading(true);
         if (session?.user) {
           setUser(session.user);
           await fetchProfile(session.user.id);
@@ -69,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => {
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
 
@@ -79,10 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
       });
-
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
     } catch (error) {
       console.error("Error signing in:", error);
       throw error;
@@ -96,26 +97,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
       });
 
-      if (signUpError) {
-        throw signUpError;
-      }
+      if (signUpError) throw signUpError;
 
       if (newUser) {
-        const { error: profileError } = await supabase.from("profiles").insert([
-          {
-            id: newUser.id,
-            name,
-            email,
-            user_type: userType,
-          },
-        ]);
+        try {
+          const { error: profileError } = await supabase.from("profiles").insert([
+            {
+              id: newUser.id,
+              name,
+              email,
+              user_type: userType,
+            },
+          ]);
 
-        if (profileError) {
+          if (profileError) throw profileError;
+
+          await fetchProfile(newUser.id);
+        } catch (profileError) {
+          console.error("Error creating profile:", profileError);
           throw profileError;
         }
       }
     } catch (error) {
-      console.error("Error signing up:", error);
+      console.error("Error during sign-up process:", error);
       throw error;
     }
   };
@@ -123,28 +127,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
+      setUser(null);
+      setProfile(null);
+      setUserNome(null);
+      setUserType(null);
     } catch (error) {
       console.error("Error signing out:", error);
       throw error;
     }
   };
 
+  if (loading) {
+    return <div>Carregando...</div>;
+  }
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        loading,
-        userNome,
-        userType,
-        signIn,
-        signUp,
-        signOut,
-      }}
-    >
+    <AuthContext.Provider value={{ user, profile, loading, userNome, userType, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
