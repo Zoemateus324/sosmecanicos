@@ -16,13 +16,23 @@ interface Review {
   comment: string;
 }
 
+interface ExtendedServiceRequest extends ServiceRequest {
+  user: {
+    name: string;
+    email: string;
+  };
+  vehicle: {
+    model: string;
+    plate: string;
+  };
+}
+
 export default function ServiceRequests() {
   const { user, profile } = useAuth();
-  const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const [requests, setRequests] = useState<ExtendedServiceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<ExtendedServiceRequest | null>(null);
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -37,7 +47,7 @@ export default function ServiceRequests() {
 
         if (error) throw error;
 
-        // Transform the data to match the ServiceRequest type
+        // Transform the data to match the ExtendedServiceRequest type
         const transformedData = data?.map(request => ({
           ...request,
           user: {
@@ -71,18 +81,13 @@ export default function ServiceRequests() {
         .insert([
           {
             user_id: user.id,
-            ...data,
+            service_type: data.service_type,
+            description: data.description,
+            location: data.location,
+            vehicle_info: data.vehicle_info,
             status: 'pending',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            user: {
-              name: profile.name,
-              email: profile.email,
-            },
-            vehicle: {
-              model: data.vehicle_info?.model || '',
-              plate: data.vehicle_info?.license_plate || '',
-            },
           },
         ]);
 
@@ -97,7 +102,7 @@ export default function ServiceRequests() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      // Transform the data to match the ServiceRequest type
+      // Transform the data to match the ExtendedServiceRequest type
       const transformedData = newData?.map(request => ({
         ...request,
         user: {
@@ -123,7 +128,7 @@ export default function ServiceRequests() {
       console.log("Accepting request:", requestId);
     } catch (err) {
       console.error("Error accepting request:", err);
-      setError("Erro ao aceitar solicitação");
+      toast.error("Erro ao aceitar solicitação");
     }
   };
 
@@ -133,7 +138,7 @@ export default function ServiceRequests() {
       console.log("Rejecting request:", requestId);
     } catch (err) {
       console.error("Error rejecting request:", err);
-      setError("Erro ao rejeitar solicitação");
+      toast.error("Erro ao rejeitar solicitação");
     }
   };
 
@@ -143,7 +148,7 @@ export default function ServiceRequests() {
       console.log("Completing request:", requestId);
     } catch (err) {
       console.error("Error completing request:", err);
-      setError("Erro ao concluir solicitação");
+      toast.error("Erro ao concluir solicitação");
     }
   };
 
@@ -154,7 +159,7 @@ export default function ServiceRequests() {
       setSelectedRequest(null);
     } catch (err) {
       console.error("Error submitting review:", err);
-      setError("Erro ao enviar avaliação");
+      toast.error("Erro ao enviar avaliação");
     }
   };
 
@@ -208,7 +213,6 @@ export default function ServiceRequests() {
           <div className="bg-white p-6 rounded-lg w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">Nova Solicitação</h2>
             <ServiceRequestForm
-              vehicles={[]} // TODO: Fetch vehicles from API
               onSubmit={handleSubmitRequest}
               onCancel={() => setShowForm(false)}
             />
@@ -228,7 +232,7 @@ export default function ServiceRequests() {
         <div className="lg:col-span-2">
           <ServiceRequestList
             requests={requests}
-            onViewDetails={setSelectedRequest}
+            onViewDetails={(request) => setSelectedRequest(request as ExtendedServiceRequest)}
             onAccept={handleAcceptRequest}
             onReject={handleRejectRequest}
             onComplete={handleCompleteRequest}
@@ -252,12 +256,6 @@ export default function ServiceRequests() {
           />
         </div>
       </div>
-
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
     </div>
   );
 } 

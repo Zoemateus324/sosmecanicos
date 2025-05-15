@@ -51,6 +51,23 @@ interface Vehicle {
   ano: number;
 }
 
+interface ServiceRequest {
+  id: string;
+  status: string;
+  created_at: string;
+  user: {
+    name: string;
+    email: string;
+  };
+  vehicle: {
+    model: string;
+    plate: string;
+  };
+  location: {
+    lat: number;
+    lng: number;
+  };
+}
 
 // Fallback UI component for critical errors
 const ErrorFallback = ({ message }: { message: string }) => (
@@ -94,6 +111,28 @@ export default function SolicitacoesDashboard() {
   const [selectedRequest, setSelectedRequest] = useState<(MechanicRequest | Guincho) | null>(null);
 
   // Removed unused toggleSidebar function
+
+  // Transform request to ServiceRequest format
+  const transformToServiceRequest = (request: MechanicRequest | Guincho): ServiceRequest => {
+    const vehicle = request.veiculos;
+    return {
+      id: request.id,
+      status: request.status,
+      created_at: request.created_at,
+      user: {
+        name: user?.user_metadata?.name || 'Usuário',
+        email: user?.email || '',
+      },
+      vehicle: {
+        model: vehicle?.modelo || '',
+        plate: vehicle?.placa || '',
+      },
+      location: {
+        lat: 0, // These values are not available in the current data structure
+        lng: 0, // These values are not available in the current data structure
+      },
+    };
+  };
 
   // Handle logout
   const handleLogout = async () => {
@@ -421,18 +460,12 @@ export default function SolicitacoesDashboard() {
         <DialogContent className="max-w-2xl">
           {selectedRequest && (
             <ServiceRequestDetails
-              request={selectedRequest}
-              vehicle={{
-                model: selectedRequest.veiculos ? `${selectedRequest.veiculos.marca} ${selectedRequest.veiculos.modelo}` : "Veículo",
-                plate: selectedRequest.veiculos?.placa || '',
-                // Adicione outros campos se necessário
-              }}
-              onCancel={() => {/* lógica de cancelamento */}}
-              canCancel={selectedRequest.status?.toLowerCase() === 'pendente' || selectedRequest.status?.toLowerCase() === 'pendentes'}
+              request={transformToServiceRequest(selectedRequest)}
               onClose={() => setDetailsDialogOpen(false)}
-              onReview={() => {}}
-              hasReviewed={false}
-              currentUser={user}
+              onSubmitReview={async (requestId, review) => {
+                // Implement review submission logic here
+                console.log('Submitting review:', { requestId, review });
+              }}
             />
           )}
         </DialogContent>

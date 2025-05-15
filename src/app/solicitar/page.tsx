@@ -1,9 +1,7 @@
 "use client";
 import { useState } from "react";
 import { supabase } from "@/models/supabase";
-import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { User } from '@supabase/supabase-js';
 
 export default function Solicitar() {
   const router = useRouter();

@@ -3,7 +3,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase/client";
 import { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
-import { toast } from 'sonner';
 
 interface Profile {
   id: string;

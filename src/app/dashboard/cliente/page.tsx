@@ -133,19 +133,20 @@ const getStatusInfo = (status: string): StatusInfo => {
 };
 
 export default function ClienteDashboard() {
-  const { user, userNome } = useAuth(); // userType obtido do AuthContext
+  const { user, userNome } = useAuth();
   const supabase = useSupabase();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [criticalError, setCriticalError] = useState<string | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [pendingRequests, setPendingRequests] = useState<ServiceRequest[]>([]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isVehicleDialogOpen, setIsVehicleDialogOpen] = useState(false);
-  
   const [isMechanicDialogOpen, setIsMechanicDialogOpen] = useState(false);
-  // Removed unused isTowDialogOpen state
-  // Removed unused editingRequest state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   const [mechanicRequest, setMechanicRequest] = useState({
     vehicleId: '',
@@ -153,8 +154,6 @@ export default function ClienteDashboard() {
     location: '',
     category_type: '',
   });
-
-  
 
   const [newVehicle, setNewVehicle] = useState<Vehicle>({
     id: '',
@@ -174,12 +173,6 @@ export default function ClienteDashboard() {
     placa: '',
   });
   const [isEditVehicleDialogOpen, setIsEditVehicleDialogOpen] = useState(false);
-  // Removed unused editingRequest state
-
-  // Toggle sidebar visibility
-  const toggleSidebar = () => {
-    setIsSidebarOpen((prev) => !prev);
-  };
 
   // Handle logout
   const handleLogout = async () => {
@@ -329,9 +322,6 @@ export default function ClienteDashboard() {
       await fetchPendingRequests();
     }
   };
-
-  // Handle request tow
-
 
   // Check user logged in
   const checkUserLoggedIn = useCallback(async () => {

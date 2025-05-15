@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { supabase } from "@/models/supabase";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -13,13 +12,13 @@ export default function Suporte() {
     subject: '',
     message: ''
   });
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setIsSubmitting(true);
     setSuccess(false);
 
     try {
@@ -35,7 +34,7 @@ export default function Suporte() {
     } catch (err) {
       console.error('Error submitting form:', err);
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -165,9 +164,10 @@ export default function Suporte() {
             />
             <button
               onClick={handleSubmit}
-              className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white p-3 w-full rounded-lg font-semibold hover:from-orange-600 hover:to-yellow-600 transition-all text-base md:text-lg"
+              disabled={isSubmitting}
+              className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white p-3 w-full rounded-lg font-semibold hover:from-orange-600 hover:to-yellow-600 transition-all text-base md:text-lg disabled:opacity-50"
             >
-              Enviar Mensagem
+              {isSubmitting ? 'Enviando...' : 'Enviar Mensagem'}
             </button>
             {success && (
               <motion.p

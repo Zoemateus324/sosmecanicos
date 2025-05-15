@@ -1,21 +1,13 @@
 'use client';
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Menu, Package, PanelBottom, Home } from 'lucide-react';
+import { Package, PanelBottom, Home } from 'lucide-react';
 import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet'
 
-
 export function Sidebar() {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
     <div className="flex w-full flex-col bg-muted/40">
-
-
-
-
       <div className="sm:hidden flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <header className='sticky top-0 z-30 flex h-14 items-center px-4
         border-bg bg-background gap-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6'>
@@ -63,10 +55,8 @@ export function Sidebar() {
                   Suporte
                 </Link>
 
-
               </nav>
             </SheetContent>
-
           </Sheet>
         </header>
       </div>

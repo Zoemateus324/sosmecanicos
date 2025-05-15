@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupabase } from '@/components/SupabaseProvider';
 import { Button } from '@/components/ui/button';
@@ -83,16 +82,10 @@ export default function MecanicaDashboard() {
   const [loading, setLoading] = useState(true);
   const [criticalError, setCriticalError] = useState<string | null>(null);
   const [mechanicRequests, setMechanicRequests] = useState<MechanicRequest[]>([]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-
-  // Toggle sidebar visibility
-  const toggleSidebar = () => {
-    setIsSidebarOpen((prev) => !prev);
-  };
 
   // Handle logout
   const handleLogout = async () => {

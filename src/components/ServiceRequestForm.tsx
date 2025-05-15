@@ -4,44 +4,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Image from 'next/image';
-
-// Tipos auxiliares
-interface Vehicle {
-  id: string;
-  marca: string;
-  modelo: string;
-  placa: string;
-  ano: number;
-}
-
-interface ServiceRequestFormData {
-  serviceType: string;
-  vehicleType: string;
-  problemDescription: string;
-  location: {
-    lat: number;
-    lng: number;
-  };
-  images: File[];
-}
+import { ServiceRequestFormData } from "@/types/service-request";
 
 interface ServiceRequestFormProps {
-  vehicles: Vehicle[];
   onSubmit: (data: ServiceRequestFormData) => Promise<void>;
   onCancel: () => void;
 }
 
 export default function ServiceRequestForm({ onSubmit, onCancel }: ServiceRequestFormProps) {
   const [formData, setFormData] = useState<ServiceRequestFormData>({
-    serviceType: '',
-    vehicleType: '',
-    problemDescription: '',
+    service_type: '',
+    description: '',
     location: {
       lat: 0,
-      lng: 0
+      lng: 0,
+      address: ''
     },
-    images: []
+    vehicle_info: {
+      make: '',
+      model: '',
+      year: new Date().getFullYear(),
+      license_plate: ''
+    }
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,13 +45,19 @@ export default function ServiceRequestForm({ onSubmit, onCancel }: ServiceReques
     }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFormData(prev => ({
-        ...prev,
-        images: Array.from(e.target.files!)
-      }));
-    }
+  const updateVehicleInfo = (field: 'make' | 'model' | 'year' | 'license_plate', value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      vehicle_info: {
+        ...(prev.vehicle_info || {
+          make: '',
+          model: '',
+          year: new Date().getFullYear(),
+          license_plate: ''
+        }),
+        [field]: value
+      }
+    }));
   };
 
   return (
@@ -75,8 +65,8 @@ export default function ServiceRequestForm({ onSubmit, onCancel }: ServiceReques
       <div>
         <Label htmlFor="serviceType">Tipo de Serviço</Label>
         <Select
-          value={formData.serviceType}
-          onValueChange={(value) => setFormData(prev => ({ ...prev, serviceType: value }))}
+          value={formData.service_type}
+          onValueChange={(value) => setFormData(prev => ({ ...prev, service_type: value }))}
         >
           <SelectTrigger>
             <SelectValue placeholder="Selecione o tipo de serviço" />
@@ -90,22 +80,11 @@ export default function ServiceRequestForm({ onSubmit, onCancel }: ServiceReques
       </div>
 
       <div>
-        <Label htmlFor="vehicleType">Tipo de Veículo</Label>
-        <Input
-          id="vehicleType"
-          type="text"
-          value={formData.vehicleType}
-          onChange={(e) => setFormData(prev => ({ ...prev, vehicleType: e.target.value }))}
-          required
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="problemDescription">Descrição do Problema</Label>
+        <Label htmlFor="description">Descrição do Problema</Label>
         <Textarea
-          id="problemDescription"
-          value={formData.problemDescription}
-          onChange={(e) => setFormData(prev => ({ ...prev, problemDescription: e.target.value }))}
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
           required
         />
       </div>
@@ -133,32 +112,52 @@ export default function ServiceRequestForm({ onSubmit, onCancel }: ServiceReques
             placeholder="Longitude"
             required
           />
+          <Input
+            type="text"
+            value={formData.location.address}
+            onChange={(e) => setFormData(prev => ({
+              ...prev,
+              location: { ...prev.location, address: e.target.value }
+            }))}
+            placeholder="Endereço"
+            required
+            className="col-span-2"
+          />
         </div>
       </div>
 
       <div>
-        <Label htmlFor="images">Imagens</Label>
-        <Input
-          type="file"
-          id="images"
-          multiple
-          accept="image/*"
-          onChange={handleImageChange}
-        />
-        {formData.images.length > 0 && (
-          <div className="mt-2 grid grid-cols-2 gap-4">
-            {formData.images.map((file, index) => (
-              <div key={index} className="relative aspect-square">
-                <Image
-                  src={URL.createObjectURL(file)}
-                  alt={`Preview ${index + 1}`}
-                  fill
-                  className="object-cover rounded-md"
-                />
-              </div>
-            ))}
-          </div>
-        )}
+        <Label htmlFor="vehicleInfo">Informações do Veículo</Label>
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            type="text"
+            value={formData.vehicle_info?.make || ''}
+            onChange={(e) => updateVehicleInfo('make', e.target.value)}
+            placeholder="Marca"
+            required
+          />
+          <Input
+            type="text"
+            value={formData.vehicle_info?.model || ''}
+            onChange={(e) => updateVehicleInfo('model', e.target.value)}
+            placeholder="Modelo"
+            required
+          />
+          <Input
+            type="number"
+            value={formData.vehicle_info?.year || new Date().getFullYear()}
+            onChange={(e) => updateVehicleInfo('year', Number(e.target.value))}
+            placeholder="Ano"
+            required
+          />
+          <Input
+            type="text"
+            value={formData.vehicle_info?.license_plate || ''}
+            onChange={(e) => updateVehicleInfo('license_plate', e.target.value)}
+            placeholder="Placa"
+            required
+          />
+        </div>
       </div>
 
       {error && (
@@ -167,7 +166,7 @@ export default function ServiceRequestForm({ onSubmit, onCancel }: ServiceReques
         </div>
       )}
 
-      <div className="flex justify-end gap-4">
+      <div className="flex justify-end space-x-4">
         <Button
           type="button"
           onClick={onCancel}
