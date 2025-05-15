@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User } from "@supabase/supabase-js";
+import { toast } from "react-hot-toast";
 
 type InsuranceQuote = {
   id: string;
@@ -20,13 +21,57 @@ type UserData = {
   tipo_usuario: string;
 };
 
+interface ServiceRequest {
+  id: string;
+  status: string;
+  created_at: string;
+  user: {
+    name: string;
+    email: string;
+  };
+  vehicle: {
+    model: string;
+    plate: string;
+  };
+  location: {
+    lat: number;
+    lng: number;
+  };
+}
 
-export default function InsurerDashboard() {
+export default function SeguradoraDashboard() {
   const [userType, setUserType] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<InsuranceQuote[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
   const router = useRouter();
+
+  const fetchInsuranceRequests = async () => {
+    try {
+      const { data: requests, error: requestsError } = await supabase
+        .from('service_requests')
+        .select(`
+          *,
+          user:profiles(name, email),
+          vehicle:vehicles(model, plate)
+        `)
+        .eq('service_type', 'seguradora')
+        .order('created_at', { ascending: false });
+
+      if (requestsError) throw requestsError;
+
+      setRequests(requests || []);
+    } catch (err) {
+      console.error('Error fetching requests:', err);
+      toast.error('Erro ao carregar solicitações');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -94,6 +139,7 @@ export default function InsurerDashboard() {
     };
 
     fetchUserData();
+    fetchInsuranceRequests();
   }, [router]);
 
   const handleLogout = async () => {
@@ -108,6 +154,57 @@ export default function InsurerDashboard() {
     } catch (err) {
       console.error("Erro ao fazer logout:", err);
       setError("Ocorreu um erro ao fazer logout. Por favor, tente novamente.");
+    }
+  };
+
+  const handleStatusChange = async (requestId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('service_requests')
+        .update({ status: newStatus })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      setRequests(requests.map(request => 
+        request.id === requestId 
+          ? { ...request, status: newStatus }
+          : request
+      ));
+    } catch (err) {
+      console.error('Error updating status:', err);
+      toast.error('Erro ao atualizar status');
+    }
+  };
+
+  const handleViewDetails = (request: ServiceRequest) => {
+    setSelectedRequest(request);
+    setShowDetails(true);
+  };
+
+  const handleCloseDetails = () => {
+    setShowDetails(false);
+    setSelectedRequest(null);
+  };
+
+  const handleSubmitReview = async (requestId: string, review: { rating: number; comment: string }) => {
+    try {
+      const { error } = await supabase
+        .from('reviews')
+        .insert([
+          {
+            request_id: requestId,
+            rating: review.rating,
+            comment: review.comment
+          }
+        ]);
+
+      if (error) throw error;
+
+      toast.success('Avaliação enviada com sucesso!');
+    } catch (err) {
+      console.error('Error submitting review:', err);
+      toast.error('Erro ao enviar avaliação');
     }
   };
 

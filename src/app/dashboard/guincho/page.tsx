@@ -33,17 +33,37 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 
-export default function TowTruckDashboard() {
+interface ServiceRequest {
+  id: string;
+  status: string;
+  created_at: string;
+  user: {
+    name: string;
+    email: string;
+  };
+  vehicle: {
+    model: string;
+    plate: string;
+  };
+  location: {
+    lat: number;
+    lng: number;
+  };
+}
+
+export default function GuinchoDashboard() {
   const [userType, setUserType] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [towRequests, setTowRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [servicosConcluidos, setServicosConcluidos] = useState<number>(0);
   const [ganhosTotais, setGanhosTotais] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [filterStatus, setFilterStatus] = useState<string>("pending");
+  const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -109,7 +129,7 @@ export default function TowTruckDashboard() {
           })
         );
 
-        setTowRequests(towRequestsWithClient || []);
+        setRequests(towRequestsWithClient || []);
 
         // Buscar serviços concluídos
         const { count: servicosCount, error: servicosError } = await supabase
@@ -150,7 +170,7 @@ export default function TowTruckDashboard() {
 
       if (error) throw error;
 
-      setTowRequests(towRequests.filter((request) => request.id !== requestId));
+      setRequests(requests.filter((request) => request.id !== requestId));
       toast.success("Solicitação aceita com sucesso!");
     } catch (err: any) {
       toast.error("Erro ao aceitar solicitação: " + (err.message || "Tente novamente."));
@@ -166,7 +186,7 @@ export default function TowTruckDashboard() {
 
       if (error) throw error;
 
-      setTowRequests(towRequests.filter((request) => request.id !== requestId));
+      setRequests(requests.filter((request) => request.id !== requestId));
       toast.success("Solicitação rejeitada com sucesso!");
     } catch (err: any) {
       toast.error("Erro ao rejeitar solicitação: " + (err.message || "Tente novamente."));
@@ -180,6 +200,57 @@ export default function TowTruckDashboard() {
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const handleStatusChange = async (requestId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('service_requests')
+        .update({ status: newStatus })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      setRequests(requests.map(request => 
+        request.id === requestId 
+          ? { ...request, status: newStatus }
+          : request
+      ));
+    } catch (err) {
+      console.error('Error updating status:', err);
+      toast.error('Erro ao atualizar status');
+    }
+  };
+
+  const handleViewDetails = (request: ServiceRequest) => {
+    setSelectedRequest(request);
+    setShowDetails(true);
+  };
+
+  const handleCloseDetails = () => {
+    setShowDetails(false);
+    setSelectedRequest(null);
+  };
+
+  const handleSubmitReview = async (requestId: string, review: { rating: number; comment: string }) => {
+    try {
+      const { error } = await supabase
+        .from('reviews')
+        .insert([
+          {
+            request_id: requestId,
+            rating: review.rating,
+            comment: review.comment
+          }
+        ]);
+
+      if (error) throw error;
+
+      toast.success('Avaliação enviada com sucesso!');
+    } catch (err) {
+      console.error('Error submitting review:', err);
+      toast.error('Erro ao enviar avaliação');
+    }
   };
 
   return (
@@ -319,7 +390,7 @@ export default function TowTruckDashboard() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-2xl font-bold text-orange-500">
-                      {towRequests.filter((req) => req.status === "pending").length}
+                      {requests.filter((req) => req.status === "pending").length}
                     </p>
                   </CardContent>
                 </Card>
@@ -388,7 +459,7 @@ export default function TowTruckDashboard() {
                   </Select>
                 </CardHeader>
                 <CardContent>
-                  {towRequests.length > 0 ? (
+                  {requests.length > 0 ? (
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
@@ -402,7 +473,7 @@ export default function TowTruckDashboard() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {towRequests.map((request) => (
+                          {requests.map((request) => (
                             <TableRow key={request.id} className="hover:bg-gray-50">
                               <TableCell className="text-gray-800">{request.clientName}</TableCell>
                               <TableCell className="text-gray-800">{request.origin}</TableCell>

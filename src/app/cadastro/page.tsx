@@ -15,15 +15,27 @@ import {
 } from "@/components/ui/select";
 import Link from "next/link";
 
+interface FormData {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  userType: string;
+  phoneNumber: string;
+}
+
 export default function Cadastro() {
   const router = useRouter();
  
   // const supabase = createComponentClient();
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [tipoUsuario, setTipoUsuario] = useState("");
+  const [formData, setFormData] = useState<FormData>({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    userType: 'user',
+    phoneNumber: ''
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(""); // Update type definition here
   const [success, setSuccess] = useState(false);
@@ -34,8 +46,8 @@ export default function Cadastro() {
       setError(null);
 
       const { data, error: signupError } = await supabase.auth.signUp({
-        email,
-        password,
+        email: formData.email,
+        password: formData.password,
       });
 
       if (signupError) {
@@ -52,10 +64,10 @@ export default function Cadastro() {
         .insert([
           {
             id: user?.id,
-            nome,
-            email,
-            telefone: phoneNumber,
-            tipo_usuario: tipoUsuario,
+            nome: formData.name,
+            email: formData.email,
+            telefone: formData.phoneNumber,
+            tipo_usuario: formData.userType,
           }
         ]);
 
@@ -93,13 +105,13 @@ export default function Cadastro() {
               id="nome"
               type="text"
               placeholder="Seu nome completo"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               disabled={loading}
               required
-              className={`w-full ${!nome && 'border-red-300 focus:border-red-500'}`}
+              className={`w-full ${!formData.name && 'border-red-300 focus:border-red-500'}`}
             />
-            {!nome && (
+            {!formData.name && (
               <p className="text-sm text-red-500 mt-1">
                 Este campo é obrigatório
               </p>
@@ -114,13 +126,13 @@ export default function Cadastro() {
               id="email"
               type="email"
               placeholder="seu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               disabled={loading}
               required
-              className={`w-full ${!email && 'border-red-300 focus:border-red-500'}`}
+              className={`w-full ${!formData.email && 'border-red-300 focus:border-red-500'}`}
             />
-            {!email && (
+            {!formData.email && (
               <p className="text-sm text-red-500 mt-1">
                 Este campo é obrigatório
               </p>
@@ -135,14 +147,14 @@ export default function Cadastro() {
               id="password"
               type="password"
               placeholder="Sua senha (mínimo 6 caracteres)"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               disabled={loading}
               required
               minLength={6}
-              className={`w-full ${!password && 'border-red-300 focus:border-red-500'}`}
+              className={`w-full ${!formData.password && 'border-red-300 focus:border-red-500'}`}
             />
-            {!password && (
+            {!formData.password && (
               <p className="text-sm text-red-500 mt-1">
                 Este campo é obrigatório
               </p>
@@ -157,13 +169,13 @@ export default function Cadastro() {
               id="phoneNumber"
               type="tel"
               placeholder="Seu telefone (ex: +5511999999999)"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
+              value={formData.phoneNumber}
+              onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
               disabled={loading}
               required
-              className={`w-full ${!phoneNumber && 'border-red-300 focus:border-red-500'}`}
+              className={`w-full ${!formData.phoneNumber && 'border-red-300 focus:border-red-500'}`}
             />
-            {!phoneNumber && (
+            {!formData.phoneNumber && (
               <p className="text-sm text-red-500 mt-1">
                 Este campo é obrigatório
               </p>
@@ -175,11 +187,11 @@ export default function Cadastro() {
               Tipo de Usuário *
             </label>
             <Select 
-              value={tipoUsuario} 
-              onValueChange={setTipoUsuario}
+              value={formData.userType} 
+              onValueChange={(value) => setFormData({ ...formData, userType: value })}
               disabled={loading}
             >
-              <SelectTrigger className={`w-full ${!tipoUsuario && 'border-red-300 focus:border-red-500'}`}>
+              <SelectTrigger className={`w-full ${!formData.userType && 'border-red-300 focus:border-red-500'}`}>
                 <SelectValue placeholder="Selecione o tipo de usuário" />
               </SelectTrigger>
               <SelectContent>
@@ -189,7 +201,7 @@ export default function Cadastro() {
                 <SelectItem value="seguradora">Seguradora</SelectItem>
               </SelectContent>
             </Select>
-            {!tipoUsuario && (
+            {!formData.userType && (
               <p className="text-sm text-red-500 mt-1">
                 Este campo é obrigatório
               </p>
@@ -210,7 +222,7 @@ export default function Cadastro() {
 
           <Button
             onClick={handleCadastro}
-            disabled={loading || !nome || !email || !password || !tipoUsuario || !phoneNumber}
+            disabled={loading || !formData.name || !formData.email || !formData.password || !formData.userType || !formData.phoneNumber}
             className="w-full bg-purple-600 hover:bg-purple-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Cadastrando..." : "Cadastrar"}

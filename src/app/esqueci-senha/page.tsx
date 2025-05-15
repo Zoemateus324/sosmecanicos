@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { supabase } from "@/models/supabase";
-import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -10,20 +9,20 @@ import Link from "next/link";
 
 export default function EsqueciSenha() {
   const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const validateEmail = (email: string) => {
     const re = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     return re.test(email);
   };
 
-  const handleResetPassword = async () => {
-    setError("");
-    setSuccess(false);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
+    setMessage(null);
+    setError(null);
 
     if (!email) {
       setError("Por favor, insira seu email.");
@@ -41,7 +40,7 @@ export default function EsqueciSenha() {
       console.log("Solicitando redefinição de senha para:", email);
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/redefinir-senha`,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
 
       if (error) {
@@ -55,22 +54,22 @@ export default function EsqueciSenha() {
         }
       } else {
         console.log("Email de redefinição enviado com sucesso");
-        setSuccess(true);
+        setMessage("Se o email existir, você receberá um link para redefinir sua senha.");
         // Limpar o campo de email após sucesso
         setEmail("");
       }
     } catch (err) {
       console.error("Erro inesperado:", err);
       setError("Ocorreu um erro inesperado. Por favor, tente novamente.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   // Função para lidar com o envio do formulário ao pressionar Enter
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !loading) {
-      handleResetPassword();
+      handleSubmit(e);
     }
   };
 
@@ -107,16 +106,14 @@ export default function EsqueciSenha() {
             </div>
           )}
           
-          {success && (
+          {message && (
             <div className="p-3 bg-green-50 border border-green-200 text-green-600 rounded-lg text-sm">
-              <p>Email enviado com sucesso!</p>
-              <p className="mt-1">Por favor, verifique sua caixa de entrada e a pasta de spam.</p>
-              <p className="mt-1">O link de recuperação expira em 24 horas.</p>
+              <p>{message}</p>
             </div>
           )}
 
           <Button
-            onClick={handleResetPassword}
+            onClick={handleSubmit}
             disabled={loading}
             className="w-full bg-purple-600 hover:bg-purple-700 text-white transition-colors"
           >

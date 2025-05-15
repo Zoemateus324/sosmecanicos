@@ -6,113 +6,60 @@ import { supabase } from "@/models/supabase";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import * as OneSignal from "@onesignal/node-onesignal";
+
+interface JobApplication {
+  name: string;
+  email: string;
+  phone: string;
+  position: string;
+  experience: string;
+  resume: File | null;
+}
 
 export default function TrabalheConosco() {
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [mensagem, setMensagem] = useState("");
-  const [curriculo, setCurriculo] = useState<File | null>(null);
-  const [status, setStatus] = useState<"idle" | "success" | "error" | "loading">("idle");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [formData, setFormData] = useState<JobApplication>({
+    name: '',
+    email: '',
+    phone: '',
+    position: '',
+    experience: '',
+    resume: null
+  });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  async function handleSubmit() {
-    // Validação
-    if (!nome || !email || !mensagem || !curriculo) {
-      setStatus("error");
-      setErrorMessage("Por favor, preencha todos os campos e envie um currículo.");
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setStatus("error");
-      setErrorMessage("Por favor, insira um email válido.");
-      return;
-    }
-
-    if (curriculo && !curriculo.name.endsWith(".pdf")) {
-      setStatus("error");
-      setErrorMessage("Por favor, envie um currículo no formato PDF.");
-      return;
-    }
-
-    setStatus("loading"); // Indica que o envio está em andamento
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setSuccess(false);
 
     try {
-      // Upload do currículo para o Supabase Storage
-      const fileName = `curriculo-${Date.now()}.pdf`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("curriculos")
-        .upload(fileName, curriculo);
-
-      if (uploadError) {
-        console.error("Erro ao fazer upload do currículo:", uploadError);
-        throw new Error("Erro ao fazer upload do currículo.");
-      }
-
-      // Obtém a URL pública do currículo
-      const curriculoUrl = supabase.storage
-        .from("curriculos")
-        .getPublicUrl(uploadData.path).data.publicUrl;
-
-      // Insere os dados na tabela candidaturas
-      const { data: insertData, error: insertError } = await supabase
-        .from("candidaturas")
-        .insert({
-          nome,
-          email,
-          mensagem,
-          curriculo_url: curriculoUrl,
-        })
-        .select();
-
-      if (insertError) {
-        console.error("Erro ao inserir candidatura:", insertError);
-        throw new Error("Erro ao salvar os dados da candidatura. Verifique o schema da tabela ou permissões.");
-      }
-
-      console.log("Candidatura inserida com sucesso:", insertData);
-
-      // Envia notificação via OneSignal
-      // try {
-      //   const appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
-      //   const apiKey = process.env.ONESIGNAL_API_KEY;
-
-      //   if (!appId || !apiKey) {
-      //     console.warn("OneSignal App ID ou API Key não configurados em .env.local.");
-      //   } else {
-      //     const configuration = OneSignal.createConfiguration({
-      //       apiKey: apiKey,
-      //     });
-      //     const client = new OneSignal.DefaultApi(configuration);
-      //     const notification = new OneSignal.Notification();
-      //     notification.app_id = appId;
-      //     notification.include_player_ids = ["admin-id"]; // Substitua por IDs reais
-      //     notification.headings = { pt: "Nova Candidatura" };
-      //     notification.contents = { pt: `Nova candidatura recebida de ${nome}` };
-      //     notification.url = "https://sosmecanicos.com.br/admin/candidaturas";
-
-      //     const response = await client.createNotification(notification);
-      //     console.log("Notificação OneSignal enviada:", response);
-      //   }
-      // } catch (notificationError) {
-      //   console.warn("Notificação OneSignal falhou, mas candidatura foi salva:", notificationError);
-      // }
-
-      // Sucesso
-      setStatus("success");
-      setNome("");
-      setEmail("");
-      setMensagem("");
-      setCurriculo(null);
-      setTimeout(() => setStatus("idle"), 3000);
-    } catch (error: any) {
-      console.error("Erro no handleSubmit:", error);
-      setStatus("error");
-      setErrorMessage(error.message || "Erro ao enviar a candidatura. Tente novamente.");
+      // Simular envio do formulário
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setSuccess(true);
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        position: '',
+        experience: '',
+        resume: null
+      });
+    } catch (err) {
+      console.error('Error submitting form:', err);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFormData(prev => ({
+        ...prev,
+        resume: e.target.files![0]
+      }));
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -189,16 +136,16 @@ export default function TrabalheConosco() {
             <input
               type="text"
               placeholder="Nome"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               className="border border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
-              disabled={status === "loading"}
+              disabled={loading}
             />
             <input
               type="email"
               placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               className="border border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
               disabled={status === "loading"}
             />

@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle, X, Upload } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import Image from 'next/image';
 
 // Tipos auxiliares
 interface Vehicle {
@@ -16,8 +17,20 @@ interface Vehicle {
   ano: number;
 }
 
+interface ServiceRequestFormData {
+  serviceType: string;
+  vehicleType: string;
+  problemDescription: string;
+  location: {
+    lat: number;
+    lng: number;
+  };
+  images: File[];
+}
+
 interface ServiceRequestFormProps {
   vehicles: Vehicle[];
+  onSubmit: (data: ServiceRequestFormData) => Promise<void>;
   onSubmit: (data: any) => void;
   onCancel: () => void;
   initialData?: any;

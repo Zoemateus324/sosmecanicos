@@ -9,53 +9,38 @@ import Footer from "@/components/Footer";
 // import { sendNotification } from "@/services/onesignal-notifications";
 
 export default function SejaParceiro() {
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [tipoParceiro, setTipoParceiro] = useState("");
-  const [mensagem, setMensagem] = useState("");
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    type: '',
+    message: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  const handleSubmit = async () => {
-    // Validação
-    if (!nome || !email || !tipoParceiro || !mensagem) {
-      setStatus("error");
-      setErrorMessage("Por favor, preencha todos os campos.");
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setStatus("error");
-      setErrorMessage("Por favor, insira um email válido.");
-      return;
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setSuccess(false);
 
     try {
-      const { error } = await supabase.from("parceiros").insert({
-        nome,
-        email,
-        tipo_parceiro: tipoParceiro,
-        mensagem,
+      // Simular envio do formulário
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setSuccess(true);
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        company: '',
+        type: '',
+        message: ''
       });
-
-      if (error) throw error;
-
-      /* await sendNotification({
-        userIds: [email],
-        title: "Bem-vindo ao SOS Mecânicos",
-        message: "Sua solicitação de parceria está em análise!",
-      }); */
-
-      setStatus("success");
-      setNome("");
-      setEmail("");
-      setTipoParceiro("");
-      setMensagem("");
-      setTimeout(() => setStatus("idle"), 3000); // Reseta o status após 3 segundos
-    } catch (error) {
-      setStatus("error");
-      setErrorMessage("Erro ao enviar a solicitação. Tente novamente.");
+    } catch (err) {
+      console.error('Error submitting form:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -152,20 +137,34 @@ export default function SejaParceiro() {
             <input
               type="text"
               placeholder="Nome"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="border border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
             />
             <input
               type="email"
               placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="border border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
+            />
+            <input
+              type="text"
+              placeholder="Telefone"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              className="border border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
+            />
+            <input
+              type="text"
+              placeholder="Empresa"
+              value={formData.company}
+              onChange={(e) => setFormData({ ...formData, company: e.target.value })}
               className="border border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
             />
             <select
-              value={tipoParceiro}
-              onChange={(e) => setTipoParceiro(e.target.value)}
+              value={formData.type}
+              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               className="border border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
             >
               <option value="">Selecione o tipo de parceiro</option>
@@ -175,8 +174,8 @@ export default function SejaParceiro() {
             </select>
             <textarea
               placeholder="Mensagem (fale sobre sua experiência e serviços)"
-              value={mensagem}
-              onChange={(e) => setMensagem(e.target.value)}
+              value={formData.message}
+              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
               className="border border-gray-300 p-3 w-full rounded-lg h-32 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
             />
             <button
@@ -185,22 +184,13 @@ export default function SejaParceiro() {
             >
               Enviar Solicitação
             </button>
-            {status === "success" && (
+            {success && (
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="text-green-600 text-center mt-4"
               >
                 Solicitação enviada com sucesso! Entraremos em contato em breve.
-              </motion.p>
-            )}
-            {status === "error" && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-red-600 text-center mt-4"
-              >
-                {errorMessage}
               </motion.p>
             )}
           </div>

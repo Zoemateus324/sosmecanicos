@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import  { useSupabase } from "@/components/SupabaseProvider";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const menus = {
   cliente: [
@@ -36,36 +37,62 @@ const menus = {
   ],
 };
 
+interface User {
+  id: string;
+  email?: string;
+  user_metadata: {
+    name?: string;
+  };
+}
+
 export default function Navbar() {
   const supabase = useSupabase();
-  const { user, userType, isLoading } = useAuth(); // Add isLoading from useAuth
+  const { user, userType } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [userState, setUserState] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const toggleMenu = () => {
-    setIsMenuOpen((prev) => !prev);
+    setIsMenuOpen(!isMenuOpen);
   };
 
   const handleLogout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw new Error("Erro ao fazer logout: " + error.message);
-      setIsMenuOpen(false);
-      toast.success("Logout realizado com sucesso!", {
-        style: { backgroundColor: "#7C3AED", color: "#ffffff" },
-      });
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao fazer logout.", {
-        style: { backgroundColor: "#6B7280", color: "#ffffff" },
-      });
+      await supabase.auth.signOut();
+      router.push('/');
+    } catch (err) {
+      console.error('Error logging out:', err);
     }
   };
 
   useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUserState({
+            id: user.id,
+            email: user.email,
+            user_metadata: user.user_metadata
+          });
+        }
+      } catch (err) {
+        console.error('Error checking user:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkUser();
+  }, []);
+
+  useEffect(() => {
     // Optional: Add any side effects, e.g., redirect if not authenticated
-    if (!isLoading && !user) {
+    if (!user) {
       setIsMenuOpen(false);
     }
-  }, [user, isLoading]);
+  }, [user]);
 
   return (
     <nav className="fixed top-0 left-0 w-full bg-white shadow-lg z-50">

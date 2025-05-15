@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Menu, Package, PanelBottom } from 'lucide-react';
+import { Menu, Package, PanelBottom, Home } from 'lucide-react';
 import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet'
+
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,40 +30,37 @@ export function Sidebar() {
               <nav className='grid gap-6 text-lg font-medium p-2'>
 
                 {/*Links de navegação */}
-                <Link href="/"
-                  className='flex h-10 w-10 bg-fuchsia-800 rounded-full
-                text-lg items-center justify-center gap-2 text-primary-foreground md:text-base'
-                  prefetch={false}
-                >
-                  <Package className='w-5 h-5' />
-                  <span className='sr-only'>Dashboard</span>
-                </Link>
-
                 <Link href="/dashboard/cliente"
                   className='flex h-10 w-10 bg-fuchsia-800 rounded-full
                 text-lg items-center justify-center gap-2 text-primary-foreground md:text-base'
                   prefetch={false}
                 >
                   <Package className='w-5 h-5' />
-                  <span className='sr-only'>Solicitações</span>
+                  <span className='sr-only'>Logo do Projeto</span>
                 </Link>
 
                 <Link href="/dashboard/cliente"
-                  className='flex h-10 w-10 bg-fuchsia-800 rounded-full
-                text-lg items-center justify-center gap-2 text-primary-foreground md:text-base'
+                  className='flex items-center gap-4 px-2.5 text-muted-foreground'
                   prefetch={false}
                 >
-                  <Package className='w-5 h-5' />
-                  <span className='sr-only'>Meus veículos</span>
+                  <Home className='w-5 h-5' />
+                  Dashboard
                 </Link>
 
                 <Link href="/dashboard/cliente"
-                  className='flex h-10 w-10 bg-fuchsia-800 rounded-full
-                text-lg items-center justify-center gap-2 text-primary-foreground md:text-base'
+                  className='flex items-center gap-4 px-2.5 text-muted-foreground'
                   prefetch={false}
                 >
                   <Package className='w-5 h-5' />
-                  <span className='sr-only'>Suporte</span>
+                  Meus veículos
+                </Link>
+
+                <Link href="/dashboard/cliente"
+                  className='flex items-center gap-4 px-2.5 text-muted-foreground'
+                  prefetch={false}
+                >
+                  <Package className='w-5 h-5' />
+                  Suporte
                 </Link>
 
 

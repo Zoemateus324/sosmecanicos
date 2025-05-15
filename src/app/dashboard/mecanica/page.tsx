@@ -47,6 +47,24 @@ interface Vehicle {
   ano: number;
 }
 
+interface ServiceRequest {
+  id: string;
+  status: string;
+  created_at: string;
+  user: {
+    name: string;
+    email: string;
+  };
+  vehicle: {
+    model: string;
+    plate: string;
+  };
+  location: {
+    lat: number;
+    lng: number;
+  };
+}
+
 // Fallback UI component for critical errors
 const ErrorFallback = ({ message }: { message: string }) => (
   <div className="flex min-h-screen items-center justify-center bg-gray-100">
@@ -74,7 +92,7 @@ function isSupabaseInitialized(
   return supabase !== null;
 }
 
-export default function MechanicDashboard() {
+export default function MecanicaDashboard() {
   const { user, userNome, userType } = useAuth();
   const supabase = useSupabase();
   const router = useRouter();
@@ -82,6 +100,10 @@ export default function MechanicDashboard() {
   const [criticalError, setCriticalError] = useState<string | null>(null);
   const [mechanicRequests, setMechanicRequests] = useState<MechanicRequest[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   // Toggle sidebar visibility
   const toggleSidebar = () => {
@@ -193,6 +215,13 @@ export default function MechanicDashboard() {
       else if (tipo === 'seguradora') router.push('/dashboard/seguradora');
       else router.push('/login');
     }
+
+    try {
+      await fetchMechanicRequests();
+    } catch (err) {
+      console.error('Error checking user:', err);
+      setError('Erro ao verificar usuário');
+    }
   };
 
   // Combined useEffect for data fetching
@@ -233,6 +262,57 @@ export default function MechanicDashboard() {
       authListener.subscription.unsubscribe();
     };
   }, [supabase, user, userType, router]);
+
+  const handleStatusChange = async (requestId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('service_requests')
+        .update({ status: newStatus })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      setRequests(requests.map(request => 
+        request.id === requestId 
+          ? { ...request, status: newStatus }
+          : request
+      ));
+    } catch (err) {
+      console.error('Error updating status:', err);
+      toast.error('Erro ao atualizar status');
+    }
+  };
+
+  const handleViewDetails = (request: ServiceRequest) => {
+    setSelectedRequest(request);
+    setShowDetails(true);
+  };
+
+  const handleCloseDetails = () => {
+    setShowDetails(false);
+    setSelectedRequest(null);
+  };
+
+  const handleSubmitReview = async (requestId: string, review: { rating: number; comment: string }) => {
+    try {
+      const { error } = await supabase
+        .from('reviews')
+        .insert([
+          {
+            request_id: requestId,
+            rating: review.rating,
+            comment: review.comment
+          }
+        ]);
+
+      if (error) throw error;
+
+      toast.success('Avaliação enviada com sucesso!');
+    } catch (err) {
+      console.error('Error submitting review:', err);
+      toast.error('Erro ao enviar avaliação');
+    }
+  };
 
   // Render fallback UI if critical error
   if (criticalError) {

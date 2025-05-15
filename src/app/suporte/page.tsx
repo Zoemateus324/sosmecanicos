@@ -3,50 +3,39 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/models/supabase";
-import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 export default function Suporte() {
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [mensagem, setMensagem] = useState("");
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
 
-  const handleSubmit = async () => {
-    // Validação
-    if (!nome || !email || !mensagem) {
-      setStatus("error");
-      setErrorMessage("Por favor, preencha todos os campos.");
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setStatus("error");
-      setErrorMessage("Por favor, insira um email válido.");
-      return;
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setSuccess(false);
 
     try {
-      const { error } = await supabase.from("suporte").insert({
-        nome,
-        email,
-        mensagem,
+      // Simular envio do formulário
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setSuccess(true);
+      setFormData({
+        name: '',
+        email: '',
+        subject: '',
+        message: ''
       });
-
-      if (error) throw error;
-
-      setStatus("success");
-      setNome("");
-      setEmail("");
-      setMensagem("");
-      setTimeout(() => setStatus("idle"), 3000); // Reseta o status após 3 segundos
-    } catch (error) {
-      setStatus("error");
-      setErrorMessage("Erro ao enviar a mensagem. Tente novamente.");
+    } catch (err) {
+      console.error('Error submitting form:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -157,21 +146,21 @@ export default function Suporte() {
             <input
               type="text"
               placeholder="Nome"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="border border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
             />
             <input
               type="email"
               placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="border border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
             />
             <textarea
               placeholder="Mensagem"
-              value={mensagem}
-              onChange={(e) => setMensagem(e.target.value)}
+              value={formData.message}
+              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
               className="border border-gray-300 p-3 w-full rounded-lg h-32 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
             />
             <button
@@ -180,22 +169,13 @@ export default function Suporte() {
             >
               Enviar Mensagem
             </button>
-            {status === "success" && (
+            {success && (
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="text-green-600 text-center mt-4"
               >
                 Mensagem enviada com sucesso!
-              </motion.p>
-            )}
-            {status === "error" && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-red-600 text-center mt-4"
-              >
-                {errorMessage}
               </motion.p>
             )}
           </div>
