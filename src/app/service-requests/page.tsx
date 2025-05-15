@@ -17,7 +17,7 @@ interface Review {
 }
 
 export default function ServiceRequests() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -36,7 +36,21 @@ export default function ServiceRequests() {
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        setRequests(data || []);
+
+        // Transform the data to match the ServiceRequest type
+        const transformedData = data?.map(request => ({
+          ...request,
+          user: {
+            name: profile?.name || '',
+            email: profile?.email || '',
+          },
+          vehicle: {
+            model: request.vehicle_info?.model || '',
+            plate: request.vehicle_info?.license_plate || '',
+          },
+        })) || [];
+
+        setRequests(transformedData);
       } catch (error) {
         console.error('Error fetching requests:', error);
         toast.error('Erro ao carregar solicitações');
@@ -46,10 +60,10 @@ export default function ServiceRequests() {
     };
 
     fetchRequests();
-  }, [user]);
+  }, [user, profile]);
 
   const handleSubmitRequest = async (data: ServiceRequestFormData) => {
-    if (!user) return;
+    if (!user || !profile) return;
 
     try {
       const { error } = await supabase
@@ -61,6 +75,14 @@ export default function ServiceRequests() {
             status: 'pending',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
+            user: {
+              name: profile.name,
+              email: profile.email,
+            },
+            vehicle: {
+              model: data.vehicle_info?.model || '',
+              plate: data.vehicle_info?.license_plate || '',
+            },
           },
         ]);
 
@@ -75,7 +97,20 @@ export default function ServiceRequests() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      setRequests(newData || []);
+      // Transform the data to match the ServiceRequest type
+      const transformedData = newData?.map(request => ({
+        ...request,
+        user: {
+          name: profile.name,
+          email: profile.email,
+        },
+        vehicle: {
+          model: request.vehicle_info?.model || '',
+          plate: request.vehicle_info?.license_plate || '',
+        },
+      })) || [];
+
+      setRequests(transformedData);
     } catch (error) {
       console.error('Error creating request:', error);
       toast.error('Erro ao criar solicitação');
