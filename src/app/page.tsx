@@ -171,7 +171,7 @@ export default function Home() {
                   height={70}
                   className="rounded-full mx-auto mb-4"
                 />
-                <p className="text-gray-600 italic mb-4">"{depoiment.text}"</p>
+                <p className="text-gray-600 italic mb-4">&ldquo;{depoiment.text}&rdquo;</p>
                 <h3 className="text-lg font-semibold text-blue-900">{depoiment.name}</h3>
               </motion.div>
             ))}

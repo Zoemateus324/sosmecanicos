@@ -5,9 +5,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import  { useSupabase } from "@/components/SupabaseProvider";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Menu } from "lucide-react";
 
 const menus = {
   cliente: [
@@ -47,7 +49,7 @@ interface User {
 
 export default function Navbar() {
   const supabase = useSupabase();
-  const { user, userType } = useAuth();
+  const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userState, setUserState] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,12 +59,11 @@ export default function Navbar() {
     setIsMenuOpen(!isMenuOpen);
   };
 
-  const handleLogout = async () => {
+  const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut();
-      router.push('/');
-    } catch (err) {
-      console.error('Error logging out:', err);
+      await signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
     }
   };
 
@@ -95,133 +96,135 @@ export default function Navbar() {
   }, [user]);
 
   return (
-    <nav className="fixed top-0 left-0 w-full bg-white shadow-lg z-50">
-      <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
-        {/* Logo and Brand */}
-        <Link href="/" className="flex items-center space-x-2">
-          <span className="text-xl md:text-2xl font-bold text-orange-500">SOS Mecânicos</span>
-        </Link>
-
-        {/* Desktop Links */}
-        <div className="hidden md:flex items-center space-x-4 md:space-x-6">
-          {!user ? (
-            <>
-              <Link href="/como-funciona" className="text-gray-600 hover:text-orange-500 text-base md:text-lg">
-                Como Funciona
+    <nav className="bg-white shadow-md">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          <div className="flex">
+            <div className="flex-shrink-0 flex items-center">
+              <Link href="/" className="text-2xl font-bold text-blue-600">
+                SOS Mecânicos
               </Link>
-              <Link href="/para-clientes" className="text-gray-600 hover:text-orange-500 text-base md:text-lg">
-                Para Clientes
-              </Link>
-              <Link href="/para-mecanicos" className="text-gray-600 hover:text-orange-500 text-base md:text-lg">
-                Para Mecânicos
-              </Link>
-              <Link href="/login" className="text-gray-600 hover:text-orange-500 text-base md:text-lg">
-                Entrar
+            </div>
+            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+              <Link
+                href="/"
+                className="border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                Início
               </Link>
               <Link
-                href="/cadastro"
-                className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white py-2 md:py-3 px-4 md:px-6 rounded-lg text-base md:text-lg font-semibold hover:from-orange-600 hover:to-yellow-600 transition-all"
+                href="/solicitar"
+                className="border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
               >
-                Cadastrar
+                Solicitar Serviço
               </Link>
-            </>
-          ) : (
-            <>
-              {userType &&
-                menus[userType as keyof typeof menus]?.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="text-gray-600 hover:text-orange-500 text-base md:text-lg"
-                  >
-                    {item.name}
-                  </Link>
-                ))}
-              <button
-                onClick={handleLogout}
-                className="text-gray-600 hover:text-orange-500 text-base md:text-lg"
+              <Link
+                href="/seja-parceiro"
+                className="border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
               >
-                Sair
-              </button>
-            </>
-          )}
+                Seja Parceiro
+              </Link>
+              <Link
+                href="/suporte"
+                className="border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                Suporte
+              </Link>
+            </div>
+          </div>
+          <div className="hidden sm:ml-6 sm:flex sm:items-center">
+            {user ? (
+              <div className="flex items-center space-x-4">
+                <Link href="/dashboard">
+                  <Button variant="outline">Dashboard</Button>
+                </Link>
+                <Button onClick={handleSignOut} variant="destructive">
+                  Sair
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <Link href="/login">
+                  <Button variant="outline">Entrar</Button>
+                </Link>
+                <Link href="/cadastro">
+                  <Button>Cadastrar</Button>
+                </Link>
+              </div>
+            )}
+          </div>
+          <div className="-mr-2 flex items-center sm:hidden">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            >
+              <span className="sr-only">Open main menu</span>
+              <Menu className="block h-6 w-6" aria-hidden="true" />
+            </button>
+          </div>
         </div>
-
-        {/* Mobile Menu Toggle */}
-        <button className="md:hidden text-gray-600" onClick={toggleMenu}>
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16m-7 6h7"}
-            />
-          </svg>
-        </button>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile menu */}
       {isMenuOpen && (
-        <div className="md:hidden bg-white shadow-lg">
-          <div className="container mx-auto px-4 py-4 flex flex-col space-y-4">
-            {!user ? (
-              <>
+        <div className="sm:hidden">
+          <div className="pt-2 pb-3 space-y-1">
+            <Link
+              href="/"
+              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-blue-500 hover:text-gray-800"
+            >
+              Início
+            </Link>
+            <Link
+              href="/solicitar"
+              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-blue-500 hover:text-gray-800"
+            >
+              Solicitar Serviço
+            </Link>
+            <Link
+              href="/seja-parceiro"
+              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-blue-500 hover:text-gray-800"
+            >
+              Seja Parceiro
+            </Link>
+            <Link
+              href="/suporte"
+              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-blue-500 hover:text-gray-800"
+            >
+              Suporte
+            </Link>
+          </div>
+          <div className="pt-4 pb-3 border-t border-gray-200">
+            {user ? (
+              <div className="space-y-1">
                 <Link
-                  href="/como-funciona"
-                  className="text-gray-600 hover:text-orange-500 text-base"
-                  onClick={() => setIsMenuOpen(false)}
+                  href="/dashboard"
+                  className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-blue-500 hover:text-gray-800"
                 >
-                  Como Funciona
+                  Dashboard
                 </Link>
-                <Link
-                  href="/para-clientes"
-                  className="text-gray-600 hover:text-orange-500 text-base"
-                  onClick={() => setIsMenuOpen(false)}
+                <button
+                  onClick={handleSignOut}
+                  className="block w-full text-left pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-red-600 hover:bg-gray-50 hover:border-red-500 hover:text-red-800"
                 >
-                  Para Clientes
-                </Link>
-                <Link
-                  href="/para-mecanicos"
-                  className="text-gray-600 hover:text-orange-500 text-base"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Para Mecânicos
-                </Link>
+                  Sair
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-1">
                 <Link
                   href="/login"
-                  className="text-gray-600 hover:text-orange-500 text-base"
-                  onClick={() => setIsMenuOpen(false)}
+                  className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-blue-500 hover:text-gray-800"
                 >
                   Entrar
                 </Link>
                 <Link
                   href="/cadastro"
-                  className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white py-2 px-4 rounded-lg text-base font-semibold hover:from-orange-600 hover:to-yellow-600 transition-all"
-                  onClick={() => setIsMenuOpen(false)}
+                  className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-blue-500 hover:text-gray-800"
                 >
                   Cadastrar
                 </Link>
-              </>
-            ) : (
-              <>
-                {userType &&
-                  menus[userType as keyof typeof menus]?.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className="text-gray-600 hover:text-orange-500 text-base"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      {item.name}
-                    </Link>
-                  ))}
-                <button
-                  onClick={handleLogout}
-                  className="text-gray-600 hover:text-orange-500 text-base text-left"
-                >
-                  Sair
-                </button>
-              </>
+              </div>
             )}
           </div>
         </div>
