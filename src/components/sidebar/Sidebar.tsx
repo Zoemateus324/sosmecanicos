@@ -54,21 +54,22 @@ export function Sidebar() {
                   <Package className='w-5 h-5' />
                   Suporte
                 </Link>
- <Link href="/perfil"
+ <Link href="/dashboard/perfil"
                   className='flex items-center gap-4 px-2.5 text-muted-foreground'
                   prefetch={false}
                 >
                   <Package className='w-5 h-5' />
                   Perfil
                 </Link>
+
+
+              </nav>
 <Button
               onClick={handleLogout}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               Logout
             </Button>
-
-              </nav>
             </SheetContent>
           </Sheet>
         </header>
