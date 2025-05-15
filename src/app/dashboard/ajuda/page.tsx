@@ -1,12 +1,9 @@
-'use client';
+export default function ajudaDashboard(){
 
-import {Sidebar} from '@/componentes/sidebar';
 
-export default function AjudaDashboard(){
-    return(
-<div className="flex flex-col w-full" >
-        <Sidebar />
-        <h1>Página de ajuda</h1>
-</div>
-    )
+return(
+ <span>Página de suporte sendo desenvolvida</span>
+
+);
+
 }
