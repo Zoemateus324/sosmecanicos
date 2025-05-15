@@ -1,6 +1,6 @@
 'use client';
 
-import {Sidebar} forma '@/componentes/sidebar';
+import {Sidebar} from '@/componentes/sidebar';
 
 export default function AjudaDashboard(){
     return(
