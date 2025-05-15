@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { supabase } from "@/models/supabase";
+
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -26,7 +26,7 @@ export default function TrabalheConosco() {
     resume: null
   });
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,15 +181,7 @@ export default function TrabalheConosco() {
                 Candidatura enviada com sucesso! Entraremos em contato em breve.
               </motion.p>
             )}
-            {status === "error" && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-red-600 text-center mt-4"
-              >
-                {errorMessage}
-              </motion.p>
-            )}
+        
           </div>
         </section>
       </div>

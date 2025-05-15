@@ -3,16 +3,15 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/models/supabase";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -54,7 +53,6 @@ interface TowRequest {
 
 export default function GuinchoDashboard() {
   const { user } = useAuth();
-  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [requests, setRequests] = useState<TowRequest[]>([]);
   const [servicosConcluidos, setServicosConcluidos] = useState<number>(0);
@@ -79,7 +77,7 @@ export default function GuinchoDashboard() {
         }
 
         setUserId(session.user.id);
-        setUserEmail(session.user?.email ?? null);
+        
 
         // Buscar tipo de usuário
         const { data: userData, error: userError } = await supabase

@@ -5,11 +5,10 @@ import { supabase } from "@/models/supabase";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 import { User } from "@supabase/supabase-js";
 import { toast } from "react-hot-toast";
-import { useAuth } from '@/contexts/AuthContext';
-import { ServiceRequest } from '@/types/service-request';
+
 
 type InsuranceQuote = {
   id: string;
@@ -24,15 +23,13 @@ type UserData = {
 };
 
 export default function SeguradoraDashboard() {
-  const { user } = useAuth();
-  const [userType, setUserType] = useState<string | null>(null);
+  
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<InsuranceQuote[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  
   const [loading, setLoading] = useState(true);
-  const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
+ 
   const router = useRouter();
 
   const fetchInsuranceRequests = async () => {
@@ -49,7 +46,7 @@ export default function SeguradoraDashboard() {
 
       if (requestsError) throw requestsError;
 
-      setRequests(requests || []);
+      
     } catch (err) {
       console.error('Error fetching requests:', err);
       toast.error('Erro ao carregar solicitações');
@@ -92,7 +89,7 @@ export default function SeguradoraDashboard() {
 
         const userDataTyped = userData as UserData;
         const tipo = userDataTyped.tipo_usuario;
-        setUserType(tipo);
+
 
         // Redirecionar se não for seguradora
         if (tipo !== "seguradora") {
@@ -142,56 +139,10 @@ export default function SeguradoraDashboard() {
     }
   };
 
-  const handleStatusChange = async (requestId: string, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from('service_requests')
-        .update({ status: newStatus })
-        .eq('id', requestId);
+ 
 
-      if (error) throw error;
 
-      setRequests(requests.map(request => 
-        request.id === requestId 
-          ? { ...request, status: newStatus }
-          : request
-      ));
-    } catch (err) {
-      console.error('Error updating status:', err);
-      toast.error('Erro ao atualizar status');
-    }
-  };
 
-  const handleViewDetails = (request: ServiceRequest) => {
-    setSelectedRequest(request);
-    setShowDetails(true);
-  };
-
-  const handleCloseDetails = () => {
-    setShowDetails(false);
-    setSelectedRequest(null);
-  };
-
-  const handleSubmitReview = async (requestId: string, review: { rating: number; comment: string }) => {
-    try {
-      const { error } = await supabase
-        .from('reviews')
-        .insert([
-          {
-            request_id: requestId,
-            rating: review.rating,
-            comment: review.comment
-          }
-        ]);
-
-      if (error) throw error;
-
-      toast.success('Avaliação enviada com sucesso!');
-    } catch (err) {
-      console.error('Error submitting review:', err);
-      toast.error('Erro ao enviar avaliação');
-    }
-  };
 
   if (loading) {
     return <div>Loading...</div>;
@@ -201,26 +152,16 @@ export default function SeguradoraDashboard() {
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
       <div className="w-64 bg-white shadow-lg">
-        <div className="p-4 flex items-center space-x-2">
-          {/*
-          <img src="/logo-sos-mecanicos.png" alt="SOS Mecânicos Logo" className="h-8 w-8" />
-           */}
-          
-          <h2 className="text-2xl font-bold text-orange-500">SOS Mecânicos</h2>
-        </div>
+        
         <nav className="mt-6">
           <a href="/dashboard/seguradora" className="block py-2.5 px-4 text-gray-600 hover:bg-orange-100 rounded">
             Dashboard
           </a>
-          <a href="/cotacoes" className="block py-2.5 px-4 text-gray-600 hover:bg-orange-100 rounded">
-            Cotações
-          </a>
+    
           <a href="/clientes" className="block py-2.5 px-4 text-gray-600 hover:bg-orange-100 rounded">
             Clientes
           </a>
-          <a href="/perfil" className="block py-2.5 px-4 text-gray-600 hover:bg-orange-100 rounded">
-            Perfil
-          </a>
+         
         </nav>
       </div>
 
@@ -231,10 +172,7 @@ export default function SeguradoraDashboard() {
           <div className="flex justify-between items-center">
             <h1 className="text-xl font-semibold text-blue-900">Dashboard da Seguradora</h1>
             <div className="flex items-center space-x-4">
-              <Avatar>
-                <AvatarImage src="https://github.com/shadcn.png" alt="User Avatar" />
-                <AvatarFallback>SE</AvatarFallback>
-              </Avatar>
+            
               <span className="text-gray-700">{userEmail || "Carregando..."}</span>
               <Button
                 variant="outline"

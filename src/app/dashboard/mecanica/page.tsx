@@ -25,8 +25,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { ServiceRequest } from '@/types/service-request';
-import { supabase } from '@/lib/supabase/client';
-
+import Link from 'next/link';
 // Define interfaces
 interface MechanicRequest {
   id: string;
@@ -48,25 +47,6 @@ interface Vehicle {
   ano: number;
 }
 
-// Fallback UI component for critical errors
-const ErrorFallback = ({ message }: { message: string }) => (
-  <div className="flex min-h-screen items-center justify-center bg-gray-100">
-    <Card className="border-none shadow-md max-w-md w-full">
-      <CardHeader>
-        <CardTitle className="text-red-600">Erro</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-gray-600">{message}</p>
-        <Button
-          onClick={() => window.location.reload()}
-          className="mt-4 bg-purple-600 hover:bg-purple-700 text-white"
-        >
-          Tentar Novamente
-        </Button>
-      </CardContent>
-    </Card>
-  </div>
-);
 
 // Type guard for Supabase client
 function isSupabaseInitialized(
@@ -83,9 +63,7 @@ export default function MecanicaDashboard() {
   const [criticalError, setCriticalError] = useState<string | null>(null);
   const [mechanicRequests, setMechanicRequests] = useState<MechanicRequest[]>([]);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
+  
 
   // Handle logout
   const handleLogout = async () => {
@@ -240,60 +218,12 @@ export default function MecanicaDashboard() {
     };
   }, [supabase, user, userType, router]);
 
-  const handleStatusChange = async (requestId: string, newStatus: ServiceRequest['status']) => {
-    try {
-      const { error } = await supabase
-        .from('service_requests')
-        .update({ status: newStatus })
-        .eq('id', requestId);
+  
 
-      if (error) throw error;
+ 
 
-      setRequests(requests.map(request => 
-        request.id === requestId 
-          ? { ...request, status: newStatus }
-          : request
-      ));
-    } catch (error) {
-      console.error('Error updating request status:', error);
-    }
-  };
+ 
 
-  const handleViewDetails = (request: ServiceRequest) => {
-    setSelectedRequest(request);
-    setShowDetails(true);
-  };
-
-  const handleCloseDetails = () => {
-    setShowDetails(false);
-    setSelectedRequest(null);
-  };
-
-  const handleSubmitReview = async (requestId: string, review: { rating: number; comment: string }) => {
-    try {
-      const { error } = await supabase
-        .from('reviews')
-        .insert([
-          {
-            request_id: requestId,
-            rating: review.rating,
-            comment: review.comment
-          }
-        ]);
-
-      if (error) throw error;
-
-      toast.success('Avaliação enviada com sucesso!');
-    } catch (err) {
-      console.error('Error submitting review:', err);
-      toast.error('Erro ao enviar avaliação');
-    }
-  };
-
-  // Render fallback UI if critical error
-  if (criticalError) {
-    return <ErrorFallback message={criticalError} />;
-  }
 
   return (
     <div className="flex min-h-screen bg-gray-100 flex-col md:flex-row relative overflow-hidden">
