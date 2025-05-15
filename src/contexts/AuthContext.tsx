@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useSupabase } from "@/components/SupabaseProvider";
 import { toast } from "sonner";
 import { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
@@ -10,6 +10,7 @@ interface Profile {
   full_name: string;
   email: string;
   user_type: string;
+  phone: string;
 }
 
 interface AuthContextType {
@@ -21,6 +22,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, fullName: string, userType: string, phone: string) => Promise<void>;
   signOut: () => Promise<void>;
+  setAuth: (auth: { user: User; userNome: string; userType: string }) => void; // Added setAuth
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,31 +33,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string | null) => {
-    if (!userId || !supabase) return;
+  const fetchProfile = useCallback(
+    async (userId: string | null) => {
+      if (!userId || !supabase) return;
 
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, email, user_type")
-        .eq("id", userId)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, full_name, email, user_type, phone")
+          .eq("id", userId)
+          .single();
 
-      if (error) {
-        toast.error(`Erro ao buscar perfil: ${error.message}`, {
+        if (error) {
+          toast.error(`Erro ao buscar perfil: ${error.message}`, {
+            style: { backgroundColor: "#EF4444", color: "#ffffff" },
+          });
+          throw error;
+        }
+
+        setProfile(data as Profile);
+      } catch (error) {
+        console.error("Unexpected error in fetchProfile:", error);
+        toast.error("Erro inesperado ao carregar perfil.", {
           style: { backgroundColor: "#EF4444", color: "#ffffff" },
         });
-        throw error;
       }
-
-      setProfile(data as Profile);
-    } catch (error) {
-      console.error("Unexpected error in fetchProfile:", error);
-      toast.error("Erro inesperado ao carregar perfil.", {
-        style: { backgroundColor: "#EF4444", color: "#ffffff" },
-      });
-    }
-  };
+    },
+    [supabase]
+  );
 
   useEffect(() => {
     if (!supabase) {
@@ -87,7 +92,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Conexão com o banco de dados não está disponível.");
     }
 
-    // Validação de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       toast.error("Por favor, insira um email válido.", {
@@ -96,7 +100,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Email inválido.");
     }
 
-    // Validação de senha
     if (password.length < 6) {
       toast.error("A senha deve ter pelo menos 6 caracteres.", {
         style: { backgroundColor: "#EF4444", color: "#ffffff" },
@@ -129,7 +132,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Conexão com o banco de dados não está disponível.");
     }
 
-    // Validação de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       toast.error("Por favor, insira um email válido.", {
@@ -138,7 +140,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Email inválido.");
     }
 
-    // Validação de senha
     if (password.length < 6) {
       toast.error("A senha deve ter pelo menos 6 caracteres.", {
         style: { backgroundColor: "#EF4444", color: "#ffffff" },
@@ -146,7 +147,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Senha muito curta.");
     }
 
-    // Validação de nome
     if (!fullName.trim()) {
       toast.error("Por favor, insira um nome válido.", {
         style: { backgroundColor: "#EF4444", color: "#ffffff" },
@@ -154,7 +154,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Nome é obrigatório.");
     }
 
-    // Validação de tipo de usuário
     if (!["cliente", "mecanico", "guincho", "seguradora"].includes(userType)) {
       toast.error("Tipo de usuário inválido.", {
         style: { backgroundColor: "#EF4444", color: "#ffffff" },
@@ -162,7 +161,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Tipo de usuário inválido.");
     }
 
-    // Validação de telefone
     const phoneRegex = /^\+?\d{10,15}$/;
     if (!phoneRegex.test(phone)) {
       toast.error("Por favor, insira um número de telefone válido.", {
@@ -235,6 +233,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const setAuth = (auth: { user: User; userNome: string; userType: string }) => {
+    setUser(auth.user);
+    setProfile({
+      id: auth.user.id,
+      full_name: auth.userNome,
+      email: auth.user.email || "",
+      user_type: auth.userType,
+      phone: "", // Phone not provided in setAuth; adjust if needed
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -246,6 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signUp,
         signOut,
+        setAuth,
       }}
     >
       {loading ? (

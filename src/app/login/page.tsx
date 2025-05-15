@@ -2,18 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSupabase } from "@/components/SupabaseProvider";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Link from "next/link";
-import { useAuth } from "@/contexts/AuthContext";
 
 export default function Login() {
   const router = useRouter();
-  const { setAuth } = useAuth();
-  const supabase = useSupabase();
+  const { signIn, userType } = useAuth(); // Use signIn from AuthContext
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,79 +22,10 @@ export default function Login() {
     setLoading(true);
     setError(null);
 
-    // Validação de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast.error("Por favor, insira um email válido.", {
-        style: { backgroundColor: "#EF4444", color: "#ffffff" },
-      });
-      setError("Email inválido.");
-      setLoading(false);
-      return;
-    }
-
-    // Validação de senha
-    if (password.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres.", {
-        style: { backgroundColor: "#EF4444", color: "#ffffff" },
-      });
-      setError("Senha muito curta.");
-      setLoading(false);
-      return;
-    }
-
     try {
-      if (!supabase || !supabase.auth) {
-        throw new Error("Conexão com o banco de dados não está disponível.");
-      }
-
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (authError) {
-        toast.error(`Erro ao fazer login: ${authError.message}`, {
-          style: { backgroundColor: "#EF4444", color: "#ffffff" },
-        });
-        setError(authError.message);
-        return;
-      }
-
-      if (!data.user || !data.session) {
-        throw new Error("Falha no login: Usuário ou sessão não encontrados.");
-      }
-
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("user_type, full_name")
-        .eq("id", data.user.id)
-        .single();
-
-      if (profileError || !profileData) {
-        throw new Error(profileError ? `Erro ao buscar perfil: ${profileError.message}` : "Perfil do usuário não encontrado.");
-      }
-
-      const tipoUsuario = profileData.user_type.toLowerCase();
-      const nomeUsuario = profileData.full_name || data.user.email?.split("@")[0] || "Usuário";
-
-      setAuth({
-        user: data.user,
-        userNome: nomeUsuario,
-        userType: tipoUsuario,
-      });
-
-      const basePath = "/dashboard";
-      const redirectPath = tipoUsuario === "cliente" ? `${basePath}/cliente` : `${basePath}/${tipoUsuario}`;
-
-      if (["cliente", "mecanico", "guincho", "seguradora"].includes(tipoUsuario)) {
-        router.push(redirectPath);
-        toast.success(`Bem-vindo, ${nomeUsuario}!`, {
-          style: { backgroundColor: "#10B981", color: "#ffffff" },
-        });
-      } else {
-        throw new Error("Tipo de usuário desconhecido.");
-      }
+      await signIn(email, password);
+      const redirectPath = userType ? `/dashboard/${userType}` : "/dashboard/cliente";
+      router.push(redirectPath);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Erro desconhecido ao fazer login.";
       toast.error(errorMessage, {
