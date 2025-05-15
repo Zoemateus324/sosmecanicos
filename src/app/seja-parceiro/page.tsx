@@ -1,203 +1,213 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSupabase } from "@/components/SupabaseProvider";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-import Image from "next/image";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-// import { sendNotification } from "@/services/onesignal-notifications";
+interface MechanicRequest {
+  id: string;
+  user_id: string;
+  description: string;
+  status: string;
+  created_at: string;
+  vehicle: string;
+}
 
-export default function SejaParceiro() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    company: '',
-    type: '',
-    message: ''
-  });
-  
-  const [success, setSuccess] = useState(false);
+export default function MechanicDashboard() {
+  const { user, userNome, signOut } = useAuth();
+  const supabase = useSupabase();
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [criticalError, setCriticalError] = useState<string | null>(null);
+  const [mechanicRequests, setMechanicRequests] = useState<MechanicRequest[]>([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setSuccess(false);
+  useEffect(() => {
+    if (!user || !supabase) {
+      setCriticalError("Usuário não autenticado ou conexão com o banco de dados não disponível.");
+      setLoading(false);
+      return;
+    }
+
+    const fetchRequests = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("service_requests")
+          .select("id, user_id, description, status, created_at, vehicle")
+          .eq("assigned_mechanic_id", user.id)
+          .eq("status", "pending");
+
+        if (error) {
+          throw new Error(`Erro ao buscar solicitações: ${error.message}`);
+        }
+
+        setMechanicRequests(data || []);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Erro desconhecido ao carregar solicitações.";
+        toast.error(errorMessage, {
+          style: { backgroundColor: "#EF4444", color: "#ffffff" },
+        });
+        setCriticalError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRequests();
+  }, [user, supabase]);
+
+  const handleAcceptRequest = async (requestId: string) => {
+    if (!supabase) return;
 
     try {
-      // Simular envio do formulário
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSuccess(true);
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        company: '',
-        type: '',
-        message: ''
+      const { error } = await supabase
+        .from("service_requests")
+        .update({ status: "accepted" })
+        .eq("id", requestId);
+
+      if (error) {
+        throw new Error(`Erro ao aceitar solicitação: ${error.message}`);
+      }
+
+      setMechanicRequests((prev) =>
+        prev.map((req) => (req.id === requestId ? { ...req, status: "accepted" } : req))
+      );
+      toast.success("Solicitação aceita com sucesso!", {
+        style: { backgroundColor: "#10B981", color: "#ffffff" },
       });
     } catch (err) {
-      console.error('Error submitting form:', err);
-    } finally {
-      setLoading(false);
+      const errorMessage = err instanceof Error ? err.message : "Erro desconhecido ao aceitar solicitação.";
+      toast.error(errorMessage, {
+        style: { backgroundColor: "#EF4444", color: "#ffffff" },
+      });
     }
   };
 
+  const toggleSidebar = () => {
+    setIsSidebarOpen((prev) => !prev);
+  };
+
+  if (criticalError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-red-600">Erro Crítico</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-700">{criticalError}</p>
+            <Button
+              onClick={() => router.push("/login")}
+              className="mt-4 bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              Voltar ao Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center bg-gray-100"
+        aria-live="polite"
+        role="status"
+      >
+        <p className="text-lg font-medium text-gray-700">Carregando...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+    <div className="min-h-screen bg-gray-100 flex">
+      {/* Sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } md:relative md:translate-x-0 transition-transform duration-300 ease-in-out`}
+        aria-hidden={!isSidebarOpen}
+      >
+        <div className="p-4">
+          <h2 className="text-xl font-bold text-purple-700">SOS Mecânicos</h2>
+          <p className="mt-2 text-gray-600">Bem-vindo, {userNome || "Mecânico"}!</p>
+          <nav className="mt-4 space-y-2">
+            <Button
+              onClick={() => router.push("/dashboard/mecanica")}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              Minhas Solicitações
+            </Button>
+            <Button
+              onClick={() => router.push("/perfil")}
+              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700"
+            >
+              Perfil
+            </Button>
+            <Button
+              onClick={async () => {
+                await signOut();
+                router.push("/login");
+              }}
+              className="w-full bg-red-600 hover:bg-red-700 text-white"
+            >
+              Sair
+            </Button>
+          </nav>
+        </div>
+      </aside>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 pt-24 pb-16">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-center mb-12"
+      <main className="flex-1 p-4 md:p-8">
+        <Button
+          onClick={toggleSidebar}
+          className="md:hidden mb-4 bg-purple-600 hover:bg-purple-700 text-white"
+          aria-label={isSidebarOpen ? "Fechar menu" : "Abrir menu"}
         >
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-blue-900 mb-4">
-            Seja Nosso Parceiro
-          </h2>
-          <p className="text-base md:text-lg lg:text-xl text-gray-600">
-            Junte-se à rede SOS Mecânicos e expanda sua atuação como mecânico, guincho ou seguradora.
-          </p>
-        </motion.div>
-
-        {/* Benefits Section */}
-        <section className="bg-white p-4 md:p-8 rounded-lg shadow-lg mb-12 relative">
-          {/* Floating Elements */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.5 }}
-            className="absolute top-4 left-4 hidden md:block"
-          >
-            
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.7 }}
-            className="absolute bottom-4 right-4 hidden md:block"
-          >
-            
-          </motion.div>
-
-          <h3 className="text-xl md:text-2xl font-semibold text-blue-900 mb-6 md:mb-8 text-center">
-            Benefícios de Ser um Parceiro
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
-            {[
-              {
-                title: "Aumente Sua Clientela",
-                description: "Tenha acesso a milhares de motoristas que precisam dos seus serviços.",
-                icon: "/assets/clientele.svg",
-              },
-              {
-                title: "Plataforma Intuitiva",
-                description: "Gerencie solicitações e pagamentos de forma simples e segura.",
-                icon: "/assets/platform.svg",
-              },
-              {
-                title: "Suporte Dedicado",
-                description: "Nossa equipe está pronta para ajudar você a crescer no SOS Mecânicos.",
-                icon: "/assets/support.svg",
-              },
-            ].map((benefit, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.3 }}
-                className="text-center p-4 md:p-6 bg-gray-50 rounded-lg shadow-md hover:shadow-xl transition-shadow"
-              >
-                <Image
-                  src={benefit.icon}
-                  alt={benefit.title}
-                  width={50}
-                  height={50}
-                  className="mx-auto mb-4"
-                />
-                <h4 className="text-base md:text-lg font-semibold text-blue-900 mb-2">{benefit.title}</h4>
-                <p className="text-gray-600 text-sm md:text-base">{benefit.description}</p>
-              </motion.div>
-            ))}
-          </div>
-        </section>
-
-        {/* Partner Form Section */}
-        <section className="bg-white p-4 md:p-8 rounded-lg shadow-lg">
-          <h3 className="text-xl md:text-2xl font-semibold text-blue-900 mb-6 md:mb-8 text-center">
-            Envie Sua Solicitação
-          </h3>
-          <div className="space-y-4">
-            <input
-              type="text"
-              placeholder="Nome"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="border border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="border border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
-            />
-            <input
-              type="text"
-              placeholder="Telefone"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="border border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
-            />
-            <input
-              type="text"
-              placeholder="Empresa"
-              value={formData.company}
-              onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-              className="border border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
-            />
-            <select
-              value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-              className="border border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
-            >
-              <option value="">Selecione o tipo de parceiro</option>
-              <option value="mecanico">Mecânico</option>
-              <option value="guincho">Guincho</option>
-              <option value="seguradora">Seguradora</option>
-            </select>
-            <textarea
-              placeholder="Mensagem (fale sobre sua experiência e serviços)"
-              value={formData.message}
-              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-              className="border border-gray-300 p-3 w-full rounded-lg h-32 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
-            />
-            <button
-              onClick={handleSubmit}
-              className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white p-3 w-full rounded-lg font-semibold hover:from-orange-600 hover:to-yellow-600 transition-all text-base md:text-lg"
-            >
-              Enviar Solicitação
-            </button>
-            {success && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-green-600 text-center mt-4"
-              >
-                Solicitação enviada com sucesso! Entraremos em contato em breve.
-              </motion.p>
+          {isSidebarOpen ? "Fechar Menu" : "Abrir Menu"}
+        </Button>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-purple-700">
+              Solicitações Pendentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {mechanicRequests.length === 0 ? (
+              <p className="text-gray-600">Nenhuma solicitação pendente no momento.</p>
+            ) : (
+              <ul className="space-y-4">
+                {mechanicRequests.map((request) => (
+                  <li key={request.id} className="p-4 bg-white rounded-lg shadow">
+                    <p>
+                      <strong>Veículo:</strong> {request.vehicle}
+                    </p>
+                    <p>
+                      <strong>Descrição:</strong> {request.description}
+                    </p>
+                    <p>
+                      <strong>Criado em:</strong>{" "}
+                      {new Date(request.created_at).toLocaleDateString("pt-BR")}
+                    </p>
+                    <Button
+                      onClick={() => handleAcceptRequest(request.id)}
+                      className="mt-2 bg-green-600 hover:bg-green-700 text-white"
+                      disabled={request.status !== "pending"}
+                    >
+                      {request.status === "pending" ? "Aceitar Solicitação" : "Aceita"}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
             )}
-          </div>
-        </section>
-      </div>
-
-      <Footer />
+          </CardContent>
+        </Card>
+      </main>
     </div>
   );
 }
