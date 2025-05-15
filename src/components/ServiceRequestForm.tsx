@@ -1,11 +1,10 @@
-import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle, X, Upload } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
 import Image from 'next/image';
 
 // Tipos auxiliares
@@ -31,9 +30,7 @@ interface ServiceRequestFormData {
 interface ServiceRequestFormProps {
   vehicles: Vehicle[];
   onSubmit: (data: ServiceRequestFormData) => Promise<void>;
-  onSubmit: (data: any) => void;
   onCancel: () => void;
-  initialData?: any;
 }
 
 // Simulação de upload (substitua por sua integração real)
@@ -45,303 +42,153 @@ async function fakeUploadFile({ file }: { file: File }): Promise<{ file_url: str
   });
 }
 
-export default function ServiceRequestForm({ vehicles, onSubmit, onCancel, initialData }: ServiceRequestFormProps) {
-  const [formData, setFormData] = useState({
-    vehicle_id: "",
-    problem_description: "",
-    images: [] as string[],
-    videos: [] as string[],
-    location: "",
-    needs_tow: false
+export default function ServiceRequestForm({ vehicles, onSubmit, onCancel }: ServiceRequestFormProps) {
+  const [formData, setFormData] = useState<ServiceRequestFormData>({
+    serviceType: '',
+    vehicleType: '',
+    problemDescription: '',
+    location: {
+      lat: 0,
+      lng: 0
+    },
+    images: []
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [errors, setErrors] = useState<{ [key: string]: string | null }>({});
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
-
-  useEffect(() => {
-    if (initialData) setFormData({
-      vehicle_id: initialData.vehicle_id || "",
-      problem_description: initialData.problem_description || "",
-      images: initialData.images || [],
-      videos: initialData.videos || [],
-      location: initialData.location || "",
-      needs_tow: initialData.needs_tow || false
-    });
-  }, [initialData]);
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" ? checked : value
-    });
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: null });
-    }
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData({ ...formData, [name]: value });
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: null });
-    }
-  };
-
-  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-    setUploading(true);
-    const uploadPromises = files.map(async (file) => {
-      try {
-        setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }));
-        const progressInterval = setInterval(() => {
-          setUploadProgress((prev) => ({
-            ...prev,
-            [file.name]: Math.min(95, (prev[file.name] || 0) + 5)
-          }));
-        }, 100);
-        // Substitua fakeUploadFile por sua função real de upload
-        const { file_url } = await fakeUploadFile({ file });
-        clearInterval(progressInterval);
-        setUploadProgress((prev) => ({ ...prev, [file.name]: 100 }));
-        const isImage = file.type.startsWith('image/');
-        const isVideo = file.type.startsWith('video/');
-        if (isImage) {
-          setFormData((prev) => ({ ...prev, images: [...prev.images, file_url] }));
-        } else if (isVideo) {
-          setFormData((prev) => ({ ...prev, videos: [...prev.videos, file_url] }));
-        }
-        return file_url;
-      } catch (error) {
-        console.error(`Erro ao fazer upload do arquivo ${file.name}:`, error);
-        return null;
-      }
-    });
-    await Promise.all(uploadPromises);
-    setUploading(false);
-  };
-
-  const removeFile = (url: string, type: "images" | "videos") => {
-    setFormData((prev) => ({ ...prev, [type]: prev[type].filter((fileUrl: string) => fileUrl !== url) }));
-  };
-
-  const validate = () => {
-    const newErrors: { [key: string]: string } = {};
-    if (!formData.vehicle_id) {
-      newErrors.vehicle_id = "Selecione um veículo";
-    }
-    if (!formData.problem_description || formData.problem_description.trim().length < 10) {
-      newErrors.problem_description = "Descrição do problema deve ter pelo menos 10 caracteres";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) {
-      onSubmit(formData);
+    setLoading(true);
+    setError(null);
+
+    try {
+      await onSubmit(formData);
+    } catch (err) {
+      console.error('Error submitting form:', err);
+      setError('Erro ao enviar formulário');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFormData(prev => ({
+        ...prev,
+        images: Array.from(e.target.files!)
+      }));
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 py-2">
-      <div className="space-y-2">
-        <Label htmlFor="vehicle_id">
-          Veículo <span className="text-red-500">*</span>
-        </Label>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="serviceType">Tipo de Serviço</Label>
         <Select
-          value={formData.vehicle_id}
-          onValueChange={(value) => handleSelectChange("vehicle_id", value)}
+          value={formData.serviceType}
+          onValueChange={(value) => setFormData(prev => ({ ...prev, serviceType: value }))}
         >
-          <SelectTrigger className={errors.vehicle_id ? "border-red-500" : ""}>
-            <SelectValue placeholder="Selecione um veículo" />
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o tipo de serviço" />
           </SelectTrigger>
           <SelectContent>
-            {vehicles.map((vehicle) => (
-              <SelectItem key={vehicle.id} value={vehicle.id}>
-                {vehicle.marca} • {vehicle.placa}
-              </SelectItem>
-            ))}
+            <SelectItem value="guincho">Guincho</SelectItem>
+            <SelectItem value="mecanica">Mecânica</SelectItem>
+            <SelectItem value="pneu">Troca de Pneu</SelectItem>
           </SelectContent>
         </Select>
-        {errors.vehicle_id && (
-          <p className="text-sm text-red-500">{errors.vehicle_id}</p>
-        )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="problem_description">
-          Descrição do Problema <span className="text-red-500">*</span>
-        </Label>
-        <Textarea
-          id="problem_description"
-          name="problem_description"
-          value={formData.problem_description}
-          onChange={handleChange}
-          placeholder="Descreva em detalhes o problema que está enfrentando..."
-          rows={4}
-          className={errors.problem_description ? "border-red-500" : ""}
-        />
-        {errors.problem_description ? (
-          <p className="text-sm text-red-500">{errors.problem_description}</p>
-        ) : (
-          <p className="text-sm text-gray-500">
-            Quanto mais detalhes você fornecer, mais fácil será para o mecânico entender o problema.
-          </p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="location">
-          Localização
-        </Label>
+      <div>
+        <Label htmlFor="vehicleType">Tipo de Veículo</Label>
         <Input
-          id="location"
-          name="location"
-          value={formData.location}
-          onChange={handleChange}
-          placeholder="Ex: Rua Exemplo, 123 - Bairro, Cidade"
+          id="vehicleType"
+          type="text"
+          value={formData.vehicleType}
+          onChange={(e) => setFormData(prev => ({ ...prev, vehicleType: e.target.value }))}
+          required
         />
-        <p className="text-sm text-gray-500">
-          Forneça sua localização para atendimento local (opcional).
-        </p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="file_upload">
-          Upload de Imagens/Vídeos
-        </Label>
-        <div className="border-2 border-dashed rounded-md p-4 text-center">
+      <div>
+        <Label htmlFor="problemDescription">Descrição do Problema</Label>
+        <Textarea
+          id="problemDescription"
+          value={formData.problemDescription}
+          onChange={(e) => setFormData(prev => ({ ...prev, problemDescription: e.target.value }))}
+          required
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="location">Localização</Label>
+        <div className="grid grid-cols-2 gap-4">
           <Input
-            id="file_upload"
-            type="file"
-            multiple
-            accept="image/*,video/*"
-            onChange={handleFileChange}
-            disabled={uploading}
-            className="hidden"
+            type="number"
+            value={formData.location.lat}
+            onChange={(e) => setFormData(prev => ({
+              ...prev,
+              location: { ...prev.location, lat: Number(e.target.value) }
+            }))}
+            placeholder="Latitude"
+            required
           />
-          <label htmlFor="file_upload" className="cursor-pointer flex flex-col items-center">
-            {uploading ? (
-              <span className="h-10 w-10 animate-spin inline-block border-4 border-current border-t-transparent text-blue-600 rounded-full mb-2"></span>
-            ) : (
-              <Upload className="h-10 w-10 text-blue-500 mb-2" />
-            )}
-            <span className="text-sm font-medium text-blue-600">Clique para selecionar</span>
-            <span className="text-xs text-gray-500 mt-1">Ou arraste arquivos aqui</span>
-          </label>
+          <Input
+            type="number"
+            value={formData.location.lng}
+            onChange={(e) => setFormData(prev => ({
+              ...prev,
+              location: { ...prev.location, lng: Number(e.target.value) }
+            }))}
+            placeholder="Longitude"
+            required
+          />
         </div>
-        <p className="text-sm text-gray-500">
-          Adicione fotos ou vídeos do problema para ajudar o mecânico a diagnosticar.
-        </p>
       </div>
 
-      {(formData.images.length > 0 || formData.videos.length > 0) && (
-        <div className="border rounded-md p-3">
-          <h4 className="font-medium mb-2">Arquivos carregados</h4>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {formData.images.map((url, index) => (
-              <div key={`img-${index}`} className="relative group">
+      <div>
+        <Label htmlFor="images">Imagens</Label>
+        <Input
+          type="file"
+          id="images"
+          multiple
+          accept="image/*"
+          onChange={handleImageChange}
+        />
+        {formData.images.length > 0 && (
+          <div className="mt-2 grid grid-cols-2 gap-4">
+            {formData.images.map((file, index) => (
+              <div key={index} className="relative aspect-square">
                 <img
-                  src={url}
-                  alt={`Imagem ${index + 1}`}
-                  className="h-20 w-full object-cover rounded border"
+                  src={URL.createObjectURL(file)}
+                  alt={`Preview ${index + 1}`}
+                  className="object-cover rounded-md w-full h-full"
                 />
-                <button
-                  type="button"
-                  onClick={() => removeFile(url, 'images')}
-                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-            {formData.videos.map((url, index) => (
-              <div key={`vid-${index}`} className="relative group">
-                <div className="h-20 w-full border rounded flex items-center justify-center bg-gray-100">
-                  <video
-                    src={url}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeFile(url, 'videos')}
-                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X className="h-3 w-3" />
-                </button>
               </div>
             ))}
           </div>
+        )}
+      </div>
+
+      {error && (
+        <div className="text-red-600 text-sm">
+          {error}
         </div>
       )}
 
-      {uploading && Object.keys(uploadProgress).map((fileName) => (
-        <div key={fileName} className="flex items-center gap-2">
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div
-              className="bg-blue-600 h-2.5 rounded-full"
-              style={{ width: `${uploadProgress[fileName]}%` }}
-            ></div>
-          </div>
-          <span className="text-xs whitespace-nowrap">
-            {uploadProgress[fileName] < 100 ? (
-              `${uploadProgress[fileName]}%`
-            ) : (
-              <CheckCircle className="h-4 w-4 text-green-500" />
-            )}
-          </span>
-        </div>
-      ))}
-
-      <div className="flex items-start space-x-2 pt-2">
-        <Checkbox
-          id="needs_tow"
-          name="needs_tow"
-          checked={formData.needs_tow}
-          onCheckedChange={(checked: boolean) => {
-            setFormData((prev) => ({
-              ...prev,
-              needs_tow: checked
-            }));
-          }}
-        />
-        <div className="grid gap-1.5 leading-none">
-          <label
-            htmlFor="needs_tow"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-          >
-            Necessito de serviço de guincho
-          </label>
-          <p className="text-sm text-gray-500">
-            Marque esta opção se o veículo não pode se locomover.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex justify-end gap-3 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
+      <div className="flex justify-end gap-4">
+        <Button
+          type="button"
+          onClick={onCancel}
+          variant="outline"
+        >
           Cancelar
         </Button>
         <Button
           type="submit"
-          className="bg-blue-600 hover:bg-blue-700"
-          disabled={uploading}
+          disabled={loading}
         >
-          {uploading ? (
-            <>
-              <span className="mr-2 h-4 w-4 animate-spin inline-block border-2 border-current border-t-transparent text-white rounded-full"></span>
-              Carregando...
-            </>
-          ) : (
-            <>
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Enviar Solicitação
-            </>
-          )}
+          {loading ? 'Enviando...' : 'Enviar Solicitação'}
         </Button>
       </div>
     </form>
