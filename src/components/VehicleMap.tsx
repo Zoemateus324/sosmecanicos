@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useMap } from 'react-leaflet';
 import type { Map } from 'leaflet';
+import { Loader } from "@googlemaps/js-api-loader";
 
 interface Mechanic {
   id: string;
@@ -14,10 +15,21 @@ interface Mechanic {
   distance: number;
 }
 
+interface Location {
+  lat: number;
+  lng: number;
+}
+
 interface VehicleMapProps {
   isDialogOpen: boolean;
   userPosition: [number, number] | null;
   mechanics: Mechanic[];
+  center: Location;
+  markers: Array<{
+    position: Location;
+    title: string;
+  }>;
+  onMarkerClick?: (marker: { position: Location; title: string }) => void;
 }
 
 const MapUpdater: React.FC<{
@@ -50,31 +62,71 @@ const Popup = dynamic(() => import('react-leaflet').then((mod) => mod.Popup), {
   ssr: false,
 });
 
-const VehicleMap: React.FC<VehicleMapProps> = ({ isDialogOpen, userPosition, mechanics }) => {
-  const mapRef = useRef<Map | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+const VehicleMap: React.FC<VehicleMapProps> = ({ isDialogOpen, userPosition, mechanics, center, markers, onMarkerClick }) => {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    import('leaflet').then((L) => {
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    const initMap = async () => {
+      const loader = new Loader({
+        apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+        version: "weekly",
       });
-    });
-  },[]);
 
-  useEffect(() => {
-    return () => {
-      if (mapRef.current && containerRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
+      try {
+        await loader.load();
+        if (mapRef.current && !mapInstanceRef.current) {
+          const map = new google.maps.Map(mapRef.current, {
+            center,
+            zoom: 13,
+            styles: [
+              {
+                featureType: "poi",
+                elementType: "labels",
+                stylers: [{ visibility: "off" }],
+              },
+            ],
+          });
+
+          mapInstanceRef.current = map;
+        }
+      } catch (error) {
+        console.error("Error loading Google Maps:", error);
       }
     };
-  }, []);
+
+    initMap();
+  }, [center]);
+
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    // Clear existing markers
+    markersRef.current.forEach((marker) => marker.setMap(null));
+    markersRef.current = [];
+
+    // Add new markers
+    markers.forEach((markerData) => {
+      const marker = new google.maps.Marker({
+        position: markerData.position,
+        map: mapInstanceRef.current,
+        title: markerData.title,
+      });
+
+      if (onMarkerClick) {
+        marker.addListener("click", () => onMarkerClick(markerData));
+      }
+
+      markersRef.current.push(marker);
+    });
+
+    // Cleanup function
+    return () => {
+      const currentMarkers = markersRef.current;
+      currentMarkers.forEach((marker) => marker.setMap(null));
+    };
+  }, [markers, onMarkerClick]);
 
   if (typeof window === 'undefined') {
     return null;
@@ -84,43 +136,10 @@ const VehicleMap: React.FC<VehicleMapProps> = ({ isDialogOpen, userPosition, mec
   const center = userPosition || defaultCenter;
 
   return (
-    <div ref={containerRef}>
-      <MapContainer
-        center={center}
-        zoom={13}
-        scrollWheelZoom={false}
-        style={{ height: '400px', width: '100%' }}
-        id="leaflet-map"
-        className="leaflet-container"
-        ref={(map) => {
-          if (map) {
-            mapRef.current = map;
-          }
-          if (isDialogOpen && mapRef.current) {
-            mapRef.current.invalidateSize();
-          }
-        }}
-      >
-        <TileLayer
-          attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <MapUpdater userPosition={userPosition} mechanics={mechanics} />
-        {userPosition && (
-          <Marker position={userPosition}>
-            <Popup>Você está aqui</Popup>
-          </Marker>
-        )}
-        {mechanics.map((mechanic) => (
-          <Marker key={mechanic.id} position={mechanic.position}>
-            <Popup>
-              {mechanic.nome} <br />
-              Distância: {mechanic.distance.toFixed(2)} km
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
-    </div>
+    <div
+      ref={mapRef}
+      className="w-full h-[400px] rounded-lg shadow-md"
+    />
   );
 };
 

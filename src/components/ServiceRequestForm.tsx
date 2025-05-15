@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, X, Upload } from "lucide-react";
 import Image from 'next/image';
 
 // Tipos auxiliares
@@ -42,7 +41,7 @@ async function fakeUploadFile({ file }: { file: File }): Promise<{ file_url: str
   });
 }
 
-export default function ServiceRequestForm({ vehicles, onSubmit, onCancel }: ServiceRequestFormProps) {
+export default function ServiceRequestForm({ onSubmit, onCancel }: ServiceRequestFormProps) {
   const [formData, setFormData] = useState<ServiceRequestFormData>({
     serviceType: '',
     vehicleType: '',
@@ -159,10 +158,11 @@ export default function ServiceRequestForm({ vehicles, onSubmit, onCancel }: Ser
           <div className="mt-2 grid grid-cols-2 gap-4">
             {formData.images.map((file, index) => (
               <div key={index} className="relative aspect-square">
-                <img
+                <Image
                   src={URL.createObjectURL(file)}
                   alt={`Preview ${index + 1}`}
-                  className="object-cover rounded-md w-full h-full"
+                  fill
+                  className="object-cover rounded-md"
                 />
               </div>
             ))}

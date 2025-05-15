@@ -46,12 +46,9 @@ export default function ServiceRequestPage() {
   const [showForm, setShowForm] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmitRequest = async (data: ServiceRequestFormData) => {
-    setLoading(true);
-    setError(null);
     try {
       // TODO: Implement API call to create service request
       console.log("Submitting request:", data);
@@ -59,56 +56,40 @@ export default function ServiceRequestPage() {
     } catch (err) {
       console.error("Error submitting request:", err);
       setError("Erro ao enviar solicitação");
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleAcceptRequest = async (requestId: string) => {
-    setLoading(true);
-    setError(null);
     try {
       // TODO: Implement API call to accept request
       console.log("Accepting request:", requestId);
     } catch (err) {
       console.error("Error accepting request:", err);
       setError("Erro ao aceitar solicitação");
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleRejectRequest = async (requestId: string) => {
-    setLoading(true);
-    setError(null);
     try {
       // TODO: Implement API call to reject request
       console.log("Rejecting request:", requestId);
     } catch (err) {
       console.error("Error rejecting request:", err);
       setError("Erro ao rejeitar solicitação");
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleCompleteRequest = async (requestId: string) => {
-    setLoading(true);
-    setError(null);
     try {
       // TODO: Implement API call to complete request
       console.log("Completing request:", requestId);
     } catch (err) {
       console.error("Error completing request:", err);
       setError("Erro ao concluir solicitação");
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleSubmitReview = async (requestId: string, review: Review) => {
-    setLoading(true);
-    setError(null);
     try {
       // TODO: Implement API call to submit review
       console.log("Submitting review for request:", requestId, review);
@@ -116,8 +97,6 @@ export default function ServiceRequestPage() {
     } catch (err) {
       console.error("Error submitting review:", err);
       setError("Erro ao enviar avaliação");
-    } finally {
-      setLoading(false);
     }
   };
 
