@@ -1,25 +1,14 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-import { Database } from '@/types/database.types'
+import { createClient } from "@supabase/supabase-js";
 
-export async function createClient() {
-  const cookieStore = await cookies()
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: { path: string; maxAge: number; domain?: string }) {
-          cookieStore.set({ name, value, ...options });
-        },
-        remove(name: string, options: { path: string; domain?: string }) {
-          cookieStore.set({ name, value: '', ...options });
-        },
-      },
-    }
-  );
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Missing Supabase environment variables. Please check your .env.local file.');
 }
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export const createSupabaseClient = (url: string, key: string) => {
+  return createClient(url, key);
+};

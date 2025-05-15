@@ -1,64 +1,49 @@
+// Define a Json type compatible with Supabase
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json }
+  | Json[];
+
 export type Database = {
   public: {
     Tables: {
-      users: {
+      profiles: {
+       
+Row: {
+          id: string;
+          full_name: string;
+          email: string;
+          user_type: string;
+          phone: string;
+          created_at: string;
+        };
+      };
+      service_requests: {
         Row: {
-          id: string
-          nome: string
-          email: string
-          telefone: string
-          user_type: string
-          created_at?: string
-        }
-        Insert: {
-          id: string
-          nome: string
-          email: string
-          telefone: string
-          user_type: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          nome?: string
-          email?: string
-          telefone?: string
-          user_type?: string
-          created_at?: string
-        }
-      }
-      tow_requests: {
+          id: string;
+          user_id: string;
+          service_type: string;
+          description: string;
+          location: Json;
+          vehicle_info: Json;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+      };
+      reviews: {
         Row: {
-          id: string
-          origin: string
-          destination: string
-          created_at: string
-          cliente_id: string
-          status: string
-          guincho_id: string | null
-          valor: number | null
-        }
-        Insert: {
-          id?: string
-          origin: string
-          destination: string
-          created_at?: string
-          cliente_id: string
-          status?: string
-          guincho_id?: string | null
-          valor?: number | null
-        }
-        Update: {
-          id?: string
-          origin?: string
-          destination?: string
-          created_at?: string
-          cliente_id?: string
-          status?: string
-          guincho_id?: string | null
-          valor?: number | null
-        }
-      }
-    }
-  }
-}
+          id: string;
+          request_id: string;
+          user_id: string;
+          rating: number;
+          comment: string | null;
+          created_at: string;
+        };
+      };
+    };
+  };
+};
