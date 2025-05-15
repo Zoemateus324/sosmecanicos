@@ -81,7 +81,7 @@ export default function Cadastro() {
       setTimeout(() => {
         router.push("/login");
       }, 2000);
-    } catch (err: any) {
+    } catch (err: string) {
       setError(err.message || "Erro ao realizar cadastro");
     } finally {
       setLoading(false);

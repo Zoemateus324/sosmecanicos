@@ -60,10 +60,9 @@ export default function MecanicaDashboard() {
   const supabase = useSupabase();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [criticalError, setCriticalError] = useState<string | null>(null);
-  const [mechanicRequests, setMechanicRequests] = useState<MechanicRequest[]>([]);
-  const [requests, setRequests] = useState<ServiceRequest[]>([]);
   
+  const [mechanicRequests, setMechanicRequests] = useState<MechanicRequest[]>([]);
+
 
   // Handle logout
   const handleLogout = async () => {
@@ -196,9 +195,7 @@ export default function MecanicaDashboard() {
         if (user && userType === 'mecanico') {
           await fetchMechanicRequests();
         }
-      } catch (err: any) {
-        console.error('Critical error:', err.message);
-        setCriticalError('Ocorreu um erro ao carregar os dados. Por favor, tente novamente mais tarde.');
+        
       } finally {
         setLoading(false);
       }
