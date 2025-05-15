@@ -32,15 +32,6 @@ interface ServiceRequestFormProps {
   onCancel: () => void;
 }
 
-// Simulação de upload (substitua por sua integração real)
-async function fakeUploadFile({ file }: { file: File }): Promise<{ file_url: string }> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({ file_url: URL.createObjectURL(file) });
-    }, 1000);
-  });
-}
-
 export default function ServiceRequestForm({ onSubmit, onCancel }: ServiceRequestFormProps) {
   const [formData, setFormData] = useState<ServiceRequestFormData>({
     serviceType: '',

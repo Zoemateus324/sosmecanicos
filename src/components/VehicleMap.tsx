@@ -1,19 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import dynamic from 'next/dynamic';
-import { useMap } from 'react-leaflet';
-import type { Map } from 'leaflet';
 import { Loader } from "@googlemaps/js-api-loader";
-
-interface Mechanic {
-  id: string;
-  nome: string;
-  latitude: number;
-  longitude: number;
-  position: [number, number];
-  distance: number;
-}
 
 interface Location {
   lat: number;
@@ -21,9 +9,6 @@ interface Location {
 }
 
 interface VehicleMapProps {
-  isDialogOpen: boolean;
-  userPosition: [number, number] | null;
-  mechanics: Mechanic[];
   center: Location;
   markers: Array<{
     position: Location;
@@ -32,37 +17,7 @@ interface VehicleMapProps {
   onMarkerClick?: (marker: { position: Location; title: string }) => void;
 }
 
-const MapUpdater: React.FC<{
-  userPosition: [number, number] | null;
-  mechanics: Mechanic[];
-}> = ({ userPosition }) => {
-  const map = useMap();
-
-  useEffect(() => {
-    if (userPosition) {
-      map.setView(userPosition, 13);
-    } else {
-      map.setView([-23.5505, -46.6333], 13);
-    }
-  }, [userPosition, map]);
-
-  return null;
-};
-
-const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.MapContainer), {
-  ssr: false,
-});
-const TileLayer = dynamic(() => import('react-leaflet').then((mod) => mod.TileLayer), {
-  ssr: false,
-});
-const Marker = dynamic(() => import('react-leaflet').then((mod) => mod.Marker), {
-  ssr: false,
-});
-const Popup = dynamic(() => import('react-leaflet').then((mod) => mod.Popup), {
-  ssr: false,
-});
-
-const VehicleMap: React.FC<VehicleMapProps> = ({ isDialogOpen, userPosition, mechanics, center, markers, onMarkerClick }) => {
+const VehicleMap: React.FC<VehicleMapProps> = ({ center, markers, onMarkerClick }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
@@ -131,9 +86,6 @@ const VehicleMap: React.FC<VehicleMapProps> = ({ isDialogOpen, userPosition, mec
   if (typeof window === 'undefined') {
     return null;
   }
-
-  const defaultCenter: [number, number] = [-23.5505, -46.6333];
-  const center = userPosition || defaultCenter;
 
   return (
     <div
