@@ -17,6 +17,8 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  userNome: string | null;
+  userType: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string, userType: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -28,6 +30,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userNome, setUserNome] = useState<string | null>(null);
+  const [userType, setUserType] = useState<string | null>(null);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -42,6 +46,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setProfile(data as Profile);
+      setUserNome(data.name);
+      setUserType(data.user_type);
     } catch (error) {
       console.error("Error fetching profile:", error);
     }
@@ -56,6 +62,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setUser(null);
           setProfile(null);
+          setUserNome(null);
+          setUserType(null);
         }
         setLoading(false);
       }
@@ -131,6 +139,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         profile,
         loading,
+        userNome,
+        userType,
         signIn,
         signUp,
         signOut,

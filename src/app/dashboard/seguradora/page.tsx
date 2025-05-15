@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User } from "@supabase/supabase-js";
 import { toast } from "react-hot-toast";
+import { useAuth } from '@/contexts/AuthContext';
+import { ServiceRequest } from '@/types/service-request';
 
 type InsuranceQuote = {
   id: string;
@@ -21,25 +23,8 @@ type UserData = {
   tipo_usuario: string;
 };
 
-interface ServiceRequest {
-  id: string;
-  status: string;
-  created_at: string;
-  user: {
-    name: string;
-    email: string;
-  };
-  vehicle: {
-    model: string;
-    plate: string;
-  };
-  location: {
-    lat: number;
-    lng: number;
-  };
-}
-
 export default function SeguradoraDashboard() {
+  const { user } = useAuth();
   const [userType, setUserType] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<InsuranceQuote[]>([]);
@@ -207,6 +192,10 @@ export default function SeguradoraDashboard() {
       toast.error('Erro ao enviar avaliação');
     }
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="flex h-screen bg-gray-100">

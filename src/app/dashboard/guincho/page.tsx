@@ -32,26 +32,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-
-interface ServiceRequest {
-  id: string;
-  status: string;
-  created_at: string;
-  user: {
-    name: string;
-    email: string;
-  };
-  vehicle: {
-    model: string;
-    plate: string;
-  };
-  location: {
-    lat: number;
-    lng: number;
-  };
-}
+import { useAuth } from '@/contexts/AuthContext';
+import { ServiceRequest } from '@/types/service-request';
 
 export default function GuinchoDashboard() {
+  const { user } = useAuth();
   const [userType, setUserType] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -158,8 +143,10 @@ export default function GuinchoDashboard() {
       }
     };
 
-    fetchUserData();
-  }, [router, filterStatus]);
+    if (user) {
+      fetchUserData();
+    }
+  }, [user, router, filterStatus]);
 
   const handleAcceptRequest = async (requestId: string) => {
     try {
@@ -202,7 +189,7 @@ export default function GuinchoDashboard() {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  const handleStatusChange = async (requestId: string, newStatus: string) => {
+  const handleStatusChange = async (requestId: string, newStatus: ServiceRequest['status']) => {
     try {
       const { error } = await supabase
         .from('service_requests')
@@ -216,9 +203,8 @@ export default function GuinchoDashboard() {
           ? { ...request, status: newStatus }
           : request
       ));
-    } catch (err) {
-      console.error('Error updating status:', err);
-      toast.error('Erro ao atualizar status');
+    } catch (error) {
+      console.error('Error updating request status:', error);
     }
   };
 
@@ -252,6 +238,10 @@ export default function GuinchoDashboard() {
       toast.error('Erro ao enviar avaliação');
     }
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">

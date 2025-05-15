@@ -25,6 +25,8 @@ import {
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { ServiceRequest } from '@/types/service-request';
+import { supabase } from '@/lib/supabase/client';
 
 // Define interfaces
 interface MechanicRequest {
@@ -45,24 +47,6 @@ interface Vehicle {
   modelo: string;
   placa: string;
   ano: number;
-}
-
-interface ServiceRequest {
-  id: string;
-  status: string;
-  created_at: string;
-  user: {
-    name: string;
-    email: string;
-  };
-  vehicle: {
-    model: string;
-    plate: string;
-  };
-  location: {
-    lat: number;
-    lng: number;
-  };
 }
 
 // Fallback UI component for critical errors
@@ -263,7 +247,7 @@ export default function MecanicaDashboard() {
     };
   }, [supabase, user, userType, router]);
 
-  const handleStatusChange = async (requestId: string, newStatus: string) => {
+  const handleStatusChange = async (requestId: string, newStatus: ServiceRequest['status']) => {
     try {
       const { error } = await supabase
         .from('service_requests')
@@ -277,9 +261,8 @@ export default function MecanicaDashboard() {
           ? { ...request, status: newStatus }
           : request
       ));
-    } catch (err) {
-      console.error('Error updating status:', err);
-      toast.error('Erro ao atualizar status');
+    } catch (error) {
+      console.error('Error updating request status:', error);
     }
   };
 

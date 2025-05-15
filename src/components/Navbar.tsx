@@ -1,63 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { cn } from "@/lib/utils";
-import  { useSupabase } from "@/components/SupabaseProvider";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
-
-const menus = {
-  cliente: [
-    { name: "Dashboard", href: "/dashboard/cliente" },
-    { name: "Meus Veículos", href: "/veiculos" },
-    { name: "Solicitar Serviço", href: "/solicitar" },
-    { name: "Meus Pedidos", href: "/pedidos" },
-    { name: "Perfil", href: "/perfil" },
-  ],
-  mecanico: [
-    { name: "Dashboard", href: "/dashboard" },
-    { name: "Solicitações", href: "/solicitacoes" },
-    { name: "Meus Serviços", href: "/servicos" },
-    { name: "Conta", href: "/conta" },
-  ],
-  guincho: [
-    { name: "Dashboard", href: "/dashboard" },
-    { name: "Serviços por km", href: "/servicos-km" },
-    { name: "Solicitações", href: "/solicitacoes" },
-    { name: "Perfil", href: "/perfil" },
-  ],
-  seguradora: [
-    { name: "Dashboard", href: "/dashboard" },
-    { name: "Planos", href: "/planos" },
-    { name: "Clientes", href: "/clientes" },
-    { name: "Solicitações", href: "/solicitacoes" },
-  ],
-};
-
-interface User {
-  id: string;
-  email?: string;
-  user_metadata: {
-    name?: string;
-  };
-}
+import { useState } from "react";
 
 export default function Navbar() {
-  const supabase = useSupabase();
   const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [userState, setUserState] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
-
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
 
   const handleSignOut = async () => {
     try {
@@ -66,34 +17,6 @@ export default function Navbar() {
       console.error("Error signing out:", error);
     }
   };
-
-  useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          setUserState({
-            id: user.id,
-            email: user.email,
-            user_metadata: user.user_metadata
-          });
-        }
-      } catch (err) {
-        console.error('Error checking user:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkUser();
-  }, []);
-
-  useEffect(() => {
-    // Optional: Add any side effects, e.g., redirect if not authenticated
-    if (!user) {
-      setIsMenuOpen(false);
-    }
-  }, [user]);
 
   return (
     <nav className="bg-white shadow-md">
