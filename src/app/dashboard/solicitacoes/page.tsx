@@ -1,30 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupabase } from '@/components/SupabaseProvider';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { motion } from 'framer-motion';
+
+
 import { toast } from 'sonner';
 import { SupabaseClient } from '@supabase/supabase-js';
+import ServiceRequestDetails from '@/components/ServiceRequestDetails';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Sidebar } from '@/components/sidebar/Sidebar';
 
 // Define interfaces
 interface MechanicRequest {
@@ -44,7 +37,6 @@ interface Guincho {
   user_id: string;
   vehicle_id: string;
   origin: string;
-  destination: string;
   observations: string;
   status: string;
   created_at: string;
@@ -59,10 +51,6 @@ interface Vehicle {
   ano: number;
 }
 
-interface AuthUser {
-  id: string;
-  email?: string;
-}
 
 // Fallback UI component for critical errors
 const ErrorFallback = ({ message }: { message: string }) => (
@@ -92,19 +80,20 @@ function isSupabaseInitialized(
 }
 
 export default function SolicitacoesDashboard() {
-  const { user, userNome } = useAuth();
+  const { user } = useAuth();
   const supabase = useSupabase();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [criticalError, setCriticalError] = useState<string | null>(null);
   const [mechanicRequests, setMechanicRequests] = useState<MechanicRequest[]>([]);
   const [guinchos, setGuinchos] = useState<Guincho[]>([]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // Removed unused state variable 'isSidebarOpen'
+  const [search, setSearch] = useState("");
+  const [tab, setTab] = useState("todas");
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<(MechanicRequest | Guincho) | null>(null);
 
-  // Toggle sidebar visibility
-  const toggleSidebar = () => {
-    setIsSidebarOpen((prev) => !prev);
-  };
+  // Removed unused toggleSidebar function
 
   // Handle logout
   const handleLogout = async () => {
@@ -125,7 +114,7 @@ export default function SolicitacoesDashboard() {
   };
 
   // Fetch mechanic requests and tow requests
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     if (!isSupabaseInitialized(supabase)) {
       toast.warning('Não foi possível carregar solicitações: conexão com o banco de dados não está disponível', {
         style: { backgroundColor: '#FBBF24', color: '#ffffff' },
@@ -186,7 +175,6 @@ export default function SolicitacoesDashboard() {
         user_id,
         vehicle_id,
         origin,
-        destination,
         observations,
         status,
         created_at,
@@ -216,10 +204,10 @@ export default function SolicitacoesDashboard() {
         })) || []
       );
     }
-  };
+  }, [supabase, user]);
 
   // Check user logged in
-  const checkUserLoggedIn = async () => {
+  const checkUserLoggedIn = useCallback(async () => {
     if (!isSupabaseInitialized(supabase)) {
       throw new Error('Supabase client is not initialized');
     }
@@ -231,7 +219,7 @@ export default function SolicitacoesDashboard() {
     if (!data.session) {
       router.push('/login');
     }
-  };
+  }, [supabase, router]);
 
   // Combined useEffect for data fetching
   useEffect(() => {
@@ -250,8 +238,12 @@ export default function SolicitacoesDashboard() {
         if (user) {
           await fetchRequests();
         }
-      } catch (err: any) {
-        console.error('Critical error:', err.message);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          console.error('Critical error:', err.message);
+        } else {
+          console.error('Critical error:', err);
+        }
         setCriticalError('Ocorreu um erro ao carregar os dados. Por favor, tente novamente mais tarde.');
       } finally {
         setLoading(false);
@@ -270,19 +262,67 @@ export default function SolicitacoesDashboard() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [supabase, user, router]);
+  }, [supabase, user, router, checkUserLoggedIn, fetchRequests]);
 
-  // Group requests by status
-  const statusGroups = {
-    em_andamento: [...mechanicRequests, ...guinchos].filter((item) => item.status === 'em_andamento'),
-    aceitas: [...mechanicRequests, ...guinchos].filter((item) => item.status === 'aceitas'),
-    em_analise: [...mechanicRequests, ...guinchos].filter((item) => item.status === 'em_analise'),
-    em_espera: [...mechanicRequests, ...guinchos].filter((item) => item.status === 'em_espera'),
-    concluidas: [...mechanicRequests, ...guinchos].filter((item) => item.status === 'concluidas'),
-    canceladas: [...mechanicRequests, ...guinchos].filter((item) => item.status === 'canceladas'),
-    pendentes: [...mechanicRequests, ...guinchos].filter((item) => item.status === 'pendentes'),
-    rejeitadas: [...mechanicRequests, ...guinchos].filter((item) => item.status === 'rejeitadas'),
+  // Agrupa todas as solicitações em um array único
+  const allRequests = [
+    ...mechanicRequests.map((item) => ({
+      ...item,
+      type: "mecanico",
+      title: item.veiculos ? `${item.veiculos.marca} ${item.veiculos.modelo}` : "Veículo",
+      plate: item.veiculos?.placa || "",
+      description: item.description,
+      date: item.created_at,
+      status: item.status,
+    })),
+    ...guinchos.map((item) => ({
+      ...item,
+      type: "guincho",
+      title: item.veiculos ? `${item.veiculos.marca} ${item.veiculos.modelo}` : "Veículo",
+      plate: item.veiculos?.placa || "",
+      description: item.observations || item.origin,
+      date: item.created_at,
+      status: item.status,
+    })),
+  ];
+
+  // Filtros de tabs
+  const statusMap: { [key: string]: (r: { status?: string }) => boolean } = {
+    todas: () => true,
+    pendentes: (r: { status?: string }) => r.status?.toLowerCase() === "pendente" || r.status?.toLowerCase() === "pendentes",
+    aceitas: (r: { status?: string }) => r.status?.toLowerCase() === "aceita" || r.status?.toLowerCase() === "aceito",
+    orcamentos: (r: { status?: string }) => r.status?.toLowerCase() === "orcamento" || r.status?.toLowerCase() === "orçamento",
+    "em andamento": (r: { status?: string }) => r.status?.toLowerCase() === "em andamento",
+    concluidas: (r: { status?: string }) => r.status?.toLowerCase() === "concluida" || r.status?.toLowerCase() === "concluído" || r.status?.toLowerCase() === "concluídas",
   };
+
+  const filteredRequests = allRequests
+    .filter((r: { status?: string }) => statusMap[tab] ? statusMap[tab](r) : true)
+    .filter((r: { description?: string; title?: string; plate?: string }) =>
+      search.length === 0 ||
+      r.description?.toLowerCase().includes(search.toLowerCase()) ||
+      r.title?.toLowerCase().includes(search.toLowerCase()) ||
+      r.plate?.toLowerCase().includes(search.toLowerCase())
+    );
+
+  // Função para exibir badge de status
+  function StatusBadge({ status }: { status: string }) {
+    let color = "bg-gray-200 text-gray-700";
+    const text = status;
+    if (["pendente", "pendentes"].includes(status?.toLowerCase())) color = "bg-yellow-100 text-yellow-700";
+    if (["aceito", "aceita"].includes(status?.toLowerCase())) color = "bg-green-100 text-green-700";
+    if (["concluida", "concluído", "concluídas"].includes(status?.toLowerCase())) color = "bg-green-200 text-green-800";
+    if (["em andamento"].includes(status?.toLowerCase())) color = "bg-blue-100 text-blue-700";
+    if (["orcamento", "orçamento"].includes(status?.toLowerCase())) color = "bg-purple-100 text-purple-700";
+    if (["cancelada", "cancelado"].includes(status?.toLowerCase())) color = "bg-red-100 text-red-700";
+    return <span className={`px-3 py-1 rounded-full text-sm font-medium ${color}`}>{text?.charAt(0).toUpperCase() + text?.slice(1)}</span>;
+  }
+
+  // Função para cancelar solicitação (exemplo, ajuste conforme sua lógica real)
+  async function handleCancel(requestId: string, requestType: string) {
+        // ... lógica de cancelamento ...
+        console.log(`Canceling request with ID: ${requestId} and type: ${requestType}`);
+      }
 
   // Render fallback UI if critical error
   if (criticalError) {
@@ -290,180 +330,113 @@ export default function SolicitacoesDashboard() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100 relative overflow-hidden md:flex-row flex-col">
-      {/* Sidebar */}
-      <motion.div
-        initial={{ x: -256 }}
-        animate={{ x: isSidebarOpen ? 0 : -256 }}
-        transition={{ duration: 0.3 }}
-        className="md:w-64 md:static md:flex md:flex-col bg-white shadow-lg h-full z-50 overflow-y-auto md:overflow-hidden fixed md:relative"
-      >
-        <div className="p-4 flex items-center space-x-2 border-b border-gray-200 md:mb-4">
-          <h2 className="text-xl md:text-2xl font-bold text-purple-600">SOS Mecânicos</h2>
-        </div>
-        <nav className="mt-6">
-          <Link
-            href="/dashboard/cliente"
-            className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 rounded font-semibold hover:text-purple-700"
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/dashboard/solicitacoes"
-            className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 rounded font-semibold text-purple-700 bg-purple-50"
-          >
-            Solicitações
-          </Link>
-          <Link
-            href="/dashboard/perfil"
-            className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 rounded font-semibold hover:text-purple-700"
-          >
-            Perfil
-          </Link>
-          <Link
-            href="/ajuda"
-            className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 rounded font-semibold hover:text-purple-700"
-          >
-            Ajuda
-          </Link>
-        </nav>
-        <div className="absolute bottom-0 left-0 w-full p-2 bg-white border-t md:hidden z-50">
-          <Button
-            variant="outline"
-            className="w-full mt-4 text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700"
-            onClick={handleLogout}
-          >
-            Sair
+    <div className="min-h-screen bg-gray-50">
+      <Sidebar/>
+      <div className="max-w-5xl mx-auto pt-10 pb-8 px-2 md:px-0">
+        <div className="flex justify-between items-center mb-2">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-1">Solicitações de Serviço</h1>
+            <p className="text-gray-500 text-base md:text-lg">Acompanhe seus pedidos de assistência mecânica</p>
+          </div>
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg text-base flex items-center gap-2">
+            <span className="text-xl font-bold">+</span> Nova Solicitação
           </Button>
-          <p className="text-center text-sm text-gray-500">© 2024 SOS Mecânicos</p>
+          <Button
+            onClick={handleLogout}
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-2 rounded-lg text-base flex items-center gap-2"
+          >
+            Logout
+          </Button>
         </div>
-      </motion.div>
-
-      {/* Overlay for mobile sidebar */}
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black opacity-5 z-50 md:hidden"
-          onClick={toggleSidebar}
-        />
-      )}
-
-      {/* Main Content */}
-      <div className="flex-1 p-4 md:p-6 w-full container mx-auto">
-        {/* Header */}
-        <header className="bg-white shadow-md p-4 mb-6 rounded-lg flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <button className="md:hidden text-gray-600" onClick={toggleSidebar}>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d={isSidebarOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16m-7 6h7'}
-                />
-              </svg>
+        <div className="bg-white rounded-lg shadow p-4 mb-6">
+          <input
+            type="text"
+            placeholder="Buscar por descrição do problema..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 text-base"
+          />
+        </div>
+        <div className="flex gap-2 mb-6">
+          {['todas', 'pendentes', 'aceitas', 'orcamentos', 'em andamento', 'concluidas'].map((tabName) => (
+            <button
+              key={tabName}
+              onClick={() => setTab(tabName)}
+              className={`px-4 py-2 rounded font-medium text-sm md:text-base transition-all ${tab === tabName ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-blue-50'}`}
+            >
+              {tabName.charAt(0).toUpperCase() + tabName.slice(1).replace('em andamento', 'Em Andamento').replace('orcamentos', 'Orçamentos').replace('concluidas', 'Concluídas')}
             </button>
-            <h1 className="text-xl md:text-2xl font-semibold text-purple-700">Solicitações</h1>
-          </div>
-          <div className="flex items-center space-x-4 md:space-x-6">
-            <Avatar>
-              <AvatarImage src="https://github.com/shadcn.png" alt="User Avatar" />
-              <AvatarFallback>
-                {userNome ? userNome.charAt(0).toUpperCase() : 'US'}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-        </header>
-
-        {/* Welcome Message */}
-        <motion.h2
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-2xl font-semibold text-purple-700 mb-4"
-        >
-          Suas Solicitações, {userNome || 'Carregando...'}!
-        </motion.h2>
-
-        {/* Requests Content */}
-        {loading ? (
-          <div className="space-y-6 animate-pulse">
-            <div className="bg-white shadow-md rounded-lg p-4">
-              <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
-              <div className="h-10 bg-gray-200 rounded w-full"></div>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {Object.entries(statusGroups).map(([status, items]) => (
-              <motion.div
-                key={status}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
+          ))}
+        </div>
+        <div className="space-y-4">
+          {loading ? (
+            <div className="bg-white rounded-lg shadow p-6 animate-pulse h-32" />
+          ) : filteredRequests.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">Nenhuma solicitação encontrada.</div>
+          ) : (
+            filteredRequests.map((req) => (
+              <div
+                key={req.id}
+                className="bg-white rounded-xl shadow p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 cursor-pointer hover:ring-2 hover:ring-blue-200"
+                onClick={() => { setSelectedRequest(req); setDetailsDialogOpen(true); }}
               >
-                <Card className="border-none shadow-md">
-                  <CardHeader>
-                    <CardTitle className="text-purple-700">
-                      {status
-                        .replace(/_/g, ' ')
-                        .replace(/\b\w/g, (c) => c.toUpperCase())}
-                    </CardTitle>
-                    <CardDescription className="text-gray-600">
-                      {items.length} {items.length === 1 ? 'solicitação' : 'solicitações'} {status.replace(/_/g, ' ')}.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {items.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="text-purple-700">Tipo</TableHead>
-                              <TableHead className="text-purple-700">Veículo</TableHead>
-                              <TableHead className="text-purple-700">Detalhes</TableHead>
-                              <TableHead className="text-purple-700">Data</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {items.map((item) => (
-                              <TableRow key={item.id} className="hover:bg-gray-50">
-                                <TableCell className="text-gray-800">
-                                  {'category_type' in item ? 'Mecânico' : 'Guincho'}
-                                </TableCell>
-                                <TableCell className="text-gray-800">
-                                  {item.veiculos
-                                    ? `${item.veiculos.marca} ${item.veiculos.modelo} (${item.veiculos.placa})`
-                                    : 'Veículo não encontrado'}
-                                </TableCell>
-                                <TableCell className="text-gray-800">
-                                  {'category_type' in item
-                                    ? `${item.category_type}: ${item.description}`
-                                    : `De ${item.origin} para ${item.destination}`}
-                                </TableCell>
-                                <TableCell className="text-gray-800">
-                                  {new Date(item.created_at).toLocaleDateString('pt-BR', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                  })}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
+                <div className="flex items-center gap-4">
+                  <div className="bg-blue-100 p-3 rounded-full">
+                    {/* Ícone do tipo de serviço */}
+                    {req.type === 'mecanico' ? (
+                      <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-blue-600"><path d="M7 17v2a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2"/><rect width="20" height="8" x="2" y="9" rx="2"/><path d="M6 13v-2a4 4 0 0 1 8 0v2"/></svg>
                     ) : (
-                      <p className="text-gray-600">
-                        Nenhuma solicitação {status.replace(/_/g, ' ')} encontrada.
-                      </p>
+                      <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-orange-500"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
                     )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        )}
+                  </div>
+                  <div>
+                    <div className="font-bold text-lg text-gray-900 flex items-center gap-2">
+                      {req.title}
+                      <span className="text-xs text-gray-400 font-normal">Placa: {req.plate}</span>
+                    </div>
+                    <div className="text-gray-700 mt-1">{req.description}</div>
+                    <div className="text-gray-400 text-sm mt-1">{new Date(req.date).toISOString().slice(0, 10)}</div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2 min-w-[120px]">
+                  <StatusBadge status={req.status} />
+                  {(req.status?.toLowerCase() === 'pendente' || req.status?.toLowerCase() === 'pendentes') && (
+                    <Button
+                      variant="outline"
+                      className="border-red-500 text-red-500 hover:bg-red-50 flex items-center gap-1 px-4 py-2"
+                      onClick={e => { e.stopPropagation(); handleCancel(req.id, req.type); }}
+                    >
+                      <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-red-500"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                      Cancelar
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
+      {/* Dialog de detalhes da solicitação */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          {selectedRequest && (
+            <ServiceRequestDetails
+              request={selectedRequest}
+              vehicle={{
+                model: selectedRequest.veiculos ? `${selectedRequest.veiculos.marca} ${selectedRequest.veiculos.modelo}` : "Veículo",
+                plate: selectedRequest.veiculos?.placa || '',
+                // Adicione outros campos se necessário
+              }}
+              onCancel={() => {/* lógica de cancelamento */}}
+              canCancel={selectedRequest.status?.toLowerCase() === 'pendente' || selectedRequest.status?.toLowerCase() === 'pendentes'}
+              onClose={() => setDetailsDialogOpen(false)}
+              onReview={() => {}}
+              hasReviewed={false}
+              currentUser={user}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

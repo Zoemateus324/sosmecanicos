@@ -10,16 +10,17 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea'; 
+import { Sidebar } from '@/components/sidebar/Sidebar';
 
 interface Profile {
   id: string;
   full_name: string;
-  user_type: string;
   email: string;
   telefone: string;
   endereco: string;
   data_nascimento: string;
   bio: string;
+  // outros campos omitidos para simplificação
 }
 
 export default function PerfilPage() {
@@ -60,15 +61,18 @@ export default function PerfilPage() {
     e.preventDefault();
     if (!user?.id || !supabase || !profile) return;
 
+    // Debug: ver o que está sendo enviado
+    // console.log('Atualizando perfil:', profile);
+
     const { error } = await supabase
       .from('profiles')
       .update({
-        full_name: profile.full_name,
-        email: profile.email,
-        telefone: profile.telefone,
-        endereco: profile.endereco,
-        data_nascimento: profile.data_nascimento,
-        bio: profile.bio,
+        full_name: profile.full_name || '',
+        email: profile.email || '',
+        telefone: profile.telefone || '',
+        endereco: profile.endereco || '',
+        data_nascimento: profile.data_nascimento || '',
+        bio: profile.bio || '',
       })
       .eq('id', user.id);
 
@@ -80,6 +84,7 @@ export default function PerfilPage() {
       toast.success('Perfil atualizado com sucesso!', {
         style: { backgroundColor: '#4ADE80', color: '#ffffff' },
       });
+      fetchProfile(); // Atualiza o estado local após update
     }
   };
 
@@ -93,6 +98,7 @@ export default function PerfilPage() {
 
   return (
     <div className="container mx-auto p-4">
+      <Sidebar/>
       <Card className="max-w-md mx-auto">
         <CardHeader>
           <CardTitle className="text-purple-700">Meu Perfil</CardTitle>

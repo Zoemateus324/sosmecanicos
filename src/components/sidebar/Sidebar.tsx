@@ -2,97 +2,75 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetTrigger,
-} from '@/components/ui/sheet';
-import { Menu } from 'lucide-react';
 import Link from 'next/link';
+import { Menu, Package, PanelBottom } from 'lucide-react';
+import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet'
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="md:w-64 bg-white shadow-lg h-full z-50">
-      <div className="p-4 border-b">
-        <h2 className="text-xl font-bold text-purple-600">SOS Mecânicos</h2>
-      </div>
-      <nav className="mt-6 hidden md:block">
-        <Link
-          href="/dashboard/cliente"
-          className="block py-2.5 px-4 text-purple-700 bg-purple-50 font-semibold"
-        >
-          Dashboard
-        </Link>
-        <Link
-          href="/dashboard/solicitacoes"
-          className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 hover:text-purple-700"
-        >
-          Solicitações
-        </Link>
-        <Link
-          href="/dashboard/perfil"
-          className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 hover:text-purple-700"
-        >
-          Perfil
-        </Link>
-        <Link
-          href="/ajuda"
-          className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 hover:text-purple-700"
-        >
-          Ajuda
-        </Link>
-      </nav>
+    <div className="flex w-full flex-col bg-muted/40">
 
-      {/* Mobile Sheet */}
-      <div className="md:hidden p-4">
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="icon">
-              <Menu className="h-6 w-6" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-64">
-            <SheetHeader>
-              <SheetTitle className="text-xl font-bold text-purple-600">SOS Mecânicos</SheetTitle>
-              <SheetDescription>Menu de navegação</SheetDescription>
-            </SheetHeader>
-            <nav className="mt-6">
-              <Link
-                href="/dashboard/cliente"
-                className="block py-2.5 px-4 text-purple-700 bg-purple-50 font-semibold"
-                onClick={() => setIsOpen(false)}
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/dashboard/solicitacoes"
-                className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 hover:text-purple-700"
-                onClick={() => setIsOpen(false)}
-              >
-                Solicitações
-              </Link>
-              <Link
-                href="/dashboard/perfil"
-                className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 hover:text-purple-700"
-                onClick={() => setIsOpen(false)}
-              >
-                Perfil
-              </Link>
-              <Link
-                href="/ajuda"
-                className="block py-2.5 px-4 text-gray-600 hover:bg-purple-100 hover:text-purple-700"
-                onClick={() => setIsOpen(false)}
-              >
-                Ajuda
-              </Link>
-            </nav>
-          </SheetContent>
-        </Sheet>
+
+
+
+      <div className="sm:hidden flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
+        <header className='sticky top-0 z-30 flex h-14 items-center px-4
+        border-bg bg-background gap-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6'>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button size="icon" variant="outline" className='sm:hidden'>
+                <PanelBottom className='w-5 h-5' />
+                <span className='sr-only'>Abrir / Fechar menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent className='sm:max-w-x'>
+              <nav className='grid gap-6 text-lg font-medium p-2'>
+
+                {/*Links de navegação */}
+                <Link href="/"
+                  className='flex h-10 w-10 bg-fuchsia-800 rounded-full
+                text-lg items-center justify-center gap-2 text-primary-foreground md:text-base'
+                  prefetch={false}
+                >
+                  <Package className='w-5 h-5' />
+                  <span className='sr-only'>Dashboard</span>
+                </Link>
+
+                <Link href="/dashboard/cliente"
+                  className='flex h-10 w-10 bg-fuchsia-800 rounded-full
+                text-lg items-center justify-center gap-2 text-primary-foreground md:text-base'
+                  prefetch={false}
+                >
+                  <Package className='w-5 h-5' />
+                  <span className='sr-only'>Solicitações</span>
+                </Link>
+
+                <Link href="/dashboard/cliente"
+                  className='flex h-10 w-10 bg-fuchsia-800 rounded-full
+                text-lg items-center justify-center gap-2 text-primary-foreground md:text-base'
+                  prefetch={false}
+                >
+                  <Package className='w-5 h-5' />
+                  <span className='sr-only'>Meus veículos</span>
+                </Link>
+
+                <Link href="/dashboard/cliente"
+                  className='flex h-10 w-10 bg-fuchsia-800 rounded-full
+                text-lg items-center justify-center gap-2 text-primary-foreground md:text-base'
+                  prefetch={false}
+                >
+                  <Package className='w-5 h-5' />
+                  <span className='sr-only'>Suporte</span>
+                </Link>
+
+
+              </nav>
+            </SheetContent>
+
+          </Sheet>
+        </header>
       </div>
     </div>
   );

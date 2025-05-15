@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupabase } from '@/components/SupabaseProvider';
@@ -47,8 +47,6 @@ import { Sidebar } from '@/components/sidebar/Sidebar';
 import { Plus, Circle, CircleCheck, CircleX } from 'lucide-react';
 import Link from 'next/link';
 
-// Define LatLngTuple
-type LatLngTuple = [number, number];
 
 // Define interfaces
 interface Vehicle {
@@ -135,18 +133,19 @@ const getStatusInfo = (status: string): StatusInfo => {
 };
 
 export default function ClienteDashboard() {
-  const { user, userNome, userType } = useAuth(); // userType obtido do AuthContext
+  const { user, userNome } = useAuth(); // userType obtido do AuthContext
   const supabase = useSupabase();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [criticalError, setCriticalError] = useState<string | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [pendingRequests, setPendingRequests] = useState<ServiceRequest[]>([]);
-  const [userPosition, setUserPosition] = useState<LatLngTuple | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isVehicleDialogOpen, setIsVehicleDialogOpen] = useState(false);
-  const [isTowDialogOpen, setIsTowDialogOpen] = useState(false);
+  
   const [isMechanicDialogOpen, setIsMechanicDialogOpen] = useState(false);
+  // Removed unused isTowDialogOpen state
+  // Removed unused editingRequest state
 
   const [mechanicRequest, setMechanicRequest] = useState({
     vehicleId: '',
@@ -155,12 +154,7 @@ export default function ClienteDashboard() {
     category_type: '',
   });
 
-  const [towRequest, setTowRequest] = useState({
-    vehicleId: '',
-    origin: '',
-    destination: '',
-    observations: '',
-  });
+  
 
   const [newVehicle, setNewVehicle] = useState<Vehicle>({
     id: '',
@@ -180,6 +174,7 @@ export default function ClienteDashboard() {
     placa: '',
   });
   const [isEditVehicleDialogOpen, setIsEditVehicleDialogOpen] = useState(false);
+  // Removed unused editingRequest state
 
   // Toggle sidebar visibility
   const toggleSidebar = () => {
@@ -306,18 +301,17 @@ export default function ClienteDashboard() {
     .insert([
       {
         user_id: user.id,
+        cliente_id: user.id,
         vehicle_id: mechanicRequest.vehicleId,
         description: mechanicRequest.description,
         location: mechanicRequest.location,
         category_type: mechanicRequest.category_type,
         status: 'pendentes',
-        // Adicionando cliente_id
       },
-    ]);if(error){
-      console.log(error)
-    }
-    else if (error) {
-      toast.error('Erro ao solicitar mecânico: ' + error.message, {
+    ]);
+    if(error){
+      console.error('Error creating mechanic request:', error);
+      toast.error('Erro ao solicitar mecânico: ' + (error as Error).message, {
         style: { backgroundColor: '#EF4444', color: '#ffffff' },
       });
     } else {
@@ -337,72 +331,10 @@ export default function ClienteDashboard() {
   };
 
   // Handle request tow
-  const handleRequestTow = async () => {
-    if (!isSupabaseInitialized(supabase)) {
-      toast.error('Não é possível solicitar guincho: conexão com o banco de dados não está disponível', {
-        style: { backgroundColor: '#EF4444', color: '#ffffff' },
-      });
-      return;
-    }
-    if (!user?.id) {
-      toast.error('Usuário não autenticado', {
-        style: { backgroundColor: '#EF4444', color: '#ffffff' },
-      });
-      return;
-    }
-    const { error } = await supabase.from('guinchos').insert([
-      {
-        user_id: user.id,
-        vehicle_id: towRequest.vehicleId,
-        origin: towRequest.origin,
-        destination: towRequest.destination,
-        observations: towRequest.observations,
-        status: 'pendentes',
-      },
-    ]);
-    if (error) {
-      toast.error('Erro ao solicitar guincho: ' + error.message, {
-        style: { backgroundColor: '#EF4444', color: '#ffffff' },
-      });
-    } else {
-      setTowRequest({
-        vehicleId: '',
-        origin: '',
-        destination: '',
-        observations: '',
-      });
-      setIsTowDialogOpen(false);
-      toast.success('Solicitação de guincho enviada com sucesso!', {
-        style: { backgroundColor: '#4ADE80', color: '#ffffff' },
-      });
-      // Refresh pending requests
-      await fetchPendingRequests();
-    }
-  };
 
-  // Get user location
-  const getUserLocation = async () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setUserPosition([latitude, longitude]);
-        },
-        (err) => {
-          toast.warning('Não foi possível obter a localização: ' + err.message, {
-            style: { backgroundColor: '#FBBF24', color: '#ffffff' },
-          });
-        }
-      );
-    } else {
-      toast.warning('Geolocalização não suportada pelo navegador.', {
-        style: { backgroundColor: '#FBBF24', color: '#ffffff' },
-      });
-    }
-  };
 
   // Check user logged in
-  const checkUserLoggedIn = async () => {
+  const checkUserLoggedIn = useCallback(async () => {
     if (!isSupabaseInitialized(supabase)) {
       throw new Error('Supabase client is not initialized');
     }
@@ -414,10 +346,10 @@ export default function ClienteDashboard() {
     if (!data.session) {
       router.push('/login');
     }
-  };
+  }, [supabase, router]);
 
   // Get vehicles
-  const getVehicles = async () => {
+  const getVehicles = useCallback(async () => {
     if (!isSupabaseInitialized(supabase)) {
       toast.warning('Não foi possível carregar veículos: conexão com o banco de dados não está disponível', {
         style: { backgroundColor: '#FBBF24', color: '#ffffff' },
@@ -443,10 +375,10 @@ export default function ClienteDashboard() {
     } else {
       setVehicles(data || []);
     }
-  };
+  }, [supabase, user?.id]);
 
   // Fetch pending requests (mechanic and tow)
-  const fetchPendingRequests = async () => {
+  const fetchPendingRequests = useCallback(async () => {
     if (!isSupabaseInitialized(supabase)) {
       toast.warning('Não foi possível carregar solicitações: conexão com o banco de dados não está disponível', {
         style: { backgroundColor: '#FBBF24', color: '#ffffff' },
@@ -463,7 +395,7 @@ export default function ClienteDashboard() {
     // Fetch mechanic requests
     const { data: mechanicData, error: mechanicError } = await supabase
       .from('mechanic_requests')
-      .select('user_id, vehicle_id, description, location, category_type, status, veiculos(id, marca, modelo, placa, ano)')
+      .select('id, user_id, vehicle_id, description, location, category_type, status, created_at, veiculos(id, marca, modelo, placa, ano)')
       .eq('user_id', user.id)
       .in('status', ['pendentes', 'aceito', 'recusado']);
 
@@ -477,7 +409,7 @@ export default function ClienteDashboard() {
     // Fetch tow requests
     const { data: towData, error: towError } = await supabase
       .from('guinchos')
-      .select('id, user_id, vehicle_id, observations, status, created_at')
+      .select('id, user_id, vehicle_id, origin, observations, status, created_at')
       .eq('user_id', user.id)
       .in('status', ['Pendente', 'Aceita', 'Em andamento', 'Concluído', 'Rejeitado']);
 
@@ -490,15 +422,23 @@ export default function ClienteDashboard() {
 
     // Combine and format requests
     const mechanicRequests: ServiceRequest[] = mechanicData?.map((req) => ({
-      ...req,
+      id: req.id || '',
+      user_id: req.user_id,
+      vehicle_id: req.vehicle_id,
       problem_description: req.description,
       type: 'mechanic' as const,
+      status: req.status,
+      created_at: req.created_at || new Date().toISOString()
     })) || [];
 
     const towRequests: ServiceRequest[] = towData?.map((req) => ({
-      ...req,
+      id: req.id,
+      user_id: req.user_id,
+      vehicle_id: req.vehicle_id,
       problem_description: req.observations || 'Solicitação de guincho',
       type: 'tow' as const,
+      status: req.status,
+      created_at: req.created_at
     })) || [];
 
     const combinedRequests = [...mechanicRequests, ...towRequests].sort(
@@ -506,56 +446,55 @@ export default function ClienteDashboard() {
     );
 
     setPendingRequests(combinedRequests);
-  };
+  }, [supabase, user?.id]);
 
   // Combined useEffect for data fetching
   useEffect(() => {
-    if (!isSupabaseInitialized(supabase)) {
-      toast.error('Conexão com o banco de dados não está disponível', {
-        style: { backgroundColor: '#EF4444', color: '#ffffff' },
-      });
-      setCriticalError('Não foi possível conectar ao banco de dados. Por favor, tente novamente mais tarde.');
-      setLoading(false);
-      return;
-    }
+    let isMounted = true;
 
     const fetchData = async () => {
       try {
         await checkUserLoggedIn();
-        if (user) {
-          await Promise.all([
-            getUserLocation().catch((err) => {
-              console.warn('Failed to get user location:', err.message);
-            }),
-            getVehicles().catch((err) => {
-              console.warn('Failed to get vehicles:', err.message);
-            }),
-            fetchPendingRequests().catch((err) => {
-              console.warn('Failed to fetch pending requests:', err.message);
-            }),
-          ]);
+        if (!isMounted) return;
+
+        // Use Promise.allSettled to handle partial failures
+        const [vehiclesResult, requestsResult] = await Promise.allSettled([
+          getVehicles(),
+          fetchPendingRequests()
+        ]);
+
+        if (!isMounted) return;
+
+        if (vehiclesResult.status === 'rejected') {
+          console.error('Error fetching vehicles:', vehiclesResult.reason);
+          toast.error('Erro ao carregar veículos. Por favor, tente novamente.', {
+            style: { backgroundColor: '#EF4444', color: '#ffffff' },
+          });
         }
-      } catch (err: any) {
-        console.error('Critical error:', err.message);
-        setCriticalError('Ocorreu um erro ao carregar os dados. Por favor, tente novamente mais tarde.');
+
+        if (requestsResult.status === 'rejected') {
+          console.error('Error fetching requests:', requestsResult.reason);
+          toast.error('Erro ao carregar solicitações. Por favor, tente novamente.', {
+            style: { backgroundColor: '#EF4444', color: '#ffffff' },
+          });
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        console.error('Critical error:', error);
+        setCriticalError(error instanceof Error ? error.message : 'An error occurred');
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
 
-    // Listen for auth state changes
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) {
-        router.push('/login');
-      }
-    });
-
     return () => {
-      authListener.subscription.unsubscribe();
+      isMounted = false;
     };
-  }, [supabase, user, router]);
+  }, [checkUserLoggedIn, getVehicles, fetchPendingRequests]);
 
   // Render fallback UI if critical error
   if (criticalError) {
@@ -657,7 +596,7 @@ export default function ClienteDashboard() {
                     {pendingRequests.length > 0 ? (
                       <div className="divide-y">
                         {pendingRequests.map((request) => {
-                          const { icon: StatusIcon, text, color } = getStatusInfo(request.status);
+                          const { icon: StatusIcon, color } = getStatusInfo(request.status);
                           return (
                             <div key={request.id} className="p-4 hover:bg-gray-50">
                               <div className="flex justify-between items-start">
@@ -668,8 +607,7 @@ export default function ClienteDashboard() {
                                   <p className="text-sm text-gray-500">ID: {request.id.substring(0, 8)}</p>
                                 </div>
                                 <div className={`flex items-center ${color}`}>
-                                  <StatusIcon className="h-4 w-4 mr-1" />
-                                  <span className="text-sm">{text}</span>
+                                <StatusIcon className="h-4 w-4 mr-1" />
                                 </div>
                               </div>
                             </div>
@@ -722,13 +660,7 @@ export default function ClienteDashboard() {
                     >
                       Solicitar Mecânico
                     </Button>
-                    <Button
-                      onClick={() => setIsTowDialogOpen(true)}
-                      className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                      disabled={!isSupabaseInitialized(supabase)}
-                    >
-                      Solicitar Guincho
-                    </Button>
+                    {/* Removed button for opening isTowDialogOpen */}
                   </CardContent>
                 </Card>
               </div>
@@ -942,18 +874,7 @@ export default function ClienteDashboard() {
           </div>
         )}
 
-        {/* User Type Display */}
-        {!loading && !criticalError && userType && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 1.0 }}
-            className="mt-6 text-lg text-gray-600"
-          >
-            Tipo de usuário:{' '}
-            <span className="font-semibold text-purple-700">{userType}</span>
-          </motion.p>
-        )}
+       
 
         {/* Dialogs */}
         <Dialog open={isVehicleDialogOpen} onOpenChange={setIsVehicleDialogOpen}>
@@ -1165,106 +1086,9 @@ export default function ClienteDashboard() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isTowDialogOpen} onOpenChange={setIsTowDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle className="text-purple-700">Solicitar Guincho</DialogTitle>
-              <DialogDescription>
-                Informe os detalhes para solicitar um guincho.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="vehicleId" className="text-right">
-                  Veículo
-                </Label>
-                <Select
-                  onValueChange={(value) =>
-                    setTowRequest({ ...towRequest, vehicleId: value })
-                  }
-                  value={towRequest.vehicleId}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Selecione um veículo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vehicles.map((veiculo) => (
-                      <SelectItem key={veiculo.id} value={veiculo.id}>
-                        {veiculo.modelo} - {veiculo.placa}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="origin" className="text-right">
-                  Origem
-                </Label>
-                <Input
-                  id="origin"
-                  value={towRequest.origin}
-                  onChange={(e) =>
-                    setTowRequest({ ...towRequest, origin: e.target.value })
-                  }
-                  className="col-span-3"
-                  placeholder="Ex.: Av. Principal, 123"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="destination" className="text-right">
-                  Destino
-                </Label>
-                <Input
-                  id="destination"
-                  value={towRequest.destination}
-                  onChange={(e) =>
-                    setTowRequest({ ...towRequest, destination: e.target.value })
-                  }
-                  className="col-span-3"
-                  placeholder="Ex.: Oficina Central, 456"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="observations" className="text-right">
-                  Observações
-                </Label>
-                <Textarea
-                  id="observations"
-                  value={towRequest.observations}
-                  onChange={(e) =>
-                    setTowRequest({
-                      ...towRequest,
-                      observations: e.target.value,
-                    })
-                  }
-                  className="col-span-3"
-                  placeholder="Informações adicionais (opcional)"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsTowDialogOpen(false)}
-                className="border-purple-600 text-purple-600 hover:bg-purple-50"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleRequestTow}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-                disabled={
-                  !isSupabaseInitialized(supabase) ||
-                  !towRequest.vehicleId ||
-                  !towRequest.origin ||
-                  !towRequest.destination
-                }
-              >
-                Solicitar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+   
+
+       
       </div>
     </div>
   );
