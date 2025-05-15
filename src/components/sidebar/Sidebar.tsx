@@ -39,7 +39,7 @@ export function Sidebar() {
                   Dashboard
                 </Link>
 
-                <Link href="/dashboard/cliente"
+                <Link href="/dashboard/veiculos"
                   className='flex items-center gap-4 px-2.5 text-muted-foreground'
                   prefetch={false}
                 >
@@ -47,12 +47,19 @@ export function Sidebar() {
                   Meus veículos
                 </Link>
 
-                <Link href="/dashboard/cliente"
+                <Link href="/dashboard/ajuda"
                   className='flex items-center gap-4 px-2.5 text-muted-foreground'
                   prefetch={false}
                 >
                   <Package className='w-5 h-5' />
                   Suporte
+                </Link>
+ <Link href="/perfil"
+                  className='flex items-center gap-4 px-2.5 text-muted-foreground'
+                  prefetch={false}
+                >
+                  <Package className='w-5 h-5' />
+                  Perfil
                 </Link>
 
               </nav>
