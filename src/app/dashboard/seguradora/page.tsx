@@ -20,7 +20,7 @@ type UserData = {
 };
 
 export default function SeguradoraDashboard() {
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+ 
   const [quotes, setQuotes] = useState<InsuranceQuote[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,7 +51,7 @@ export default function SeguradoraDashboard() {
         return;
       }
 
-      setUserEmail(session.user.email ?? null);
+      
 
       // Buscar tipo de usuário
       const { data: userData, error: userError } = await supabase
