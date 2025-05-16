@@ -303,7 +303,7 @@ export default function ClienteDashboard() {
       },
     ]);
     if(error){
-      console.error('Error creating mechanic request:', error);
+      console.error('Erro ao criar solicitação do mecânico:', error);
       toast.error('Erro ao solicitar mecânico: ' + (error as Error).message, {
         style: { backgroundColor: '#EF4444', color: '#ffffff' },
       });
@@ -326,11 +326,11 @@ export default function ClienteDashboard() {
   // Check user logged in
   const checkUserLoggedIn = useCallback(async () => {
     if (!isSupabaseInitialized(supabase)) {
-      throw new Error('Supabase client is not initialized');
+      throw new Error('Cliente não está logado');
     }
     const { data, error } = await supabase.auth.getSession();
     if (error) {
-      console.error('Error checking session:', error.message);
+      console.error('Erro ao iniciar a sessão:', error.message);
       throw new Error('Erro ao verificar sessão: ' + error.message);
     }
     if (!data.session) {
@@ -492,7 +492,7 @@ export default function ClienteDashboard() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100 relative overflow-hidden md:flex-row flex-col">
+    <div className="flex gap-[2%] flex-wrap content-start">
       <Sidebar />
 
       {/* Overlay for mobile sidebar */}
@@ -508,7 +508,7 @@ export default function ClienteDashboard() {
         {/* Header */}
         <header className="bg-white shadow-md p-4 mb-6 rounded-lg flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <button className="md:hidden text-gray-600" onClick={toggleSidebar}>
+            {/* <button className="md:hidden text-gray-600" onClick={toggleSidebar}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -517,7 +517,7 @@ export default function ClienteDashboard() {
                   d={isSidebarOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16m-7 6h7'}
                 />
               </svg>
-            </button>
+            </button> */}
             <h1 className="text-xl md:text-2xl font-semibold text-purple-700">Dashboard</h1>
           </div>
           <div className="flex items-center space-x-4 md:space-x-6">

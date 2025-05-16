@@ -13,13 +13,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR" className={inter.className}>
       <body className="min-h-screen bg-gray-100 text-gray-900 antialiased">
+  
         <SupabaseProvider>
           <AuthProvider>
             {children}
             <Toaster position="top-right" richColors />
           </AuthProvider>
         </SupabaseProvider>
+
       </body>
+
     </html>
   );
 }

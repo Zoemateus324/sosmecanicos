@@ -33,35 +33,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = useCallback(
-    async (userId: string | null) => {
-      if (!userId || !supabase) return;
+const fetchProfile = useCallback(
+  async (userId: string | null) => {
+    if (!userId) {
+      console.warn("Usuário não identificado. userId é null.");
+      return;
+    }
 
-      try {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("id, full_name, email, user_type, phone")
-          .eq("id", userId)
-          .single();
+    if (!supabase) {
+      console.warn("Supabase não inicializado.");
+      toast.error("Erro ao buscar perfil: Conexão com o banco não disponível.", {
+        style: { backgroundColor: "#EF4444", color: "#ffffff" },
+      });
+      return;
+    }
 
-        if (error) {
-          toast.error(`Erro ao buscar perfil: ${error.message}`, {
-            style: { backgroundColor: "#EF4444", color: "#ffffff" },
-          });
-          throw error;
-        }
+    console.log("Fetching profile for userId:", userId);
 
-        setProfile(data as Profile);
-      } catch (error) {
-        console.error("Unexpected error in fetchProfile:", error);
-        toast.error("Erro inesperado ao carregar perfil.", {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, user_type")
+        .eq("id", userId)
+        .single();
+
+      if (error) {
+        console.error("Supabase error:", error);
+        toast.error(`Erro ao buscar perfil: ${error.message}`, {
           style: { backgroundColor: "#EF4444", color: "#ffffff" },
         });
+        return null; 
       }
-    },
-    [supabase]
-  );
 
+      console.log("Profile data:", data);
+      return data as Profile;
+    } catch (error) {
+      console.error("Erro inesperado ao carregar perfil:", error);
+      toast.error("Erro inesperado ao carregar perfil.", {
+        style: { backgroundColor: "#EF4444", color: "#ffffff" },
+      });
+      return null;
+    }
+  },
+  [supabase]
+);
   useEffect(() => {
     if (!supabase) {
       setLoading(false);
@@ -206,7 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
     } catch (error) {
-      console.error("Error during sign-up process:", error);
+      console.error("Erro durante o processo de cadastro:", error);
       throw error;
     }
   };
@@ -240,7 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       full_name: auth.userNome,
       email: auth.user.email || "",
       user_type: auth.userType,
-      phone: "", // Phone not provided in setAuth; adjust if needed
+      phone: "", 
     });
   };
 
