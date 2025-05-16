@@ -171,15 +171,36 @@ export function Sidebar() {
                   Dashboard
                 </Link>
 
-                <Link href="/dashboard/cliente"
+                <Link href="/dashboard/veiculos"
                   className='flex items-center gap-4 px-2.5 text-muted-foreground'
                   prefetch={false}
                 >
                   <Car className="w-5 h-5" />
                   Meus veículos
                 </Link>
+                <Link href="/dashboard/solicitacoes"
+                  className='flex items-center gap-4 px-2.5 text-muted-foreground'
+                  prefetch={false}
+                >
+                  <Settings2 className="w-5 h-5" />
+                  Solicitações
+                </Link>
+                <Link href="/dashboard/mecanicos"
+                  className='flex items-center gap-4 px-2.5 text-muted-foreground'
+                  prefetch={false}
+                >
+                  <Car className="w-5 h-5" />
+                  Mecânicos
+                </Link>
+                <Link href="/dashboard/guinchos"
+                  className='flex items-center gap-4 px-2.5 text-muted-foreground'
+                  prefetch={false}
+                >
+                  <Car className="w-5 h-5" />
+                 Guinchos
+                </Link>
 
-                <Link href="/dashboard/cliente"
+                <Link href="/dashboard/ajuda"
                   className='flex items-center gap-4 px-2.5 text-muted-foreground'
                   prefetch={false}
                 >
@@ -187,6 +208,14 @@ export function Sidebar() {
                   Suporte
                 </Link>
 
+              </nav>
+              <nav className='grid gap-6 text-lg font-medium p-2'>
+                  <Link href="#"
+          className="flex items-center gap-4 px-2.5 text-muted-foreground"
+          >
+            <LogOut className="h-5 w-5 text-red-500"/>
+            Sair
+          </Link>
               </nav>
 
             </SheetContent>

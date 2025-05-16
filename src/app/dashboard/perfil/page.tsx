@@ -28,8 +28,7 @@ export default function PerfilPage() {
   const supabase = useSupabase();
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+ 
 
   // Fetch profile data
   const fetchProfile = useCallback(async () => {
@@ -42,27 +41,21 @@ export default function PerfilPage() {
       .single();
 
     if (error) {
-      setError('Erro ao carregar o perfil: ' + error.message);
       toast.error('Erro ao carregar o perfil', {
         style: { backgroundColor: '#EF4444', color: '#ffffff' },
       });
-    } else {
+      console.error('Erro ao carregar o perfil:', error);
       setProfile(data);
     }
-    setLoading(false);
   }, [user?.id, supabase]);
-
   useEffect(() => {
     fetchProfile();
-  }, [user?.id, supabase, fetchProfile]);
+  }, [fetchProfile]);
 
   // Handle profile update
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.id || !supabase || !profile) return;
-
-    // Debug: ver o que está sendo enviado
-    // console.log('Atualizando perfil:', profile);
 
     const { error } = await supabase
       .from('profiles')
@@ -84,95 +77,105 @@ export default function PerfilPage() {
       toast.success('Perfil atualizado com sucesso!', {
         style: { backgroundColor: '#4ADE80', color: '#ffffff' },
       });
-      fetchProfile(); // Atualiza o estado local após update
+      fetchProfile();
     }
   };
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-screen">Carregando...</div>;
-  }
-
-  if (error) {
-    return <div className="flex justify-center items-center h-screen text-red-600">{error}</div>;
-  }
+  const handleBack = () => {
+    router.push('/dashboard/cliente');
+  };
 
   return (
-    <div className="container mx-auto p-4">
-      <Sidebar/>
-      <Card className="max-w-md mx-auto">
-        <CardHeader>
-          <CardTitle className="text-purple-700">Meu Perfil</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleUpdateProfile} className="space-y-4">
-            <div>
-              <Label htmlFor="nome">Nome</Label>
-              <Input
-                id="nome"
-                value={profile?.full_name || ''}
-                onChange={(e) => setProfile({ ...profile!, full_name: e.target.value })}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={profile?.email || ''}
-                onChange={(e) => setProfile({ ...profile!, email: e.target.value })}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="telefone">Telefone</Label>
-              <Input
-                id="telefone"
-                value={profile?.telefone || ''}
-                onChange={(e) => setProfile({ ...profile!, telefone: e.target.value })}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="endereco">Endereço</Label>
-              <Input
-                id="endereco"
-                value={profile?.endereco || ''}
-                onChange={(e) => setProfile({ ...profile!, endereco: e.target.value })}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="data_nascimento">Data de Nascimento</Label>
-              <Input
-                id="data_nascimento"
-                type="date"
-                value={profile?.data_nascimento || ''}
-                onChange={(e) => setProfile({ ...profile!, data_nascimento: e.target.value })}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                value={profile?.bio || ''}
-                onChange={(e) => setProfile({ ...profile!, bio: e.target.value })}
-                className="mt-1"
-              />
-            </div>
-            <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white">
-              Salvar Alterações
+    <div className="flex bg-gray-100 min-h-screen w-full">
+      <Sidebar />
+      <main className="flex-1  container mx-auto p-4 flex justify-center items-start w-full">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="text-purple-700">Meu Perfil</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleUpdateProfile} className="space-y-4">
+              <div>
+                <Label htmlFor="nome">Nome</Label>
+                <Input
+                  id="nome"
+                  value={profile?.full_name || ''}
+                  onChange={(e) =>
+                    setProfile((prev) => prev ? { ...prev, full_name: e.target.value } : null)
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={profile?.email || ''}
+                  onChange={(e) =>
+                    setProfile((prev) => prev ? { ...prev, email: e.target.value } : null)
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input
+                  id="telefone"
+                  value={profile?.telefone || ''}
+                  onChange={(e) =>
+                    setProfile((prev) => prev ? { ...prev, telefone: e.target.value } : null)
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="endereco">Endereço</Label>
+                <Input
+                  id="endereco"
+                  value={profile?.endereco || ''}
+                  onChange={(e) =>
+                    setProfile((prev) => prev ? { ...prev, endereco: e.target.value } : null)
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="data_nascimento">Data de Nascimento</Label>
+                <Input
+                  id="data_nascimento"
+                  type="date"
+                  value={profile?.data_nascimento || ''}
+                  onChange={(e) =>
+                    setProfile((prev) => prev ? { ...prev, data_nascimento: e.target.value } : null)
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  value={profile?.bio || ''}
+                  onChange={(e) =>
+                    setProfile((prev) => prev ? { ...prev, bio: e.target.value } : null)
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white">
+                Salvar Alterações
+              </Button>
+            </form>
+            <Button
+              onClick={handleBack}
+              className="mt-4 bg-red-600 hover:bg-red-700 text-white"
+            >
+              Voltar
             </Button>
-          </form>
-          <Button
-            onClick={() => router.push('/dashboard/cliente')}
-            className="mt-4 bg-red-600 hover:bg-red-700 text-white"
-          >
-            Voltar
-          </Button>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </main>
     </div>
   );
 }

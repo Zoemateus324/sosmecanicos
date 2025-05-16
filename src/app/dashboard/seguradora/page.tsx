@@ -183,7 +183,7 @@ export default function SeguradoraDashboard() {
           <div className="flex justify-between items-center">
             <h1 className="text-xl font-semibold text-blue-900">Dashboard da Seguradora</h1>
             <div className="flex items-center space-x-4">
-              <span className="text-gray-700">{userEmail || "Carregando..."}</span>
+              
               <Button
                 variant="outline"
                 className="border-orange-500 text-orange-500 hover:bg-orange-100 hover:text-orange-500"
