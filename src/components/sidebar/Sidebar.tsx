@@ -2,11 +2,12 @@
 
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Package, PanelBottom, Home } from 'lucide-react';
-import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet'
+import { Package, PanelBottom, Home, Car, BellRing, Bolt, KeySquare, MessageCircleWarning, Settings2, LogOut } from 'lucide-react';
+import { Sheet, SheetTrigger, SheetContent, SheetTitle } from '@/components/ui/sheet'
+
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 export function Sidebar() {
-  const router = useRouter();
 
   return (
     <div className="flex w-full flex-col bg-muted/40">
