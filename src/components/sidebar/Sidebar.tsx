@@ -1,40 +1,9 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { Package, PanelBottom, Home, Settings2, BellRing, Bolt, KeySquare, MessageCircleWarning, Car, LogOut } from "lucide-react";
-import { Sheet, SheetTrigger, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { toast } from "sonner";
-import { supabase } from "@/models/supabase";
-import { useRouter } from "next/navigation";
-import { Tooltip, TooltipContent, TooltipProvider } from "../ui/tooltip";
-import { TooltipTrigger } from "@radix-ui/react-tooltip";
-
-function isSupabaseInitialized(
-  supabase: SupabaseClient | null
-): supabase is SupabaseClient {
-  return supabase !== null;
-}
-
-// Contém o logout handle
-const handleLogout = async (router: ReturnType<typeof useRouter>) => {
-  if (!isSupabaseInitialized(supabase)) {
-    toast.error("Não é possível fazer logout: conexão com o banco de dados não está disponível", {
-      style: { backgroundColor: "#EF4444", color: "#ffffff" },
-    });
-    return;
-  }
-
-  const { error } = await supabase.auth.signOut();
-  if (error) {
-    toast.error("Erro ao sair: " + error.message, {
-      style: { backgroundColor: "#EF4444", color: "#ffffff" },
-    });
-  } else {
-    router.push("/login");
-  }
-};
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Package, PanelBottom, Home } from 'lucide-react';
+import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet'
 
 export function Sidebar() {
   const router = useRouter();
@@ -201,66 +170,24 @@ export function Sidebar() {
                   Dashboard
                 </Link>
 
-                <Link
-                  href="/dashboard/veiculos"
-                  className="flex items-center gap-4 px-2.5 text-muted-foreground"
+                <Link href="/dashboard/cliente"
+                  className='flex items-center gap-4 px-2.5 text-muted-foreground'
                   prefetch={false}
                 >
                   <Car className="w-5 h-5" />
                   Meus veículos
                 </Link>
 
-                <Link
-                  href="/dashboard/cliente"
-                  className="flex items-center gap-4 px-2.5 text-muted-foreground"
-                  prefetch={false}
-                >
-                  <BellRing className="w-5 h-5" />
-                  Solicitações
-                </Link>
-                <Link
-                  href="/dashboard/cliente"
-                  className="flex items-center gap-4 px-2.5 text-muted-foreground"
-                  prefetch={false}
-                >
-                  <Bolt className="w-5 h-5" />
-                  Mecânicos
-                </Link>
-                
-                <Link
-                  href="/dashboard/cliente"
-                  className="flex items-center gap-4 px-2.5 text-muted-foreground"
-                  prefetch={false}
-                >
-                  <KeySquare className="w-5 h-5" />
-                  Guinchos
-                </Link>
-                <Link
-                  href="/dashboard/cliente"
-                  className="flex items-center gap-4 px-2.5 text-muted-foreground"
+                <Link href="/dashboard/cliente"
+                  className='flex items-center gap-4 px-2.5 text-muted-foreground'
                   prefetch={false}
                 >
                   <MessageCircleWarning className="w-5 h-5" />
                   Suporte
                 </Link>
-                
-                <Link
-                  href="/dashboard/cliente"
-                  className="flex items-center gap-4 px-2.5 text-muted-foreground"
-                  prefetch={false}
-                >
-                  <Settings2 className="w-5 h-5" />
-                 Meu Perfil
-                </Link>
-                
 
-                <Button
-                  onClick={() => handleLogout(router)}
-                  className="bg-gray-800 hover:bg-gray-700 text-white"
-                >
-                  Logout
-                </Button>
               </nav>
+
             </SheetContent>
           </Sheet>
         </header>

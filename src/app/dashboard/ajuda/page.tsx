@@ -7,4 +7,7 @@ export default function AjudaDashboard() {
             <h1>Página de ajuda</h1>
         </div>
     )
+
+
+
 }
