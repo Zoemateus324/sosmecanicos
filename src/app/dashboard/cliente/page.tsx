@@ -57,6 +57,9 @@ interface Vehicle {
   ano: number;
   placa: string;
 }
+interface User{
+  full_name:string;
+}
 
 interface ServiceRequest {
   id: string;

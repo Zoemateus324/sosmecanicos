@@ -18,6 +18,10 @@ export default function Navbar() {
     }
   };
 
+  // consta o tipo de usuário para redirecionar atraves do link para o dashboard
+  // Exemplo: user?.type pode ser 'cliente' ou 'parceiro'
+ 
+
   return (
     <nav className="bg-white shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -121,7 +125,7 @@ export default function Navbar() {
             {user ? (
               <div className="space-y-1">
                 <Link
-                  href="/dashboard"
+                  href="/dashboard/cliente"
                   className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-blue-500 hover:text-gray-800"
                 >
                   Dashboard
