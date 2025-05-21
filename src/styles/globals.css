@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "tailwindcss/preflight";
 @tailwind utilities;
 @import 'leaflet/dist/leaflet.css';
 
