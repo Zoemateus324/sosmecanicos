@@ -86,7 +86,7 @@ export default function PerfilPage() {
   };
 
   return (
-    <div className="flex bg-gray-100 min-h-screen w-full">
+    <div className="flex flex-col bg-gray-100 min-h-screen w-full">
       <Sidebar />
       <main className="flex-1  container mx-auto p-4 flex justify-center items-start w-full">
         <Card className="max-w-md w-full">
