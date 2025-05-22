@@ -57,9 +57,7 @@ interface Vehicle {
   ano: number;
   placa: string;
 }
-interface User{
-  full_name:string;
-}
+
 
 interface ServiceRequest {
   id: string;
@@ -601,6 +599,13 @@ export default function ClienteDashboard() {
                                 </div>
                                 <div className={`flex items-center ${color}`}>
                                 <StatusIcon className="h-4 w-4 mr-1" />
+                                <div className="flex">
+                                  <span className={`text-sm ${color}`}>
+                                    {request.status}
+                                  </span>
+                                
+                                </div>
+                                
                                 </div>
                               </div>
                             </div>

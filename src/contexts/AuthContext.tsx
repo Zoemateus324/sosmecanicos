@@ -10,7 +10,7 @@ interface Profile {
   full_name: string;
   email: string;
   user_type: string;
-  phone: string;
+  telefone: string;
 }
 
 interface AuthContextType {
@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data, error } = await supabase
           .from("profiles")
-          .select("id, full_name, email, user_type, phone")
+          .select("id, full_name, email, user_type, telefone")
           .eq("id", userId)
           .single();
 
@@ -191,7 +191,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       full_name: auth.userNome,
       email: auth.user.email || "",
       user_type: auth.userType,
-      phone: "",
+      telefone:"",
+    } as Profile);
+    setLoading(false);
+    toast.success("Autenticação atualizada com sucesso!", {
+      style: { backgroundColor: "#4CAF50", color: "#ffffff" },
+
     });
   };
 
