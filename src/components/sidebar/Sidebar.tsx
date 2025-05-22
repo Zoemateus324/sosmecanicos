@@ -65,7 +65,7 @@ export function Sidebar() {
             <Tooltip >
               <TooltipTrigger asChild>
 
-                <Link href="/dashboard/mecânicos"
+                <Link href="/dashboard/mecanicos"
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-fore">
                   <Bolt className="h-4 w-4" />
                   <span className="sr-only">Mecânicos</span>
@@ -78,7 +78,7 @@ export function Sidebar() {
               <Tooltip >
               <TooltipTrigger asChild>
 
-                <Link href="/dashboard/guinchos"
+                <Link href="/dashboard/guincho"
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-fore">
                   <KeySquare className="h-4 w-4" />
                   <span className="sr-only">Guinchos</span>
@@ -192,7 +192,7 @@ export function Sidebar() {
                   <Car className="w-5 h-5" />
                   Mecânicos
                 </Link>
-                <Link href="/dashboard/guinchos"
+                <Link href="/dashboard/guincho"
                   className='flex items-center gap-4 px-2.5 text-muted-foreground'
                   prefetch={false}
                 >
