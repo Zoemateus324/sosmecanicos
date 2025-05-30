@@ -7,12 +7,8 @@ import { Sheet, SheetTrigger, SheetContent, SheetTitle } from '@/components/ui/s
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import React from "react";
 
-interface SidebarProps {
-  isOpen: boolean; // Added isOpen prop
-  toggleSidebar: () => void;
-}
 
-export function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
+export function Sidebar() {
   return (
     <div className="flex w-full flex-col bg-muted/40">
       {/* Desktop Sidebar (Hidden on small screens) */}
@@ -136,9 +132,9 @@ export function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
         <header
           className="sticky top-0 z-30 flex h-14 items-center px-4 border-b bg-background gap-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6"
         >
-          <Sheet open={isOpen} onOpenChange={(open) => !open && toggleSidebar()}>
+          <Sheet>
             <SheetTrigger asChild>
-              <Button size="icon" variant="outline" className="sm:hidden" onClick={toggleSidebar}>
+              <Button size="icon" variant="outline" className="sm:hidden" >
                 <PanelBottom className="w-5 h-5" />
                 <span className="sr-only">Abrir / Fechar menu</span>
               </Button>
