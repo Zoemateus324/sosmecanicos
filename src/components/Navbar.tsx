@@ -140,7 +140,7 @@ export default function Navbar() {
             ) : (
               <div className="space-y-1">
                 <Link
-                  href="/login"
+                  href="/manutencaoscreen"
                   className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-blue-500 hover:text-gray-800"
                 >
                   Entrar

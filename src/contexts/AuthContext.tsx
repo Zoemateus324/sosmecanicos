@@ -75,15 +75,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        const profileData = await fetchProfile(session.user.id);
+        setProfile(profileData);
+      }
+      setLoading(false);
+    };
+
+    getSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event: AuthChangeEvent, session: Session | null) => {
         setLoading(true);
+        setUser(session?.user ?? null);
         if (session?.user) {
-          setUser(session.user);
           const profileData = await fetchProfile(session.user.id);
           setProfile(profileData);
         } else {
-          setUser(null);
           setProfile(null);
         }
         setLoading(false);
@@ -93,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription?.unsubscribe();
     };
-  }, [supabase, fetchProfile]);
+  }, [supabase, fetchProfile]); // Adicionado fetchProfile como dependência
 
   const signIn = async (email: string, password: string) => {
     if (!supabase) throw new Error("Conexão indisponível.");
@@ -160,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (newUser) {
       const { error: profileError } = await supabase.from("profiles").insert([
-        { id: newUser.id, full_name: fullName, email, user_type: userType, phone }
+        { id: newUser.id, full_name: fullName, email, user_type: userType, telefone: phone }
       ]);
 
       if (profileError) {
@@ -168,7 +179,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw profileError;
       }
 
-      await fetchProfile(newUser.id);
+      const profileData = await fetchProfile(newUser.id);
+      setProfile(profileData);
       toast.success("Cadastro realizado com sucesso!");
     }
   };
@@ -182,6 +194,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
 
+    setUser(null);
+    setProfile(null);
     toast.success("Logout realizado com sucesso!");
   };
 
@@ -192,12 +206,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       full_name: auth.userNome,
       email: auth.user.email || "",
       user_type: auth.userType,
-      telefone:"",
+      telefone: "",
     } as Profile);
     setLoading(false);
     toast.success("Autenticação atualizada com sucesso!", {
       style: { backgroundColor: "#4CAF50", color: "#ffffff" },
-
     });
   };
 
