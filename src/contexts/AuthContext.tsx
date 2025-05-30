@@ -60,6 +60,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return data as Profile;
       } catch (databaseError) {
         console.error("Erro ao buscar perfil:", databaseError);
+        toast.error("Erro inesperado ao carregar perfil.", {
+          style: { backgroundColor: "#EF4444", color: "#ffffff" },
+        });
         return null;
       }
     },
