@@ -1,36 +1,151 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SOS Mecânicos
 
-## Getting Started
+## Visão Geral
 
-First, run the development server:
+O **SOS Mecânicos** é um sistema desenvolvido para conectar motoristas a mecânicos de forma rápida e eficiente, facilitando o atendimento de emergências automotivas. O objetivo principal é agilizar o processo de solicitação de serviços mecânicos, proporcionando segurança e praticidade aos usuários.
+
+---
+
+## Objetivos do Sistema
+
+- Facilitar a busca e contratação de mecânicos próximos.
+- Permitir que mecânicos recebam solicitações em tempo real.
+- Oferecer avaliações e feedbacks para melhorar a qualidade do serviço.
+- Gerenciar histórico de atendimentos para usuários e mecânicos.
+
+---
+
+## Tecnologias Utilizadas
+
+### Front-end
+
+- **React.js**: Biblioteca principal para construção da interface.
+- **Redux**: Gerenciamento de estado global.
+- **Axios**: Consumo de APIs REST.
+- **Styled-components**: Estilização dos componentes.
+- **React Router**: Navegação entre páginas.
+
+### Back-end
+
+- **Node.js**: Ambiente de execução JavaScript.
+- **Express.js**: Framework para criação de APIs REST.
+- **SupabaseB**: Banco de dados SQL.
+- **Mongoose**: ODM para MongoDB.
+- **JWT**: Autenticação baseada em tokens.
+
+---
+
+## Como Trabalhar com o Sistema
+
+### 1. Fork do Repositório
+
+1. Acesse o repositório principal no GitHub.
+2. Clique em **Fork** para criar uma cópia em sua conta.
+
+### 2. Clonando o Projeto
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/seu-usuario/sosmecanicos.git
+cd sosmecanicos
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Criando uma Branch
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+git checkout -b nome-da-sua-feature
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Sincronizando com o Repositório Principal
 
-## Learn More
+```bash
+git remote add upstream https://github.com/repositorio-principal/sosmecanicos.git
+git fetch upstream
+git merge upstream/main
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 5. Enviando Alterações
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+git add .
+git commit -m "Descrição da alteração"
+git push origin nome-da-sua-feature
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 6. Pull Request
 
-## Deploy on Vercel
+- Acesse seu fork no GitHub e crie um **Pull Request** para o repositório principal.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Como Rodar o Projeto Localmente
+
+### Front-end
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+### Back-end
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+- O front-end estará disponível em `http://localhost:3000`
+- O back-end estará disponível em `http://localhost:5000`
+
+---
+
+## Testando o Sistema
+
+### Front-end
+
+```bash
+cd frontend
+npm test
+```
+
+### Back-end
+
+```bash
+cd backend
+npm test
+```
+
+---
+
+## Deploy
+
+### Front-end
+
+- Recomenda-se o uso do **Vercel** ou **Netlify**.
+- Faça o build do projeto:
+    ```bash
+    npm run build
+    ```
+- Siga as instruções da plataforma escolhida para publicar a pasta `build`.
+
+### Back-end
+
+- Recomenda-se o uso do **Heroku** ou **Render**.
+- Configure as variáveis de ambiente.
+- Faça o deploy seguindo as instruções da plataforma.
+
+---
+
+## Contribuição
+
+- Sempre crie branches para novas features ou correções.
+- Descreva claramente suas alterações nos commits.
+- Mantenha o repositório atualizado com o upstream.
+- Siga o padrão de código definido no projeto.
+
+---
+
+## Contato
+
+Dúvidas ou sugestões? Abra uma issue ou entre em contato com os mantenedores do projeto.
