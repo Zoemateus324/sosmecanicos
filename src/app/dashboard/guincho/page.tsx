@@ -23,10 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "react-hot-toast";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-
 
 
 export default function GuinchoDashboard() {
