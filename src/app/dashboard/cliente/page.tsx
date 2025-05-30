@@ -394,7 +394,7 @@ export default function ClienteDashboard() {
 
   return (
     <div className="flex gap-[2%] flex-wrap content-start">
-     <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+     <Sidebar />
 
       {isSidebarOpen && (
         <div
