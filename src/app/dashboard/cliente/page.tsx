@@ -44,7 +44,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Sidebar } from "@/components/sidebar/Sidebar";
-import { Plus, Circle, CircleCheck, CircleX } from "lucide-react";
+import { Plus, Circle, CircleCheck } from "lucide-react";
 import Link from "next/link";
 
 // Define interfaces
@@ -86,7 +86,7 @@ const ErrorFallback = ({ message }: { message: string }) => (
         <p className="text-gray-600">{message}</p>
         <Button
           onClick={() => window.location.reload()}
-          className="mt-4 bg-purple-600 hover:bg-purple-700 text-white"
+          className="mt-4 bg-black-600 hover:bg-black-700 text-white"
         >
           Tentar Novamente
         </Button>
@@ -118,12 +118,7 @@ const getStatusInfo = (status: string): StatusInfo => {
         text: "Aceito",
         color: "text-green-600",
       };
-    case "recusado":
-      return {
-        icon: CircleX,
-        text: "Recusado",
-        color: "text-red-600",
-      };
+   
     default:
       return {
         icon: Circle,
@@ -273,7 +268,7 @@ export default function ClienteDashboard() {
         status: "pendente",
       });
     if (error) {
-      console.error("Erro ao criar solicitação do mecânico:", error);
+      
       toast.error("Erro ao solicitar mecânico: " + error.message, {
         style: { backgroundColor: "#EF4444", color: "#ffffff" },
       });
@@ -323,7 +318,7 @@ export default function ClienteDashboard() {
         .from("guinchos")
         .select("id, user_id, vehicle_id, observations, status, created_at")
         .eq("user_id", user.id)
-        .in("status", ["Pendente", "Aceita", "Recusado"]),
+        .in("status", ["Pendente", "Aceita"]),
     ]);
 
     if (mechanicData.error) {
@@ -405,7 +400,7 @@ export default function ClienteDashboard() {
       <div className="flex-1 p-4 md:p-6 w-full container mx-auto">
         <header className="bg-white shadow-md p-4 mb-6 rounded-lg flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <h1 className="text-xl md:text-2xl font-semibold text-purple-700">Dashboard</h1>
+            <h1 className="text-xl md:text-2xl font-semibold text-black-700">Dashboard</h1>
           </div>
           <div className="flex items-center space-x-4 md:space-x-6">
             <Avatar>
@@ -422,7 +417,7 @@ export default function ClienteDashboard() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-2xl font-semibold text-purple-700 mb-4"
+          className="text-2xl font-semibold text-black-700 mb-4"
         >
           Bem-vindo(a), {userNome || "Carregando..."}!
         </motion.h2>
@@ -488,7 +483,7 @@ export default function ClienteDashboard() {
                         <p className="text-gray-500">Nenhuma solicitação pendente.</p>
                         <Button
                           onClick={() => setIsMechanicDialogOpen(true)}
-                          className="mt-2 bg-purple-600 hover:bg-purple-700 text-white"
+                          className="mt-2 bg-black-600 hover:bg-black-700 text-white"
                           disabled={!isSupabaseInitialized(supabase)}
                         >
                           <Plus className="mr-1 h-4 w-4" /> Criar Solicitação
@@ -502,13 +497,13 @@ export default function ClienteDashboard() {
               <div className="space-y-6">
                 <Card className="border-none shadow-md">
                   <CardHeader>
-                    <CardTitle className="text-purple-700">Veículos Cadastrados</CardTitle>
+                    <CardTitle className="text-black-700">Veículos Cadastrados</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-3xl font-bold text-gray-800">{vehicles.length}</p>
                     <Button
                       onClick={() => setIsVehicleDialogOpen(true)}
-                      className="mt-4 bg-purple-600 hover:bg-purple-700 text-white"
+                      className="w-full bg-blue-950 hover:bg-blue-950 text-white"
                       disabled={!isSupabaseInitialized(supabase)}
                     >
                       Adicionar Veículo
@@ -517,12 +512,12 @@ export default function ClienteDashboard() {
                 </Card>
                 <Card className="border-none shadow-md">
                   <CardHeader>
-                    <CardTitle className="text-purple-700">Ações Rápidas</CardTitle>
+                    <CardTitle className="text-black-700">Ações Rápidas</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <Button
                       onClick={() => setIsMechanicDialogOpen(true)}
-                      className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                      className="w-full bg-blue-950 hover:bg-blue-950 text-white"
                       disabled={!isSupabaseInitialized(supabase)}
                     >
                       Solicitar Mecânico
@@ -539,7 +534,7 @@ export default function ClienteDashboard() {
             >
               <Card className="border-none shadow-md">
                 <CardHeader>
-                  <CardTitle className="text-purple-700">Veículos Cadastrados</CardTitle>
+                  <CardTitle className="text-black-700">Veículos Cadastrados</CardTitle>
                   <CardDescription className="text-gray-600">
                     Gerencie os veículos associados à sua conta
                   </CardDescription>
@@ -550,11 +545,11 @@ export default function ClienteDashboard() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="text-purple-700">Marca</TableHead>
-                            <TableHead className="text-purple-700">Modelo</TableHead>
-                            <TableHead className="text-purple-700">Placa</TableHead>
-                            <TableHead className="text-purple-700">Ano</TableHead>
-                            <TableHead className="text-purple-700">Ações</TableHead>
+                            <TableHead className="text-black-700">Marca</TableHead>
+                            <TableHead className="text-black-700">Modelo</TableHead>
+                            <TableHead className="text-black-700">Placa</TableHead>
+                            <TableHead className="text-black-700">Ano</TableHead>
+                            <TableHead className="text-black-700">Ações</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -573,7 +568,7 @@ export default function ClienteDashboard() {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="border-purple-600 text-purple-600 hover:bg-purple-50 mr-2"
+                                      className="border-black-600 text-black-600 hover:bg-black-50 mr-2"
                                       onClick={() =>
                                         setEditVehicle({
                                           ...veiculo,
@@ -586,7 +581,7 @@ export default function ClienteDashboard() {
                                   </DialogTrigger>
                                   <DialogContent className="sm:max-w-[425px]">
                                     <DialogHeader>
-                                      <DialogTitle className="text-purple-700">
+                                      <DialogTitle className="text-black-700">
                                         Editar Veículo
                                       </DialogTitle>
                                       <DialogDescription>
@@ -664,13 +659,13 @@ export default function ClienteDashboard() {
                                       <Button
                                         variant="outline"
                                         onClick={() => setIsEditVehicleDialogOpen(false)}
-                                        className="border-purple-600 text-purple-600 hover:bg-purple-50"
+                                        className="border-black-600 text-black-600 hover:bg-black-50"
                                       >
                                         Cancelar
                                       </Button>
                                       <Button
                                         onClick={handleEditVehicle}
-                                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                                        className="bg-blue-950 hover:bg-blue-950 text-white"
                                         disabled={!isSupabaseInitialized(supabase)}
                                       >
                                         Salvar
@@ -722,7 +717,7 @@ export default function ClienteDashboard() {
                       </p>
                       <Button
                         onClick={() => setIsVehicleDialogOpen(true)}
-                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                        className="bg-black-600 hover:bg-black-700 text-white"
                         disabled={!isSupabaseInitialized(supabase)}
                       >
                         Cadastrar Meu Primeiro Veículo
@@ -738,7 +733,7 @@ export default function ClienteDashboard() {
         <Dialog open={isVehicleDialogOpen} onOpenChange={setIsVehicleDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle className="text-purple-700">Cadastrar Novo Veículo</DialogTitle>
+              <DialogTitle className="text-black-700">Cadastrar Novo Veículo</DialogTitle>
               <DialogDescription>
                 Preencha os dados do veículo para adicioná-lo à sua conta.
               </DialogDescription>
@@ -805,13 +800,13 @@ export default function ClienteDashboard() {
               <Button
                 variant="outline"
                 onClick={() => setIsVehicleDialogOpen(false)}
-                className="border-purple-600 text-purple-600 hover:bg-purple-50"
+                className="border-black-600 text-black-600 hover:bg-black-50"
               >
                 Cancelar
               </Button>
               <Button
                 onClick={handleAddVehicle}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
+                className="bg-blue-950 hover:bg-blue-950 text-white"
                 disabled={!isSupabaseInitialized(supabase)}
               >
                 Cadastrar
@@ -823,7 +818,7 @@ export default function ClienteDashboard() {
         <Dialog open={isMechanicDialogOpen} onOpenChange={setIsMechanicDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle className="text-purple-700">Solicitar Mecânico</DialogTitle>
+              <DialogTitle className="text-black-700">Solicitar Mecânico</DialogTitle>
               <DialogDescription>
                 Informe os detalhes para solicitar um mecânico.
               </DialogDescription>
@@ -923,13 +918,13 @@ export default function ClienteDashboard() {
               <Button
                 variant="outline"
                 onClick={() => setIsMechanicDialogOpen(false)}
-                className="border-purple-600 text-purple-600 hover:bg-purple-50"
+                className="border-black-600 text-black-600 hover:bg-black-50"
               >
                 Cancelar
               </Button>
               <Button
                 onClick={handleRequestMechanic}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
+                className="bg-blue-950 hover:bg-blue-950 text-white"
                 disabled={
                   !isSupabaseInitialized(supabase) ||
                   !mechanicRequest.vehicleId ||
