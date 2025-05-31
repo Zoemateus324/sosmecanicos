@@ -333,8 +333,7 @@ export default function ClienteDashboard() {
       });
     }
     if (towData.error) {
-      console.error("Error fetching tow requests:", towData.error.message);
-      toast.warning("Erro ao obter solicitações de guincho: " + towData.error.message, {
+        toast.warning("Erro ao obter solicitações de guincho: " + towData.error.message, {
         style: { backgroundColor: "#FBBF24", color: "#ffffff" },
       });
     }
