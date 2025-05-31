@@ -86,9 +86,9 @@ export default function PerfilPage() {
   };
 
   return (
-    <div className="flex flex-col bg-gray-100 min-h-screen w-full">
+    <div className="flex gap-[2%] flex-wrap content-start">
       <Sidebar />
-      <main className="flex-1  container mx-auto p-4 flex justify-center items-start w-full">
+      <main className="flex-1 p-4 md:p-6 w-full container mx-auto">
         <Card className="max-w-md w-full">
           <CardHeader>
             <CardTitle className="text-purple-700">Meu Perfil</CardTitle>

@@ -7,10 +7,10 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 
 export default function veiculosDashboard() {
     return (
-        <div className="flex flex-col gap-[2%] flex-wrap content-start">
+        <div className="flex gap-[2%] flex-wrap content-start">
             <Sidebar/>
             
-            <div className="flex-1  container  p-4 flex justify-center items-start w-full">
+            <div className="flex-1 p-4 md:p-6 w-full container mx-auto">
             <Card>
                 <CardContent>
                     <CardTitle>Veículos</CardTitle>

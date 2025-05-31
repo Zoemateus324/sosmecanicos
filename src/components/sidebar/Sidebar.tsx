@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Package, PanelBottom, Home, Car, BellRing, Bolt, KeySquare, MessageCircleWarning, Settings2, LogOut } from 'lucide-react';
+import { Package, PanelBottom, Home, Car, BellRing, Bolt, MessageCircleWarning, Settings2, LogOut } from 'lucide-react';
 import { Sheet, SheetTrigger, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import React from "react";
@@ -71,7 +71,7 @@ export function Sidebar() {
               </TooltipTrigger>
               <TooltipContent side="right">Mecânicos</TooltipContent>
             </Tooltip>
-            <Tooltip>
+            {/* <Tooltip>
               <TooltipTrigger asChild>
                 <Link
                   href="/dashboard/guincho"
@@ -82,7 +82,7 @@ export function Sidebar() {
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="right">Guinchos</TooltipContent>
-            </Tooltip>
+            </Tooltip> */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
@@ -189,14 +189,14 @@ export function Sidebar() {
                   Mecânicos
                 </Link>
 
-                <Link
+                {/* <Link
                   href="/dashboard/guincho"
                   className="flex items-center gap-4 px-2.5 text-muted-foreground"
                   prefetch={false}
                 >
                   <Car className="w-5 h-5" />
                   Guinchos
-                </Link>
+                </Link> */}
 
                 <Link
                   href="/dashboard/ajuda"

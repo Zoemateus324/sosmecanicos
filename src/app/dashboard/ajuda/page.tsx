@@ -1,5 +1,6 @@
 
 import { Sidebar } from '@/components/sidebar/Sidebar';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
 
 
 export default function AjudaDashboard() {
@@ -8,10 +9,14 @@ export default function AjudaDashboard() {
 
 
   return (
-    <div className="flex flex-col">
+    <div className="flex gap-[2%] flex-wrap content-start">
        <Sidebar/>
-      <main className='flex-1  container mx-auto p-4 flex justify-center items-start w-full'>
-        <h2>Sua página de suporte e ajuda!</h2>
+      <main className='flex-1 p-4 md:p-6 w-full container mx-auto'>
+        <Card>
+          <CardContent>
+            <CardTitle>Suporte SOS Mecânicos</CardTitle>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
