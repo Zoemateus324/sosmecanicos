@@ -20,7 +20,7 @@ export default function Footer() {
           <h3 className="text-lg font-semibold mb-4">Seja Parte</h3>
           <ul className="space-y-2">
             <li><Link href="/trabalhe-conosco" className="hover:underline">Trabalhe Conosco</Link></li>
-            <li><Link href="/seja-parceiro" className="hover:underline">Seja Nosso Parceiro</Link></li>
+            <li><Link href="/cadastro" className="hover:underline">Seja Nosso Parceiro</Link></li>
           </ul>
         </div>
         <div>
