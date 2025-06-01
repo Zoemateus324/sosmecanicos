@@ -1,6 +1,6 @@
 export default function ManutencaoScreen() {
   return (
-    <div className="flex flex-col gap-[2%] flex-wrap content-start">
+    <div className="flex flex-col gap-[2%] flex-wrap content-start sim:mt-4">
       <div className="flex-1 container p-4 flex justify-center items-start w-full">
         <h1 className="text-2xl font-bold">Tela de Manutenção</h1>
         <p>Esta é a tela de manutenção.</p>
