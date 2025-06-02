@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Package, PanelBottom, Home, Car, BellRing, Bolt, MessageCircleWarning, Settings2, LogOut } from 'lucide-react';
+import { Package, PanelBottom, Home, Car, BellRing, Bolt, MessageCircleWarning, Settings2, LogOut, Settings } from 'lucide-react';
 import { Sheet, SheetTrigger, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import React from "react";
@@ -205,6 +205,15 @@ export function Sidebar() {
                 >
                   <MessageCircleWarning className="w-5 h-5" />
                   Suporte
+                </Link>
+
+                 <Link
+                  href="/dashboard/perfil"
+                  className="flex items-center gap-4 px-2.5 text-muted-foreground"
+                  prefetch={false}
+                >
+                  <Settings className="w-5 h-5" />
+                  Perfil
                 </Link>
               </nav>
 

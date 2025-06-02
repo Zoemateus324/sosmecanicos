@@ -282,7 +282,7 @@ export default function ClienteDashboard() {
     }
   };
 
-  // Check user logged in
+  // // Check user logged in
   const checkUserLoggedIn = useCallback(async () => {
     if (!isSupabaseInitialized(supabase)) throw new Error("Cliente não está logado");
     const { data, error } = await supabase.auth.getSession();
@@ -363,20 +363,28 @@ export default function ClienteDashboard() {
     let isMounted = true;
 
     const fetchData = async () => {
-      try {
-        await checkUserLoggedIn();
-        if (!isMounted) return;
+  try {
+    await checkUserLoggedIn();
+    if (!isMounted) return;
 
-        await Promise.all([getVehicles(), fetchPendingRequests()]);
-        if (!isMounted) return;
-      } catch (error) {
-        if (!isMounted) return;
-        console.error("Critical error:", error);
-        setCriticalError(error instanceof Error ? error.message : "An error occurred");
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
+    // Add a timeout of 10 seconds for the Promise.all
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Tempo limite excedido ao buscar dados")), 10000);
+    });
+
+    await Promise.race([
+      Promise.all([getVehicles(), fetchPendingRequests()]),
+      timeoutPromise,
+    ]);
+    if (!isMounted) return;
+  } catch (error) {
+    if (!isMounted) return;
+    console.error("Critical error:", error);
+    setCriticalError(error instanceof Error ? error.message : "An error occurred");
+  } finally {
+    if (isMounted) setLoading(false);
+  }
+};
 
     fetchData();
     return () => {
@@ -542,23 +550,23 @@ export default function ClienteDashboard() {
                 <CardContent>
                   {vehicles.length > 0 ? (
                     <div className="overflow-x-auto">
-                      <Table>
+                      <Table className="sm:overflow-x-auto">
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="text-black-700">Marca</TableHead>
+                            <TableHead className="hidden sm:table-cell text-black-700">Marca</TableHead>
                             <TableHead className="text-black-700">Modelo</TableHead>
-                            <TableHead className="text-black-700">Placa</TableHead>
-                            <TableHead className="text-black-700">Ano</TableHead>
+                            <TableHead className="hidden sm:table-cell text-black-700">Placa</TableHead>
+                            <TableHead className="hidden sm:table-cell text-black-700">Ano</TableHead>
                             <TableHead className="text-black-700">Ações</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {vehicles.map((veiculo) => (
                             <TableRow key={veiculo.id} className="hover:bg-gray-50">
-                              <TableCell className="text-gray-800">{veiculo.marca}</TableCell>
+                              <TableCell className="text-gray-800 hidden sm:table-cell">{veiculo.marca}</TableCell>
                               <TableCell className="text-gray-800">{veiculo.modelo}</TableCell>
-                              <TableCell className="text-gray-800">{veiculo.placa}</TableCell>
-                              <TableCell className="text-gray-800">{veiculo.ano}</TableCell>
+                              <TableCell className="text-gray-800 hidden sm:table-cell">{veiculo.placa}</TableCell>
+                              <TableCell className="text-gray-800 hidden sm:table-cell">{veiculo.ano}</TableCell>
                               <TableCell>
                                 <Dialog
                                   open={isEditVehicleDialogOpen}
