@@ -7,27 +7,13 @@ import { AlertCircleIcon } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/models/supabase";
 import { Button } from "@/components/ui/button";
-import { ServiceRequestDetailsModal } from "@/components/ServiceRequestDetailsModal";
+import { ServiceRequestDetailsModal, ServiceRequest as ModalServiceRequest } from "@/components/ServiceRequestDetailsModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { PaymentModal } from "@/components/PaymentModal";
 import { toast } from "sonner";
 
-interface ServiceRequest {
-  id: number;
-  status: string;
-  description?: string | null;
-  location?: string | null;    
-  estimated_price?: number | null;
-  vehicle?: {
-    id: number;
-    modelo: string;
-    marca: string;
-    ano: string;
-  } | null;
-  category_type: 'Mecânica Geral' | 'Motor e Transmissão' | 'Suspensão e Direção' | 'Elétrica e Eletrônica' | 'Ar-Condicionado' | 'Funilaria e Pintura' | 'Tuning e Personalização' | 'Engrenagens' | 'Rodas e Pneus' | 'Freios' | 'Escapamento' | 'Manutenção Preventiva' | 'Diagnóstico' | 'Troca de Peças' | 'Reparos' | 'Socorro Urgente';
-  service_type: 'mecanico' | 'guincho' ;
-  provider_id?: string | null;
-}
+// Use the ServiceRequest type from ServiceRequestDetailsModal for compatibility
+type ServiceRequest = ModalServiceRequest;
 
 export default function Solicitacoes() {
   const { user } = useAuth();
@@ -35,7 +21,6 @@ export default function Solicitacoes() {
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   useEffect(() => {
@@ -103,9 +88,8 @@ export default function Solicitacoes() {
   const handleEditRequest = (request: ServiceRequest) => {
     setSelectedRequest(request);
     setIsDetailsModalOpen(false);
-    setIsEditModalOpen(true);
+    // setIsEditModalOpen(true); // Removed unused state
   };
-
   const handleCancelRequest = async (requestId: number, serviceType: 'mechanic' | 'tow' | 'insurance') => {
     if (!supabase) return;
 
@@ -263,7 +247,13 @@ export default function Solicitacoes() {
           isOpen={isPaymentModalOpen}
           onClose={() => setIsPaymentModalOpen(false)}
           amount={selectedRequest.estimated_price || 0}
-          serviceType={selectedRequest.service_type}
+          serviceType={
+            selectedRequest.service_type === "mecanico"
+              ? "mechanic"
+              : selectedRequest.service_type === "guincho"
+              ? "tow"
+              : selectedRequest.service_type
+          }
           serviceId={selectedRequest.id.toString()}
           providerId={selectedRequest.provider_id || ''}
           onSuccess={handlePaymentSuccess}

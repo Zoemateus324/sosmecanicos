@@ -60,7 +60,7 @@ export function ServiceRequestDetailsModal({ isOpen, onClose, request, onEdit, o
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Detalhes da Solicitação #{request.id}</DialogTitle>
+          <DialogTitle>Detalhes da Solicitação</DialogTitle>
           <DialogDescription>
             Informações completas sobre a solicitação de serviço.
           </DialogDescription>
@@ -125,6 +125,7 @@ export function ServiceRequestDetailsModal({ isOpen, onClose, request, onEdit, o
              </Badge>
           </div>
           {/* Add more details specific to each request type here */}
+          
         </div>
         <div className="flex justify-end gap-2 mt-4">
           {/* Action Buttons (conditional based on status and user role) */}
