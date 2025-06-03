@@ -12,12 +12,12 @@ import { useSupabase } from "@/components/SupabaseProvider";
 import { toast } from "sonner";
 
 // Define the Mechanic type
-type Mechanic = {
+type Mecanicos = {
     id: string;
     company_name: string;
     rating?: number | null;
     services_completed?: number | null;
-    address?: string | null;
+    endereco?: string | null;
     phone?: string | null;
     specialties?: string[] | null;
     city?: string | null;
@@ -28,17 +28,17 @@ type Mechanic = {
 
 export default function MecanicosDashboard() {
     const supabase = useSupabase();
-    const [mechanics, setMechanics] = useState<Mechanic[]>([]);
+    const [mecanicos, setMecanicos] = useState<Mecanicos[]>([]);
     const [loading, setLoading] = useState(true);
     const [specialtyFilter, setSpecialtyFilter] = useState<string>("all");
     const [ratingFilter, setRatingFilter] = useState<number>(0);
     const [searchTerm, setSearchTerm] = useState<string>("");
 
     useEffect(() => {
-        fetchMechanics();
+        fetchMecanicos();
     }, [specialtyFilter, ratingFilter, searchTerm, supabase]);
 
-    const fetchMechanics = async () => {
+    const fetchMecanicos = async () => {
         setLoading(true);
         try {
             let query = supabase
@@ -47,16 +47,15 @@ export default function MecanicosDashboard() {
                     id,
                     full_name,
                     avatar_url,
-                    address,
-                    city,
-                    state,
+                    endereco,
+                    cidade,
+                    estado,
                     zip_code,
-                    phone_number,
-                    services,
-                    rating,
-                    services_completed
+                    telefone,                    
+                    rating
+                    
                 `)
-                .eq('role', 'mechanic');
+                .eq("user_type", "mecanico" );
 
             if (specialtyFilter !== "all") {
                 query = query.ilike('services', `%${specialtyFilter}%`);
@@ -81,27 +80,27 @@ export default function MecanicosDashboard() {
             if (error) {
                 console.error("Erro ao buscar mecânicos detalhado:", error);
                 toast.error("Erro ao carregar mecânicos. Tente novamente mais tarde.");
-                setMechanics([]);
+                setMecanicos([]);
             } else {
-                const mechanicsData: Mechanic[] = data.map(item => ({
+                const mecanicosData: Mecanicos[] = data.map(item => ({
                     id: item.id,
                     company_name: item.full_name || 'N/A',
                     avatar_url: item.avatar_url,
-                    address: item.address,
-                    city: item.city,
-                    state: item.state,
+                    endereco: item.endereco,
+                    cidade: item.cidade,
+                    estado: item.estado,
                     zip_code: item.zip_code,
-                    phone: item.phone_number,
-                    specialties: Array.isArray(item.services) ? item.services : [],
+                    telefone: item.telefone,
+                   especialidade: Array.isArray(item.services) ? item.services : [],
                     rating: item.rating,
                     services_completed: item.services_completed,
                 }));
-                setMechanics(mechanicsData);
+                setMecanicos(mecanicosData);
             }
         } catch (error) {
             console.error("Erro inesperado ao buscar mecânicos:", error);
             toast.error("Ocorreu um erro inesperado ao carregar os mecânicos.");
-            setMechanics([]);
+            setMecanicos([]);
         } finally {
             setLoading(false);
         }
@@ -115,7 +114,7 @@ export default function MecanicosDashboard() {
         setSearchTerm("");
     };
 
-    const handleViewMechanic = (id: string) => {
+    const handleViewMecanicos = (id: string) => {
         alert(`Ver detalhes do mecânico com ID: ${id}`);
     };
 
@@ -180,24 +179,24 @@ export default function MecanicosDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {loading ? (
           <div className="text-center py-8"><p>Carregando mecânicos...</p></div>
-        ) : mechanics.length > 0 ? (
-          mechanics.map((mechanic: Mechanic) => (
-            <Card key={mechanic.id} className="overflow-hidden">
+        ) : mecanicos.length > 0 ? (
+          mecanicos.map((mecanicos: Mecanicos) => (
+            <Card key={mecanicos.id} className="overflow-hidden">
               <CardHeader className="pb-2">
                 <CardTitle className="flex justify-between items-start">
-                  <span>{mechanic.company_name}</span>
+                  <span>{mecanicos.company_name}</span>
                   <div className="flex items-center">
                     {[...Array(5)].map((_, i) => (
                       <Star 
                         key={i} 
-                        className={`w-4 h-4 ${i < Math.round(mechanic.rating || 0) ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`} 
+                        className={`w-4 h-4 ${i < Math.round(mecanicos.rating || 0) ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`} 
                       />
                     ))}
                   </div>
                 </CardTitle>
                 <div className="flex items-center mt-1">
                   <span className="text-sm text-gray-500">
-                    {mechanic.services_completed || 0} {mechanic.services_completed === 1 ? "serviço realizado" : "serviços realizados"}
+                    {mecanicos.services_completed || 0} {mecanicos.services_completed === 1 ? "serviço realizado" : "serviços realizados"}
                   </span>
                 </div>
               </CardHeader>
@@ -206,21 +205,21 @@ export default function MecanicosDashboard() {
                 <div className="flex items-center gap-2 mb-3">
                   <MapPin className="w-4 h-4 text-gray-500" />
                   <p className="text-sm text-gray-700 truncate">
-                    {mechanic.address || "Endereço não disponível"},
-                    {mechanic.city ? ` ${mechanic.city}` : ''}
-                    {mechanic.state ? `, ${mechanic.state}` : ''}
+                    {mecanicos.endereco || "Endereço não disponível"},
+                    {mecanicos.cidade ? ` ${mecanicos.cidade}` : ''}
+                    {mecanicos.estado ? `, ${mecanicos.estado}` : ''}
                   </p>
                 </div>
                 
                 <div className="flex items-center gap-2 mb-4">
                   <Phone className="w-4 h-4 text-gray-500" />
                   <p className="text-sm text-gray-700">
-                    {mechanic.phone || "Telefone não disponível"}
+                    {mecanicos.telefone || "Telefone não disponível"}
                   </p>
                 </div>
                 
                 <div className="flex flex-wrap gap-2">
-                  {mechanic.specialties?.map((specialty, index) => (
+                  {mecanicos.especialidade?.map((specialty, index) => (
                     <Badge key={index} variant="outline" className="bg-gray-50">
                       {specialty === "motor" ? "Motor" : 
                        specialty === "freios" ? "Freios" : 
@@ -237,7 +236,7 @@ export default function MecanicosDashboard() {
               <CardFooter className="bg-gray-50 border-t pt-4 pb-4">
                 <Button 
                   className="w-full bg-blue-600 hover:bg-blue-700"
-                  onClick={() => handleViewMechanic(mechanic.id)}
+                  onClick={() => handleViewMecanicos(mecanicos.id)}
                 >
                   Ver Detalhes
                   <ChevronRight className="ml-2 h-4 w-4" />
