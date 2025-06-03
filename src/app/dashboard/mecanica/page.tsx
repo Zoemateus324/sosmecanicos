@@ -1,213 +1,219 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sidebar } from "./components/sidebarmecanicos/Sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSupabase } from "@/components/SupabaseProvider";
-import { toast } from "sonner";
+import { Info } from "./components/informativo/Info";
+import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar, Clock, DollarSign, Wrench } from "lucide-react";
+import { PaymentModal } from "@/components/PaymentModal";
+import { toast } from "sonner";
 
-interface MechanicRequest {
+interface ServiceRequest {
   id: string;
-  user_id: string;
-  description: string;
   status: string;
-  created_at: string;
+  client_name: string;
   vehicle: string;
+  description: string;
+  created_at: string;
+  estimated_price: number;
+  client_id: string;
 }
 
 export default function MechanicDashboard() {
-  const { user, userNome, signOut } = useAuth();
+  const { user, userNome } = useAuth();
   const supabase = useSupabase();
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [criticalError, setCriticalError] = useState<string | null>(null);
-  const [mechanicRequests, setMechanicRequests] = useState<MechanicRequest[]>([]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
+  const [stats, setStats] = useState({
+    pending: 0,
+    inProgress: 0,
+    completed: 0,
+    totalEarnings: 0
+  });
+  const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   useEffect(() => {
-    if (!user || !supabase) {
-      setCriticalError("Usuário não autenticado ou conexão com o banco de dados não disponível.");
-      setLoading(false);
-      return;
+    fetchServiceRequests();
+  }, []);
+
+  const fetchServiceRequests = async () => {
+    const { data, error } = await supabase
+      .from('service_requests')
+      .select('*')
+      .eq('mechanic_id', user?.id)
+      .order('created_at', { ascending: false });
+
+    if (data) {
+      setServiceRequests(data);
+      // Calculate stats
+      const stats = {
+        pending: data.filter(req => req.status === 'pending').length,
+        inProgress: data.filter(req => req.status === 'in_progress').length,
+        completed: data.filter(req => req.status === 'completed').length,
+        totalEarnings: data
+          .filter(req => req.status === 'completed')
+          .reduce((sum, req) => sum + (req.estimated_price || 0), 0)
+      };
+      setStats(stats);
     }
+  };
 
-    const fetchRequests = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("service_requests")
-          .select("id, user_id, description, status, created_at, vehicle")
-          .eq("assigned_mechanic_id", user.id)
-          .eq("status", "pending");
+  const handleAcceptRequest = (request: ServiceRequest) => {
+    setSelectedRequest(request);
+    setIsPaymentModalOpen(true);
+  };
 
-        if (error) {
-          throw new Error(`Erro ao buscar solicitações: ${error.message}`);
-        }
-
-        setMechanicRequests(data || []);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Erro desconhecido ao carregar solicitações.";
-        toast.error(errorMessage, {
-          style: { backgroundColor: "#EF4444", color: "#ffffff" },
-        });
-        setCriticalError(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRequests();
-  }, [user, supabase]);
-
-  const handleAcceptRequest = async (requestId: string) => {
-    if (!supabase) return;
+  const handlePaymentSuccess = async () => {
+    if (!selectedRequest) return;
 
     try {
+      // Update service request status
       const { error } = await supabase
-        .from("service_requests")
-        .update({ status: "accepted" })
-        .eq("id", requestId);
+        .from('service_requests')
+        .update({ status: 'in_progress' })
+        .eq('id', selectedRequest.id);
 
-      if (error) {
-        throw new Error(`Erro ao aceitar solicitação: ${error.message}`);
-      }
+      if (error) throw error;
 
-      setMechanicRequests((prev) =>
-        prev.map((req) => (req.id === requestId ? { ...req, status: "accepted" } : req))
-      );
-      toast.success("Solicitação aceita com sucesso!", {
-        style: { backgroundColor: "#10B981", color: "#ffffff" },
-      });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Erro desconhecido ao aceitar solicitação.";
-      toast.error(errorMessage, {
-        style: { backgroundColor: "#EF4444", color: "#ffffff" },
-      });
+      toast.success('Serviço iniciado com sucesso!');
+      fetchServiceRequests(); // Refresh the list
+    } catch (error) {
+      console.error('Error updating service request:', error);
+      toast.error('Erro ao atualizar status do serviço.');
     }
   };
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen((prev) => !prev);
-  };
-
-  if (criticalError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-red-600">Erro Crítico</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-700">{criticalError}</p>
-            <Button
-              onClick={() => router.push("/login")}
-              className="mt-4 bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              Voltar ao Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center bg-gray-100"
-        aria-live="polite"
-        role="status"
-      >
-        <p className="text-lg font-medium text-gray-700">Carregando...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <aside
-        className={`fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } md:relative md:translate-x-0 transition-transform duration-300 ease-in-out`}
-        aria-hidden={!isSidebarOpen}
-      >
-        <div className="p-4">
-          <h2 className="text-xl font-bold text-purple-700">SOS Mecânicos</h2>
-          <p className="mt-2 text-gray-600">Bem-vindo, {userNome || "Mecânico"}!</p>
-          <nav className="mt-4 space-y-2">
-            <Button
-              onClick={() => router.push("/dashboard/mecanica")}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              Minhas Solicitações
-            </Button>
-            <Button
-              onClick={() => router.push("/perfil")}
-              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700"
-            >
-              Perfil
-            </Button>
-            <Button
-              onClick={async () => {
-                await signOut();
-                router.push("/login");
-              }}
-              className="w-full bg-red-600 hover:bg-red-700 text-white"
-            >
-              Sair
-            </Button>
-          </nav>
-        </div>
-      </aside>
+    <div className="flex gap-[2%] flex-wrap content-start">
+      <Sidebar />
 
-      {/* Main Content */}
-      <main className="flex-1 p-4 md:p-8">
-        <Button
-          onClick={toggleSidebar}
-          className="md:hidden mb-4 bg-purple-600 hover:bg-purple-700 text-white"
-          aria-label={isSidebarOpen ? "Fechar menu" : "Abrir menu"}
-        >
-          {isSidebarOpen ? "Fechar Menu" : "Abrir Menu"}
-        </Button>
-        <Card>
+      <div className="flex-1 p-4 md:p-6 w-full container mx-auto">
+        <Card className="mb-4">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-purple-700">
-              Solicitações Pendentes
-            </CardTitle>
+            <CardTitle className="text-2xl">Dashboard do Mecânico</CardTitle>
+            <p className="text-muted-foreground">Bem-vindo(a), {userNome}!</p>
           </CardHeader>
           <CardContent>
-            {mechanicRequests.length === 0 ? (
-              <p className="text-gray-600">Nenhuma solicitação pendente no momento.</p>
-            ) : (
-              <ul className="space-y-4">
-                {mechanicRequests.map((request) => (
-                  <li key={request.id} className="p-4 bg-white rounded-lg shadow">
-                    <p>
-                      <strong>Veículo:</strong> {request.vehicle}
-                    </p>
-                    <p>
-                      <strong>Descrição:</strong> {request.description}
-                    </p>
-                    <p>
-                      <strong>Criado em:</strong>{" "}
-                      {new Date(request.created_at).toLocaleDateString("pt-BR")}
-                    </p>
-                    <Button
-                      onClick={() => handleAcceptRequest(request.id)}
-                      className="mt-2 bg-green-600 hover:bg-green-700 text-white"
-                      disabled={request.status !== "pending"}
-                    >
-                      {request.status === "pending" ? "Aceitar Solicitação" : "Aceita"}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <span>Gerencie suas tarefas e solicitações de serviço aqui.</span>
           </CardContent>
         </Card>
-      </main>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.pending}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
+              <Wrench className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.inProgress}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Concluídos</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.completed}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Ganhos Totais</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">R$ {stats.totalEarnings.toFixed(2)}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Info />
+
+        {/* Service Requests */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Solicitações de Serviço</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {serviceRequests.map((request) => (
+                <Card key={request.id}>
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold">{request.client_name}</h3>
+                        <p className="text-sm text-muted-foreground">{request.vehicle}</p>
+                        <p className="mt-2">{request.description}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge variant={
+                          request.status === 'pending' ? 'secondary' :
+                          request.status === 'in_progress' ? 'default' :
+                          'outline'
+                        }>
+                          {request.status === 'pending' ? 'Pendente' :
+                           request.status === 'in_progress' ? 'Em Andamento' :
+                           'Concluído'}
+                        </Badge>
+                        <p className="text-sm font-medium">R$ {request.estimated_price?.toFixed(2)}</p>
+                        {request.status === 'pending' && (
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => handleAcceptRequest(request)}
+                          >
+                            Aceitar e Pagar
+                          </Button>
+                        )}
+                        {request.status === 'in_progress' && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              // TODO: Implementar finalização do serviço
+                            }}
+                          >
+                            Finalizar Serviço
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Payment Modal */}
+      {selectedRequest && (
+        <PaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
+          amount={selectedRequest.estimated_price}
+          serviceType="mechanic"
+          serviceId={selectedRequest.id}
+          providerId={user?.id || ''}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }
+

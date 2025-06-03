@@ -5,68 +5,117 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronRight, FilterX, Hammer, MapPin, Phone, Star } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSupabase } from "@/components/SupabaseProvider";
+import { toast } from "sonner";
 
 // Define the Mechanic type
 type Mechanic = {
     id: string;
     company_name: string;
-    rating?: number;
-    services_completed?: number;
-    address?: string;
-    phone?: string;
-    specialties?: string[];
+    rating?: number | null;
+    services_completed?: number | null;
+    address?: string | null;
+    phone?: string | null;
+    specialties?: string[] | null;
+    city?: string | null;
+    state?: string | null;
+    zip_code?: string | null;
+    avatar_url?: string | null;
 };
-const mechanics: Mechanic[] = [
-    {
-        id: "1",
-        company_name: "Oficina do João - Teste",
-        rating: 4.5,
-        services_completed: 120,
-        address: "Rua das Flores, 123",
-        phone: "(11) 99999-9999",
-        specialties: ["motor", "freios", "elétrica"]
-    },
-    {
-        id: "2",
-        company_name: "Auto Center Maria",
-        rating: 5,
-        services_completed: 200,
-        address: "Av. Brasil, 456",
-        phone: "(11) 98888-8888",
-        specialties: ["suspensão", "funilaria", "geral"]
-    }
-    // Adicione mais mecânicos conforme necessário
-];
 
 export default function MecanicosDashboard() {
+    const supabase = useSupabase();
+    const [mechanics, setMechanics] = useState<Mechanic[]>([]);
+    const [loading, setLoading] = useState(true);
     const [specialtyFilter, setSpecialtyFilter] = useState<string>("all");
     const [ratingFilter, setRatingFilter] = useState<number>(0);
+    const [searchTerm, setSearchTerm] = useState<string>("");
 
-    // Check if any filter is active
-    const isFilterActive = specialtyFilter !== "all" || ratingFilter !== 0;
+    useEffect(() => {
+        fetchMechanics();
+    }, [specialtyFilter, ratingFilter, searchTerm, supabase]);
 
-    // Reset filters to default values
+    const fetchMechanics = async () => {
+        setLoading(true);
+        try {
+            let query = supabase
+                .from('profiles')
+                .select(`
+                    id,
+                    full_name,
+                    avatar_url,
+                    address,
+                    city,
+                    state,
+                    zip_code,
+                    phone_number,
+                    services,
+                    rating,
+                    services_completed
+                `)
+                .eq('role', 'mechanic');
+
+            if (specialtyFilter !== "all") {
+                query = query.ilike('services', `%${specialtyFilter}%`);
+            }
+
+            if (ratingFilter > 0) {
+                query = query.gte('rating', ratingFilter);
+            }
+
+            if (searchTerm) {
+                query = query.or(`
+                    full_name.ilike.%${searchTerm}%,
+                    address.ilike.%${searchTerm}%,
+                    city.ilike.%${searchTerm}%,
+                    zip_code.ilike.%${searchTerm}%,
+                    services.ilike.%${searchTerm}%
+                `);
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.error("Erro ao buscar mecânicos detalhado:", error);
+                toast.error("Erro ao carregar mecânicos. Tente novamente mais tarde.");
+                setMechanics([]);
+            } else {
+                const mechanicsData: Mechanic[] = data.map(item => ({
+                    id: item.id,
+                    company_name: item.full_name || 'N/A',
+                    avatar_url: item.avatar_url,
+                    address: item.address,
+                    city: item.city,
+                    state: item.state,
+                    zip_code: item.zip_code,
+                    phone: item.phone_number,
+                    specialties: Array.isArray(item.services) ? item.services : [],
+                    rating: item.rating,
+                    services_completed: item.services_completed,
+                }));
+                setMechanics(mechanicsData);
+            }
+        } catch (error) {
+            console.error("Erro inesperado ao buscar mecânicos:", error);
+            toast.error("Ocorreu um erro inesperado ao carregar os mecânicos.");
+            setMechanics([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const isFilterActive = specialtyFilter !== "all" || ratingFilter !== 0 || searchTerm !== "";
+
     const handleClearFilters = () => {
         setSpecialtyFilter("all");
         setRatingFilter(0);
+        setSearchTerm("");
     };
 
-    // Filter mechanics based on selected filters
-    const filteredMechanics = mechanics.filter((mechanic) => {
-        const specialtyMatch =
-            specialtyFilter === "all" ||
-            mechanic.specialties?.includes(specialtyFilter);
-        const ratingMatch =
-            ratingFilter === 0 ||
-            (mechanic.rating && mechanic.rating >= ratingFilter);
-        return specialtyMatch && ratingMatch;
-    });
-
-    // Function to handle viewing mechanic details
     const handleViewMechanic = (id: string) => {
-        // You can implement navigation or modal opening here
         alert(`Ver detalhes do mecânico com ID: ${id}`);
     };
 
@@ -82,7 +131,12 @@ export default function MecanicosDashboard() {
       <div className="bg-white p-4 rounded-lg shadow-sm border mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
-            
+             <Input
+                placeholder="Buscar por nome, endereço, CEP..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+             />
           </div>
           
           <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}>
@@ -90,8 +144,25 @@ export default function MecanicosDashboard() {
               <SelectValue placeholder="Filtrar por especialidade" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {/* Add more SelectItem components for each specialty as needed */}
+              <SelectItem value="all">Todas as especialidades</SelectItem>
+              <SelectItem value="motor">Motor</SelectItem>
+              <SelectItem value="freios">Freios</SelectItem>
+              <SelectItem value="suspensão">Suspensão</SelectItem>
+              <SelectItem value="elétrica">Elétrica</SelectItem>
+              <SelectItem value="funilaria">Funilaria</SelectItem>
+              <SelectItem value="geral">Serviços Gerais</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={ratingFilter.toString()} onValueChange={(value) => setRatingFilter(Number(value))}>
+            <SelectTrigger>
+               <SelectValue placeholder="Filtrar por avaliação" />
+            </SelectTrigger>
+            <SelectContent>
+               <SelectItem value="0">Qualquer avaliação</SelectItem>
+               <SelectItem value="4">4 estrelas ou mais</SelectItem>
+               <SelectItem value="3">3 estrelas ou mais</SelectItem>
+               <SelectItem value="2">2 estrelas ou mais</SelectItem>
+               <SelectItem value="1">1 estrela ou mais</SelectItem>
             </SelectContent>
           </Select>
           <Button
@@ -107,8 +178,10 @@ export default function MecanicosDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {filteredMechanics.length > 0 ? (
-          filteredMechanics.map((mechanic: Mechanic) => (
+        {loading ? (
+          <div className="text-center py-8"><p>Carregando mecânicos...</p></div>
+        ) : mechanics.length > 0 ? (
+          mechanics.map((mechanic: Mechanic) => (
             <Card key={mechanic.id} className="overflow-hidden">
               <CardHeader className="pb-2">
                 <CardTitle className="flex justify-between items-start">
@@ -133,7 +206,9 @@ export default function MecanicosDashboard() {
                 <div className="flex items-center gap-2 mb-3">
                   <MapPin className="w-4 h-4 text-gray-500" />
                   <p className="text-sm text-gray-700 truncate">
-                    {mechanic.address || "Endereço não disponível"}
+                    {mechanic.address || "Endereço não disponível"},
+                    {mechanic.city ? ` ${mechanic.city}` : ''}
+                    {mechanic.state ? `, ${mechanic.state}` : ''}
                   </p>
                 </div>
                 

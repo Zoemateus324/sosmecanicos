@@ -208,6 +208,31 @@ export default function ServiceRequests() {
     }
   };
 
+  const handleCancelRequest = async (requestId: string) => {
+    if (!supabase) return;
+
+    try {
+      const { error } = await supabase
+        .from("service_requests")
+        .update({ status: "cancelled", updated_at: new Date().toISOString() })
+        .eq("id", requestId);
+
+      if (error) throw error;
+
+      setRequests((prev) =>
+        prev.map((req) => (req.id === requestId ? { ...req, status: "cancelled" } : req))
+      );
+      toast.success("Solicitação cancelada com sucesso!", {
+        style: { backgroundColor: "#10B981", color: "#ffffff" },
+      });
+    } catch (error) {
+      console.error("Error cancelling request:", error);
+      toast.error("Erro ao cancelar solicitação", {
+        style: { backgroundColor: "#EF4444", color: "#ffffff" },
+      });
+    }
+  };
+
   const handleSubmitReview = async (requestId: string, review: Review) => {
     if (!supabase || !user) return;
 
@@ -287,6 +312,16 @@ export default function ServiceRequests() {
                 >
                   Ver detalhes
                 </Button>
+                {request.status === 'pending' && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleCancelRequest(request.id)}
+                    aria-label={`Cancelar solicitação ${request.id}`}
+                  >
+                    Cancelar
+                  </Button>
+                )}
               </div>
             </div>
           </div>

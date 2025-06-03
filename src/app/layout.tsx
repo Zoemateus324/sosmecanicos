@@ -5,6 +5,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import '@/styles/globals.css';
 import { Inter } from 'next/font/google';
 import { Toaster } from 'sonner';
+import { StripeProvider } from '@/components/StripeProvider';
 
 // Configurar fonte (opcional)
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -14,12 +15,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR" className={inter.className}>
       <body className="min-h-screen bg-gray-100 text-gray-900 antialiased">
   
-        <SupabaseProvider>
-          <AuthProvider>
-            {children}
-            <Toaster position="top-right" richColors />
-          </AuthProvider>
-        </SupabaseProvider>
+        <StripeProvider>
+          <SupabaseProvider>
+            <AuthProvider>
+              {children}
+              <Toaster position="top-right" richColors />
+            </AuthProvider>
+          </SupabaseProvider>
+        </StripeProvider>
 
       </body>
 

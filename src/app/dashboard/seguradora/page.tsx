@@ -6,28 +6,46 @@ import { useSupabase } from "@/components/SupabaseProvider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, DollarSign, Users, FileText } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type InsuranceQuote = {
   id: string;
   client_email: string;
   vehicle_model: string;
   quote_value: number;
+  status: string;
   created_at: string;
 };
 
 type UserData = {
   tipo_usuario: string;
+  nome: string;
 };
 
 export default function SeguradoraDashboard() {
- 
   const [quotes, setQuotes] = useState<InsuranceQuote[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userNome, setUserNome] = useState<string>("");
   const router = useRouter();
   const supabase = useSupabase();
 
-  // Função para buscar dados do usuário e cotações
+  const [stats, setStats] = useState({
+    active: 0,
+    pending: 0,
+    completed: 0,
+    totalRevenue: 0
+  });
+
   const fetchUserData = useCallback(async () => {
     if (!supabase) {
       setError("Conexão com o banco de dados não está disponível.");
@@ -36,7 +54,6 @@ export default function SeguradoraDashboard() {
     }
 
     try {
-      // Obter sessão do usuário
       const {
         data: { session },
         error: sessionError,
@@ -51,37 +68,32 @@ export default function SeguradoraDashboard() {
         return;
       }
 
-      
-
-      // Buscar tipo de usuário
       const { data: userData, error: userError } = await supabase
-        .from("profiles") // Usando 'profiles' para consistência
-        .select("tipo_usuario")
+        .from("profiles")
+        .select("tipo_usuario, nome")
         .eq("id", session.user.id)
         .single();
 
       if (userError) {
-        console.error("Erro ao buscar tipo de usuário:", userError);
+        console.error("Erro ao buscar dados do usuário:", userError);
         setError("Erro ao carregar dados do usuário.");
         return;
       }
 
       const userDataTyped = userData as UserData;
-      const tipo = userDataTyped.tipo_usuario;
+      setUserNome(userDataTyped.nome);
 
-      // Redirecionar se não for seguradora
-      if (tipo !== "seguradora") {
-        if (tipo === "cliente") router.push("/dashboard");
-        else if (tipo === "mecanico") router.push("/dashboard/mecanico");
-        else if (tipo === "guincho") router.push("/dashboard/guincho");
+      if (userDataTyped.tipo_usuario !== "seguradora") {
+        if (userDataTyped.tipo_usuario === "cliente") router.push("/dashboard");
+        else if (userDataTyped.tipo_usuario === "mecanico") router.push("/dashboard/mecanico");
+        else if (userDataTyped.tipo_usuario === "guincho") router.push("/dashboard/guincho");
         else router.push("/login");
         return;
       }
 
-      // Buscar cotações de seguro
       const { data: quotesData, error: quotesError } = await supabase
         .from("insurance_quotes")
-        .select("id, client_email, vehicle_model, quote_value, created_at")
+        .select("*")
         .eq("insurer_id", session.user.id)
         .order("created_at", { ascending: false });
 
@@ -91,7 +103,20 @@ export default function SeguradoraDashboard() {
         return;
       }
 
-      setQuotes(quotesData as InsuranceQuote[] || []);
+      const quotesTyped = quotesData as InsuranceQuote[];
+      setQuotes(quotesTyped);
+
+      // Calculate stats
+      const stats = {
+        active: quotesTyped.filter(q => q.status === 'active').length,
+        pending: quotesTyped.filter(q => q.status === 'pending').length,
+        completed: quotesTyped.filter(q => q.status === 'completed').length,
+        totalRevenue: quotesTyped
+          .filter(q => q.status === 'completed')
+          .reduce((sum, q) => sum + q.quote_value, 0)
+      };
+      setStats(stats);
+
     } catch (err) {
       console.error("Erro ao carregar dados:", err);
       setError("Ocorreu um erro ao carregar os dados. Por favor, tente novamente.");
@@ -100,34 +125,22 @@ export default function SeguradoraDashboard() {
     }
   }, [router, supabase]);
 
-  // Função para logout
   const handleLogout = useCallback(async () => {
     if (!supabase) {
-      toast.error("Conexão com o banco de dados não está disponível.", {
-        style: { backgroundColor: "#EF4444", color: "#ffffff" },
-      });
+      toast.error("Conexão com o banco de dados não está disponível.");
       return;
     }
 
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Erro ao fazer logout:", error);
-        toast.error("Erro ao fazer logout. Por favor, tente novamente.", {
-          style: { backgroundColor: "#EF4444", color: "#ffffff" },
-        });
-        return;
-      }
+      if (error) throw error;
       router.push("/login");
     } catch (err) {
       console.error("Erro ao fazer logout:", err);
-      toast.error("Ocorreu um erro ao fazer logout. Por favor, tente novamente.", {
-        style: { backgroundColor: "#EF4444", color: "#ffffff" },
-      });
+      toast.error("Ocorreu um erro ao fazer logout. Por favor, tente novamente.");
     }
   }, [supabase, router]);
 
-  // Executar fetchUserData na montagem do componente
   useEffect(() => {
     fetchUserData();
   }, [fetchUserData]);
@@ -181,73 +194,109 @@ export default function SeguradoraDashboard() {
         {/* Header */}
         <header className="bg-white shadow-md p-4 mb-6 rounded-lg">
           <div className="flex justify-between items-center">
-            <h1 className="text-xl font-semibold text-blue-900">Dashboard da Seguradora</h1>
-            <div className="flex items-center space-x-4">
-              
-              <Button
-                variant="outline"
-                className="border-orange-500 text-orange-500 hover:bg-orange-100 hover:text-orange-500"
-                onClick={handleLogout}
-              >
-                Sair
-              </Button>
+            <div>
+              <h1 className="text-xl font-semibold text-blue-900">Dashboard da Seguradora</h1>
+              <p className="text-muted-foreground">Bem-vindo(a), {userNome}!</p>
             </div>
+            <Button
+              variant="outline"
+              className="border-orange-500 text-orange-500 hover:bg-orange-100 hover:text-orange-500"
+              onClick={handleLogout}
+            >
+              Sair
+            </Button>
           </div>
         </header>
 
         {/* Dashboard Content */}
         <div className="space-y-6">
-          {/* Cards Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-blue-900">Cotações Ativas</CardTitle>
-                <CardDescription>Cotações enviadas a clientes</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Cotações Ativas</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-orange-500">{quotes.length}</p>
+                <div className="text-2xl font-bold">{stats.active}</div>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
-                <CardTitle className="text-blue-900">Clientes Atendidos</CardTitle>
-                <CardDescription>Total de clientes na plataforma</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-orange-500">15</p> {/* TODO: Substituir por dado real */}
+                <div className="text-2xl font-bold">{stats.pending}</div>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
-                <CardTitle className="text-blue-900">Receita Total</CardTitle>
-                <CardDescription>Receita gerada com seguros</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Concluídos</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-orange-500">R$ 10.000,00</p> {/* TODO: Substituir por dado real */}
+                <div className="text-2xl font-bold">{stats.completed}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Receita Total</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">R$ {stats.totalRevenue.toFixed(2)}</div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Quotes Section */}
+          {/* Quotes Table */}
           <Card>
             <CardHeader>
               <CardTitle className="text-blue-900">Cotações de Seguro</CardTitle>
               <CardDescription>Suas cotações recentes</CardDescription>
             </CardHeader>
             <CardContent>
-              {quotes.length > 0 ? (
-                <ul className="space-y-2">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Veículo</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {quotes.map((quote) => (
-                    <li key={quote.id} className="p-2 bg-gray-50 rounded">
-                      Cliente: {quote.client_email} - Veículo: {quote.vehicle_model} - Valor: R${" "}
-                      {quote.quote_value.toFixed(2)} - Criada em:{" "}
-                      {new Date(quote.created_at).toLocaleDateString("pt-BR")}
-                    </li>
+                    <TableRow key={quote.id}>
+                      <TableCell>{quote.client_email}</TableCell>
+                      <TableCell>{quote.vehicle_model}</TableCell>
+                      <TableCell>R$ {quote.quote_value.toFixed(2)}</TableCell>
+                      <TableCell>
+                        {new Date(quote.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          quote.status === 'pending' ? 'secondary' :
+                          quote.status === 'active' ? 'default' :
+                          'outline'
+                        }>
+                          {quote.status === 'pending' ? 'Pendente' :
+                           quote.status === 'active' ? 'Ativo' :
+                           'Concluído'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm">
+                          Ver Detalhes
+                        </Button>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </ul>
-              ) : (
-                <p className="text-gray-600">Nenhuma cotação disponível no momento.</p>
-              )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </div>

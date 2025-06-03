@@ -1,9 +1,12 @@
 'use client';
 
 import { Sidebar } from "@/components/sidebar/Sidebar";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle, CardFooter } from "@/components/ui/card";
 import { supabase } from "@/models/supabase";
 import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { VehicleDetailsModal } from "@/components/VehicleDetailsModal";
 
 type Veiculo = {
     id: number;
@@ -15,12 +18,11 @@ type Veiculo = {
     status: string;
 }
 
- 
-
-
-
 export default function VeiculosDashboard() {
     const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
+    const [selectedVehicle, setSelectedVehicle] = useState<Veiculo | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
     useEffect(() => {
         const fetchVeiculos = async () => {
             const { data, error } = await supabase
@@ -38,37 +40,86 @@ export default function VeiculosDashboard() {
         fetchVeiculos();
     }, []);
    
-   
-   
+    const handleViewVehicle = (veiculo: Veiculo) => {
+        setSelectedVehicle(veiculo);
+        setIsModalOpen(true);
+    };
+
+    const handleDeleteVehicle = async (id: number) => {
+        if (!supabase) return;
+
+        if (window.confirm("Tem certeza que deseja deletar este veículo?")) {
+            try {
+                const { error } = await supabase
+                    .from('veiculos')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) {
+                    console.error("Erro ao deletar veículo:", error);
+                } else {
+                    setVeiculos(veiculos.filter(v => v.id !== id));
+                    console.log("Veículo deletado com sucesso!");
+                }
+            } catch (error) {
+                console.error("Erro ao deletar veículo:", error);
+            }
+        }
+    };
+
     return (
-
-        <div className="flex gap-[2%] flex-wrap content-start">
-            <Sidebar/>
-            
-            <div className="flex-1 p-4 md:p-6 w-full container mx-auto sm:px-4">
-            <Card>
-                <CardContent>
-                    <CardTitle>Veículos</CardTitle>
-                </CardContent>
-            </Card>
-
-
-            {veiculos.map((veiculo:Veiculo)=>(
-                <Card key={veiculo.id} className="mt-4">
-                    <CardContent>
-                        <div className="flex flex-col">
-                            <span><strong>ID:</strong> {veiculo.id}</span>
-                            <span><strong>Placa:</strong> {veiculo.placa}</span>
-                            <span><strong>Modelo:</strong> {veiculo.modelo}</span>
-                            <span><strong>Ano:</strong> {veiculo.ano}</span>
-                            <span><strong>Cor:</strong> {veiculo.cor}</span>
-                            <span><strong>Quilometragem:</strong> {veiculo.quilometragem}</span>
-                            <span><strong>Status:</strong> {veiculo.status}</span>
-                        </div>
+        <>
+            <div className="flex gap-[2%] flex-wrap content-start">
+                <Sidebar/>
+                
+                <div className="flex-1 p-4 md:p-6 w-full container mx-auto sm:px-4">
+                <Card className="mb-6">
+                    <CardContent className="p-6">
+                        <CardTitle className="text-2xl font-bold text-gray-900">Veículos</CardTitle>
                     </CardContent>
                 </Card>
-            ))}
-           </div>
-        </div>
+
+                 {/* Vehicles Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {veiculos.map((veiculo:Veiculo)=>(
+                        <Card key={veiculo.id} className="mt-0 h-full flex flex-col">
+                            <CardContent className="p-6 flex-1">
+                                <div className="flex flex-col space-y-2 h-full">
+                                    <h3 className="text-lg font-semibold">{veiculo.modelo} ({veiculo.ano})</h3>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-600">Placa: <strong>{veiculo.placa}</strong></span>
+                                        <Badge variant={
+                                            veiculo.status === 'ativo' ? 'default' :
+                                            veiculo.status === 'inativo' ? 'destructive' :
+                                            'secondary'
+                                        }>
+                                            {veiculo.status}
+                                        </Badge>
+                                    </div>
+                                    <span className="text-sm text-gray-600">Cor: {veiculo.cor}</span>
+                                    <span className="text-sm text-gray-600">Quilometragem: {veiculo.quilometragem} km</span>
+                                    {/* Add more details or actions here if needed */}
+                                </div>
+                            </CardContent>
+                             <CardFooter className="flex justify-end gap-2 p-4 bg-gray-50 border-t">
+                                 <Button variant="outline" size="sm" onClick={() => handleViewVehicle(veiculo)}>
+                                     Visualizar
+                                 </Button>
+                                 <Button variant="destructive" size="sm" onClick={() => handleDeleteVehicle(veiculo.id)}>
+                                     Deletar
+                                 </Button>
+                            </CardFooter>
+                        </Card>
+                    ))}
+                </div>
+               </div>
+            </div>
+             {/* Vehicle Details Modal */}
+            <VehicleDetailsModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                vehicle={selectedVehicle}
+            />
+        </>
     );
 }
