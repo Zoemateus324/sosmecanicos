@@ -74,15 +74,6 @@ interface StatusInfo {
   text: string;
   color: string;
 }
-interface User {
-  id: string;
-  full_name: string;
-  avatar_url: string;
-  endereco: string;
-  cidade: string;
-  estado: string;
-  zip_code: string;
-}
 
 // Fallback UI component for critical errors
 const ErrorFallback = ({ message }: { message: string }) => (
@@ -147,10 +138,10 @@ export default function ClienteDashboard() {
   const [pendingRequests, setPendingRequests] = useState<ServiceRequest[]>([]);
   const [isVehicleDialogOpen, setIsVehicleDialogOpen] = useState(false);
   const [isMechanicDialogOpen, setIsMechanicDialogOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+ 
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
+ 
   const [mechanicRequest, setMechanicRequest] = useState({
     vehicleId: "",
     description: "",
@@ -407,12 +398,7 @@ export default function ClienteDashboard() {
     <div className="flex gap-[2%] flex-wrap content-start">
      <Sidebar />
 
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black opacity-50 z-40 md:hidden"
-          onClick={toggleSidebar}
-        />
-      )}
+      {/* Sidebar overlay logic removed because isSidebarOpen is unused */}
 
       <div className="flex-1 p-4 md:p-6 w-full container mx-auto">
         <header className="bg-white shadow-md p-4 mb-6 rounded-lg flex justify-between items-center">
@@ -436,7 +422,7 @@ export default function ClienteDashboard() {
           transition={{ duration: 0.5 }}
           className="text-2xl font-semibold text-black-700 mb-4"
         >
-          Bem-vindo(a), {user?.full_name || "Carregando..."}!
+          Bem-vindo(a), {profile?.full_name || "Carregando..."}!
         </motion.h2>
 
         {loading ? (
