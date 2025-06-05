@@ -5,7 +5,7 @@ import { Sidebar } from "./components/sidebarmecanicos/Sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSupabase } from "@/components/SupabaseProvider";
 import { Info } from "./components/informativo/Info";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, DollarSign, Wrench } from "lucide-react";
@@ -24,7 +24,7 @@ interface ServiceRequest {
 }
 
 export default function MechanicDashboard() {
-  const { user, userNome } = useAuth();
+  const { user, profile } = useAuth();
   const supabase = useSupabase();
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [stats, setStats] = useState({
@@ -36,14 +36,10 @@ export default function MechanicDashboard() {
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  useEffect(() => {
-    fetchServiceRequests();
-  }, []);
-
-  const fetchServiceRequests = async () => {
-    const { data, error } = await supabase
+  const fetchServiceRequests = useCallback(async () => {
+    const { data } = await supabase
       .from('service_requests')
-      .select('*')
+      .select('id, status, client_name, vehicle, description, created_at, estimated_price, client_id')
       .eq('mechanic_id', user?.id)
       .order('created_at', { ascending: false });
 
@@ -60,7 +56,11 @@ export default function MechanicDashboard() {
       };
       setStats(stats);
     }
-  };
+  }, [supabase, user?.id]);
+
+  useEffect(() => {
+    fetchServiceRequests();
+  }, [fetchServiceRequests, supabase, user?.id]);
 
   const handleAcceptRequest = (request: ServiceRequest) => {
     setSelectedRequest(request);
@@ -95,7 +95,7 @@ export default function MechanicDashboard() {
         <Card className="mb-4">
           <CardHeader>
             <CardTitle className="text-2xl">Dashboard do Mecânico</CardTitle>
-            <p className="text-muted-foreground">Bem-vindo(a), {userNome}!</p>
+            <p className="text-muted-foreground">Bem-vindo(a), {profile?.full_name}!</p>
           </CardHeader>
           <CardContent>
             <span>Gerencie suas tarefas e solicitações de serviço aqui.</span>

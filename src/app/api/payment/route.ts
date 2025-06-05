@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     const providerAmount = calculateServiceProviderAmount(amount);
 
     // Create transfer to service provider
-    const transfer = await createTransfer(
+    await createTransfer(
       providerAmount,
       providerId, // This should be the Stripe connected account ID of the service provider
       paymentIntent.id

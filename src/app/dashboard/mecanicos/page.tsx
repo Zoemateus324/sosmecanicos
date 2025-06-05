@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChevronRight, FilterX, Hammer, MapPin, Phone, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSupabase } from "@/components/SupabaseProvider";
 import { toast } from "sonner";
 
@@ -15,15 +15,15 @@ import { toast } from "sonner";
 type Mecanicos = {
     id: string;
     company_name: string;
-    rating?: number | null;
-    services_completed?: number | null;
-    endereco?: string | null;
-    phone?: string | null;
-    specialties?: string[] | null;
-    city?: string | null;
-    state?: string | null;
-    zip_code?: string | null;
-    avatar_url?: string | null;
+    rating: number | null;
+    services_completed: number | null;
+    endereco: string | null;
+    cidade: string | null;
+    estado: string | null;
+    telefone: string | null;
+    especialidade: string[] | null;
+    zip_code: string | null;
+    avatar_url: string | null;
 };
 
 export default function MecanicosDashboard() {
@@ -34,11 +34,7 @@ export default function MecanicosDashboard() {
     const [ratingFilter, setRatingFilter] = useState<number>(0);
     const [searchTerm, setSearchTerm] = useState<string>("");
 
-    useEffect(() => {
-        fetchMecanicos();
-    }, [specialtyFilter, ratingFilter, searchTerm, supabase]);
-
-    const fetchMecanicos = async () => {
+    const fetchMecanicos = useCallback(async () => {
         setLoading(true);
         try {
             let query = supabase
@@ -52,8 +48,9 @@ export default function MecanicosDashboard() {
                     estado,
                     zip_code,
                     telefone,                    
-                    rating
-                    
+                    rating,
+                    services_completed,
+                    services
                 `)
                 .eq("user_type", "mecanico" );
 
@@ -68,8 +65,8 @@ export default function MecanicosDashboard() {
             if (searchTerm) {
                 query = query.or(`
                     full_name.ilike.%${searchTerm}%,
-                    address.ilike.%${searchTerm}%,
-                    city.ilike.%${searchTerm}%,
+                    endereco.ilike.%${searchTerm}%,
+                    cidade.ilike.%${searchTerm}%,
                     zip_code.ilike.%${searchTerm}%,
                     services.ilike.%${searchTerm}%
                 `);
@@ -85,15 +82,15 @@ export default function MecanicosDashboard() {
                 const mecanicosData: Mecanicos[] = data.map(item => ({
                     id: item.id,
                     company_name: item.full_name || 'N/A',
-                    avatar_url: item.avatar_url,
-                    endereco: item.endereco,
-                    cidade: item.cidade,
-                    estado: item.estado,
-                    zip_code: item.zip_code,
-                    telefone: item.telefone,
-                   especialidade: Array.isArray(item.services) ? item.services : [],
-                    rating: item.rating,
-                    services_completed: item.services_completed,
+                    avatar_url: item.avatar_url || null,
+                    endereco: item.endereco || null,
+                    cidade: item.cidade || null,
+                    estado: item.estado || null,
+                    zip_code: item.zip_code || null,
+                    telefone: item.telefone || null,
+                    especialidade: Array.isArray(item.services) ? item.services as string[] : null,
+                    rating: item.rating || null,
+                    services_completed: item.services_completed || null,
                 }));
                 setMecanicos(mecanicosData);
             }
@@ -104,7 +101,11 @@ export default function MecanicosDashboard() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [supabase, specialtyFilter, ratingFilter, searchTerm]);
+
+    useEffect(() => {
+        fetchMecanicos();
+    }, [fetchMecanicos, specialtyFilter, ratingFilter, searchTerm, supabase]);
 
     const isFilterActive = specialtyFilter !== "all" || ratingFilter !== 0 || searchTerm !== "";
 
@@ -205,9 +206,7 @@ export default function MecanicosDashboard() {
                 <div className="flex items-center gap-2 mb-3">
                   <MapPin className="w-4 h-4 text-gray-500" />
                   <p className="text-sm text-gray-700 truncate">
-                    {mecanicos.endereco || "Endereço não disponível"},
-                    {mecanicos.cidade ? ` ${mecanicos.cidade}` : ''}
-                    {mecanicos.estado ? `, ${mecanicos.estado}` : ''}
+                    {mecanicos.endereco || "Endereço não disponível"}{mecanicos.cidade ? `, ${mecanicos.cidade}` : ''}{mecanicos.estado ? `, ${mecanicos.estado}` : ''}
                   </p>
                 </div>
                 
@@ -219,7 +218,7 @@ export default function MecanicosDashboard() {
                 </div>
                 
                 <div className="flex flex-wrap gap-2">
-                  {mecanicos.especialidade?.map((specialty, index) => (
+                  {mecanicos.especialidade?.map((specialty: string, index: number) => (
                     <Badge key={index} variant="outline" className="bg-gray-50">
                       {specialty === "motor" ? "Motor" : 
                        specialty === "freios" ? "Freios" : 

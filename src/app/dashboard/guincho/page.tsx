@@ -57,10 +57,10 @@ export default function GuinchoDashboard() {
 
   useEffect(() => {
     fetchTowRequests();
-  }, []);
+  }, [fetchTowRequests]);
 
   const fetchTowRequests = async () => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('tow_requests')
       .select('*')
       .eq('tow_truck_id', user?.id)
