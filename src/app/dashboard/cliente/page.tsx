@@ -74,6 +74,15 @@ interface StatusInfo {
   text: string;
   color: string;
 }
+interface User {
+  id: string;
+  full_name: string;
+  avatar_url: string;
+  endereco: string;
+  cidade: string;
+  estado: string;
+  zip_code: string;
+}
 
 // Fallback UI component for critical errors
 const ErrorFallback = ({ message }: { message: string }) => (
