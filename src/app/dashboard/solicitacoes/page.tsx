@@ -7,13 +7,13 @@ import { AlertCircleIcon } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/models/supabase";
 import { Button } from "@/components/ui/button";
-import { ServiceRequestDetailsModal, ServiceRequest as ModalServiceRequest } from "@/components/ServiceRequestDetailsModal";
+import { ServiceRequestDetailsModal} from "@/components/ServiceRequestDetailsModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { PaymentModal } from "@/components/PaymentModal";
 import { toast } from "sonner";
-
-// Use the ServiceRequest type from ServiceRequestDetailsModal for compatibility
-type ServiceRequest = ModalServiceRequest;
+// Update the path below to the actual location of ServiceRequest type, e.g.:
+// Update the path below to the actual location of ServiceRequest type, e.g.:
+import type { ServiceRequest } from "@/types/ServiceRequest"; // Adjust the path as needed
 
 export default function Solicitacoes() {
   const { user } = useAuth();
