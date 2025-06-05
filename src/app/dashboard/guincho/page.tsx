@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -42,7 +42,7 @@ interface TowRequest {
 }
 
 export default function GuinchoDashboard() {
-  const { user, userNome } = useAuth();
+  const { user, profile } = useAuth();
   const supabase = useSupabase();
   const [towRequests, setTowRequests] = useState<TowRequest[]>([]);
   const [stats, setStats] = useState({
@@ -55,11 +55,7 @@ export default function GuinchoDashboard() {
   const [selectedRequest, setSelectedRequest] = useState<TowRequest | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  useEffect(() => {
-    fetchTowRequests();
-  }, [fetchTowRequests]);
-
-  const fetchTowRequests = async () => {
+  const fetchTowRequests = useCallback(async () => {
     const { data } = await supabase
       .from('tow_requests')
       .select('*')
@@ -79,7 +75,11 @@ export default function GuinchoDashboard() {
       };
       setStats(stats);
     }
-  };
+  }, [supabase, user?.id]);
+
+  useEffect(() => {
+    fetchTowRequests();
+  }, [fetchTowRequests, supabase, user?.id]);
 
   const handleAcceptRequest = (request: TowRequest) => {
     setSelectedRequest(request);
@@ -115,7 +115,7 @@ export default function GuinchoDashboard() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold text-gray-800">Dashboard do Guincho</h1>
-          <p className="text-muted-foreground">Bem-vindo(a), {userNome}!</p>
+          <p className="text-muted-foreground">Bem-vindo(a), {profile?.full_name}!</p>
         </div>
 
         {/* Statistics Cards */}
