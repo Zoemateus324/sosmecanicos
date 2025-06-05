@@ -129,7 +129,7 @@ const getStatusInfo = (status: string): StatusInfo => {
 };
 
 export default function ClienteDashboard() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const supabase = useSupabase();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -413,7 +413,7 @@ export default function ClienteDashboard() {
           <div className="flex items-center space-x-4 md:space-x-6">
             <Avatar>
               <AvatarImage src="https://github.com/shadcn.png" alt="User Avatar" />
-              <AvatarFallback>{user?.full_name?.charAt(0).toUpperCase() || "US"}</AvatarFallback>
+              <AvatarFallback>{profile?.full_name?.charAt(0).toUpperCase() || "US"}</AvatarFallback>
             </Avatar>
             <Button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white">
               Logout
