@@ -67,7 +67,7 @@ const CardVeiculos = () => {
            };
     return ( 
         
-             <div className="flex-1 p-4 md:p-6 w-full container mx-auto sm:px-4">
+             <div className="flex-1 p-4 md:p-6 w-full container mx-auto sm:px-4 sm:gap-4 sm:py-4 sm:pl-14">
                 <Card className="mb-6 bg-white rounded-2xl">
                     <CardContent className="p-6">
                         <CardTitle className="text-2xl font-bold text-gray-900">Veículos</CardTitle>
