@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 // Import other components or icons as needed (e.g., for vehicle info, location)
 
 // Define a more generic type for service requests
-interface ServiceRequest {
+export interface ServiceRequest {
   id: number;
   status: string;
   description?: string | null;
