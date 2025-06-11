@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Navbar from "@/app/(public)/_components/Navbar";
+import Footer from "@/app/(public)/_components/Footer";
 
 export default function Suporte() {
   const [formData, setFormData] = useState({

@@ -28,8 +28,8 @@ export default function Navbar() {
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/" className="text-2xl font-bold text-blue-600">
-                SOS Mecânicos
+              <Link href="/" className="text-2xl font-bold text-black">
+                 <span className="text-orange-500 font-bold text-3xl">SOS</span> Mecânicos
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">

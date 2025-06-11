@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Image from "next/image";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Navbar from "@/app/(public)/_components/Navbar";
+import Footer from "@/app/(public)/_components/Footer";
 
 export default function ParaClientes() {
   return (

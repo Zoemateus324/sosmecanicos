@@ -5,8 +5,8 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { useSupabase } from "@/components/SupabaseProvider";
 import { toast } from "sonner";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Navbar from "@/app/(public)/_components/Navbar";
+import Footer from "@/app/(public)/_components/Footer";
 
 interface JobApplication {
   name: string;

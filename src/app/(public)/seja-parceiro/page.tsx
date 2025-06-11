@@ -1,6 +1,6 @@
 "use client";
 
-import Navbar from "@/components/Navbar";
+import Navbar from "@/app/(public)/_components/Navbar";
 
 export default function MechanicDashboard() {
   

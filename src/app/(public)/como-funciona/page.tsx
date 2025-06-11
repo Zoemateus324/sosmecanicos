@@ -1,7 +1,7 @@
 "use client";
 
-import Footer from "@/components/Footer";
-import Navbar from "@/components/Navbar";
+import Footer from "@/app/(public)/_components/Footer";
+import Navbar from "@/app/(public)/_components/Navbar";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import Link from "next/link";
