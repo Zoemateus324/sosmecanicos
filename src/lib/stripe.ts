@@ -1,15 +1,26 @@
 import { loadStripe } from '@stripe/stripe-js';
 import Stripe from 'stripe';
 
+// Check for required environment variables
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('Missing environment variable: STRIPE_SECRET_KEY');
+}
+
+if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+  throw new Error('Missing environment variable: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY');
+}
+
 // Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2025-05-28.basil',
 });
 
 // Load Stripe.js
 export const getStripe = () => {
-  const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
-  return stripePromise;
+  if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+    throw new Error('Stripe publishable key is not configured');
+  }
+  return loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 };
 
 // Create a payment intent
