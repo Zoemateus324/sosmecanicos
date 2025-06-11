@@ -12,7 +12,7 @@ import React from "react";
 
 export default function Login() {
   const router = useRouter();
-  const { signIn, userType } = useAuth(); // Use signIn from AuthContext
+  const { signIn, profile } = useAuth(); // Use signIn and profile from AuthContext
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +25,7 @@ export default function Login() {
 
     try {
       await signIn(email, password);
-      const redirectPath = userType ? `/dashboard/${userType}` : "/dashboard/cliente";
+      const redirectPath = profile?.user_type ? `/dashboard/${profile.user_type}` : "/dashboard/cliente";
       router.push(redirectPath);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Erro desconhecido ao fazer login.";
