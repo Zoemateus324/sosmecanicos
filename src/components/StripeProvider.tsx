@@ -3,13 +3,14 @@
 import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '@/lib/stripe';
 import { useEffect, useState } from 'react';
+import { Stripe } from '@stripe/stripe-js';
 
 interface StripeProviderProps {
   children: React.ReactNode;
 }
 
 export function StripeProvider({ children }: StripeProviderProps) {
-  const [stripePromise, setStripePromise] = useState<any>(null);
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
 
   useEffect(() => {
     try {
