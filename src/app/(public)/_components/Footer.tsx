@@ -33,7 +33,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="text-center mt-8">
-        <p>&copy; 2025 SOS Mecânicos. Todos os direitos reservados.</p>
+        <p className="text-gray-500">SOS Mecânicos &copy; {new Date().getFullYear()} - Todos os direitos reservados.</p>
         <p className="text-sm font-bold">Desenvolvido por <a href="https://github.com/Zoemateus324" className="text-blue-500 hover:underline">Zoé Mateus</a></p>
       </div>
     </footer>
