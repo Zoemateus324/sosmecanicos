@@ -64,6 +64,7 @@ export default function PlanosMecanicosPage() {
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulação
       toast.success(`Plano ${plano} assinado com sucesso!`);
     } catch (error) {
+      console.error('Erro ao assinar plano:', error);
       toast.error("Erro ao assinar o plano. Tente novamente.");
     } finally {
       setLoading(null);
