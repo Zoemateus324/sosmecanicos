@@ -2,7 +2,7 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
 
-import  SupabaseProvider  from '@/components/SupabaseProvider';
+import  {SupabaseProvider}  from '@/components/SupabaseProvider';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { StripeProvider } from '@/components/StripeProvider';
 import { Toaster } from 'sonner';
@@ -20,7 +20,7 @@ export default async function RootLayout({
     <html lang="pt-BR" className={inter.className}>
       <body className="min-h-screen bg-gray-100 text-gray-900 antialiased">
         <StripeProvider>
-          <SupabaseProvider initialSession={null}>
+          <SupabaseProvider >
             <AuthProvider>
               {children}
               <Toaster position="top-right" richColors />

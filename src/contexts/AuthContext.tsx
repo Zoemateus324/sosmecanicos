@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { createClientComponentClient } from "@/lib/supabaseClient";
+import { supabase  } from "@/lib/supabaseClient";
 
 import { toast } from "sonner";
 import { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
@@ -27,7 +27,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const supabase = createClientComponentClient();
+
   const [user, setUser] = useState<User | null>(null);
   const [profiles, setProfiles] = useState<Profiles | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
     },
-    [supabase]
+  []
   );
 
   useEffect(() => {
@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => subscription?.unsubscribe();
-  }, [supabase, fetchProfile]);
+  }, [fetchProfile]);
 
   const signIn = async (email: string, password: string) => {
     if (!supabase) throw new Error("Conexão indisponível.");
@@ -162,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id: newUser.id,
           nome: fullName,
           email,
-          conta: userType,
+          conta: "Cliente",
           telefone: phone,
         },
       ]);

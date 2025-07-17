@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+
 import { SupabaseClient } from "@supabase/supabase-js";
 
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { supabase  } from "@/lib/supabaseClient";
 import {
   Card,
   CardContent,
@@ -130,7 +131,7 @@ const getStatusInfo = (status: string): StatusInfo => {
 
 export default function ClienteDashboard() {
   const { user, profiles } = useAuth();
-  const supabase = createClientComponentClient();
+ 
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [criticalError, setCriticalError] = useState<string | null>(null);
