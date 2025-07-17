@@ -1,58 +1,86 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sidebar } from "./components/sidebarmecanicos/Sidebar";
-import { useAuth } from "@/contexts/AuthContext";
-import { useSupabase } from "@/components/SupabaseProvider";
-import { Info } from "./components/informativo/Info";
 import { useEffect, useState, useCallback } from "react";
-import { Badge } from "@/components/ui/badge";
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
 import { Calendar, Clock, DollarSign, Wrench } from "lucide-react";
-import { PaymentModal } from "@/components/PaymentModal";
 import { toast } from "sonner";
 
 interface ServiceRequest {
   id: string;
   status: string;
   client_name: string;
-  vehicle: string;
   description: string;
-  created_at: string;
+  location: string;
+  category_type: string;
   estimated_price: number;
+  created_at: string;
   client_id: string;
 }
 
-export default function MechanicDashboard() {
-  const { user, profile } = useAuth();
-  const supabase = useSupabase();
+export default function MecanicaDashboard() {
+  const { user, profiles } = useAuth();
+  const supabase = createClientComponentClient();
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [stats, setStats] = useState({
     pending: 0,
     inProgress: 0,
     completed: 0,
-    totalEarnings: 0
+    totalEarnings: 0,
   });
-  const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const fetchServiceRequests = useCallback(async () => {
-    const { data } = await supabase
-      .from('service_requests')
-      .select('id, status, client_name, vehicle, description, created_at, estimated_price, client_id')
-      .eq('mechanic_id', user?.id)
+    if (!user?.id) {
+      toast.error("Usuário não autenticado.");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('solicitacoes')
+      .select('id, status, client_name, description, location, category_type, estimated_price, created_at, client_id')
+      .eq('mechanic_id', user.id)
       .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Error fetching service requests:", error.message);
+      toast.error("Erro ao carregar solicitações: " + error.message);
+      return;
+    }
 
     if (data) {
       setServiceRequests(data);
-      // Calculate stats
       const stats = {
-        pending: data.filter(req => req.status === 'pending').length,
-        inProgress: data.filter(req => req.status === 'in_progress').length,
-        completed: data.filter(req => req.status === 'completed').length,
+        pending: data.filter((req: ServiceRequest) => req.status === 'pendente').length,
+        inProgress: data.filter((req: ServiceRequest) => req.status === 'aceito').length,
+        completed: data.filter((req: ServiceRequest) => req.status === 'concluido').length,
         totalEarnings: data
-          .filter(req => req.status === 'completed')
-          .reduce((sum, req) => sum + (req.estimated_price || 0), 0)
+          .filter((req: ServiceRequest) => req.status === 'concluido')
+          .reduce((sum: number, req: ServiceRequest) => sum + (req.estimated_price || 0), 0),
       };
       setStats(stats);
     }
@@ -60,47 +88,63 @@ export default function MechanicDashboard() {
 
   useEffect(() => {
     fetchServiceRequests();
-  }, [fetchServiceRequests, supabase, user?.id]);
+  }, [fetchServiceRequests]);
 
-  const handleAcceptRequest = (request: ServiceRequest) => {
-    setSelectedRequest(request);
-    setIsPaymentModalOpen(true);
-  };
-
-  const handlePaymentSuccess = async () => {
-    if (!selectedRequest) return;
+  const handleAcceptRequest = async (request: ServiceRequest) => {
+    if (!user?.id) {
+      toast.error("Usuário não autenticado.");
+      return;
+    }
 
     try {
-      // Update service request status
       const { error } = await supabase
-        .from('service_requests')
-        .update({ status: 'in_progress' })
-        .eq('id', selectedRequest.id);
+        .from('solicitacoes')
+        .update({ status: 'aceito' })
+        .eq('id', request.id);
 
       if (error) throw error;
 
-      toast.success('Serviço iniciado com sucesso!');
-      fetchServiceRequests(); // Refresh the list
+      toast.success('Serviço aceito com sucesso!');
+      await fetchServiceRequests();
     } catch (error) {
-      console.error('Error updating service request:', error);
-      toast.error('Erro ao atualizar status do serviço.');
+      console.error('Error accepting service request:', error);
+      toast.error('Erro ao aceitar serviço.');
     }
   };
 
-  return (
-    <div className="flex gap-[2%] flex-wrap content-start">
-      <Sidebar />
+  const handleCompleteRequest = async (request: ServiceRequest) => {
+    if (!user?.id) {
+      toast.error("Usuário não autenticado.");
+      return;
+    }
 
-      <div className="flex-1 p-4 md:p-6 w-full container mx-auto">
-        <Card className="mb-4">
-          <CardHeader>
-            <CardTitle className="text-2xl">Dashboard do Mecânico</CardTitle>
-            <p className="text-muted-foreground">Bem-vindo(a), {profile?.full_name}!</p>
-          </CardHeader>
-          <CardContent>
-            <span>Gerencie suas tarefas e solicitações de serviço aqui.</span>
-          </CardContent>
-        </Card>
+    try {
+      const { error } = await supabase
+        .from('solicitacoes')
+        .update({ status: 'concluido' })
+        .eq('id', request.id);
+
+      if (error) throw error;
+
+      toast.success('Serviço finalizado com sucesso!');
+      await fetchServiceRequests();
+    } catch (error) {
+      console.error('Error completing service request:', error);
+      toast.error('Erro ao finalizar serviço.');
+    }
+  };
+
+  const filteredRequests = serviceRequests.filter((request: ServiceRequest) =>
+    statusFilter === "all" ? true : request.status === statusFilter
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl font-bold text-gray-800">Dashboard de Mecânica</h1>
+          <p className="text-muted-foreground">Bem-vindo(a), {profiles?.nome || "Usuário"}!</p>
+        </div>
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -142,78 +186,87 @@ export default function MechanicDashboard() {
           </Card>
         </div>
 
-        <Info />
+        <div className="mb-6">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrar por status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="pendente">Pendentes</SelectItem>
+              <SelectItem value="aceito">Em Andamento</SelectItem>
+              <SelectItem value="concluido">Concluídos</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        {/* Service Requests */}
-        <Card className="mt-6">
+        <Card>
           <CardHeader>
-            <CardTitle>Solicitações de Serviço</CardTitle>
+            <CardTitle>Solicitações de Serviços Mecânicos</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {serviceRequests.map((request) => (
-                <Card key={request.id}>
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold">{request.client_name}</h3>
-                        <p className="text-sm text-muted-foreground">{request.vehicle}</p>
-                        <p className="mt-2">{request.description}</p>
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <Badge variant={
-                          request.status === 'pending' ? 'secondary' :
-                          request.status === 'in_progress' ? 'default' :
-                          'outline'
-                        }>
-                          {request.status === 'pending' ? 'Pendente' :
-                           request.status === 'in_progress' ? 'Em Andamento' :
-                           'Concluído'}
-                        </Badge>
-                        <p className="text-sm font-medium">R$ {request.estimated_price?.toFixed(2)}</p>
-                        {request.status === 'pending' && (
-                          <Button 
-                            variant="default" 
-                            size="sm"
-                            onClick={() => handleAcceptRequest(request)}
-                          >
-                            Aceitar e Pagar
-                          </Button>
-                        )}
-                        {request.status === 'in_progress' && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              // TODO: Implementar finalização do serviço
-                            }}
-                          >
-                            Finalizar Serviço
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead>Localização</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredRequests.map((request: ServiceRequest) => (
+                  <TableRow key={request.id}>
+                    <TableCell>{request.client_name}</TableCell>
+                    <TableCell>{request.description}</TableCell>
+                    <TableCell>{request.location}</TableCell>
+                    <TableCell>{request.category_type}</TableCell>
+                    <TableCell>
+                      {new Date(request.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>R$ {request.estimated_price?.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        request.status === 'pendente' ? 'secondary' :
+                        request.status === 'aceito' ? 'default' :
+                        'outline'
+                      }>
+                        {request.status === 'pendente' ? 'Pendente' :
+                         request.status === 'aceito' ? 'Em Andamento' :
+                         'Concluído'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {request.status === 'pendente' && (
+                        <Button 
+                          variant="default" 
+                          size="sm"
+                          onClick={() => handleAcceptRequest(request)}
+                        >
+                          Aceitar
+                        </Button>
+                      )}
+                      {request.status === 'aceito' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleCompleteRequest(request)}
+                        >
+                          Finalizar Serviço
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </div>
-
-      {/* Payment Modal */}
-      {selectedRequest && (
-        <PaymentModal
-          isOpen={isPaymentModalOpen}
-          onClose={() => setIsPaymentModalOpen(false)}
-          amount={selectedRequest.estimated_price}
-          serviceType="mechanic"
-          serviceId={selectedRequest.id}
-          providerId={user?.id || ''}
-          onSuccess={handlePaymentSuccess}
-        />
-      )}
     </div>
   );
 }
-

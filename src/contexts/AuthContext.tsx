@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { useSupabase } from "@/components/SupabaseProvider";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "sonner";
 import { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 
@@ -26,9 +26,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const supabase = useSupabase();
+  const supabase = createClientComponentClient();
   const [user, setUser] = useState<User | null>(null);
-  const [profiles, setProfile] = useState<Profiles | null>(null);
+  const [profiles, setProfiles] = useState<Profiles | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = useCallback(
@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (currentUser) {
         const profileData = await fetchProfile(currentUser.id);
-        setProfile(profileData);
+        setProfiles(profileData);
       }
 
       setLoading(false);
@@ -84,9 +84,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (currentUser) {
           const profileData = await fetchProfile(currentUser.id);
-          setProfile(profileData);
+          setProfiles(profileData);
         } else {
-          setProfile(null);
+          setProfiles(null);
         }
 
         setLoading(false);
@@ -158,9 +158,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error: profileError } = await supabase.from("profiles").insert([
         {
           id: newUser.id,
-          nome,
-          sobrenome,
+          nome: fullName,
           email,
+          conta: userType,
           telefone: phone,
         },
       ]);
@@ -171,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const profileData = await fetchProfile(newUser.id);
-      setProfile(profileData);
+      setProfiles(profileData);
       toast.success("Cadastro realizado com sucesso!");
     }
   };
@@ -186,13 +186,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setUser(null);
-    setProfile(null);
+    setProfiles(null);
     toast.success("Logout realizado com sucesso!");
   };
 
   const setAuth = (user: User) => {
     setUser(user);
-    fetchProfile(user.id).then(setProfile);
+    fetchProfile(user.id).then(setProfiles);
     setLoading(false);
     toast.success("Sessão autenticada!");
   };

@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSupabase } from "@/components/SupabaseProvider";
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { SupabaseClient } from "@supabase/supabase-js";
+
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -42,7 +44,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { Plus, Circle, CircleCheck } from "lucide-react";
 import Link from "next/link";
@@ -53,7 +54,7 @@ interface Vehicle {
   user_id: string;
   marca: string;
   modelo: string;
-  ano: string,
+  ano: string;
   placa: string;
 }
 
@@ -65,8 +66,8 @@ interface ServiceRequest {
   status: string;
   type: "mechanic" | "tow";
   created_at: string;
-  location?: string; // Adicionado para suportar requests de mecânico
-  category_type?: string; // Adicionado para suportar requests de mecânico
+  location?: string;
+  category_type?: string;
 }
 
 interface StatusInfo {
@@ -118,7 +119,6 @@ const getStatusInfo = (status: string): StatusInfo => {
         text: "Aceito",
         color: "text-green-600",
       };
-   
     default:
       return {
         icon: Circle,
@@ -130,7 +130,7 @@ const getStatusInfo = (status: string): StatusInfo => {
 
 export default function ClienteDashboard() {
   const { user, profiles } = useAuth();
-  const supabase = useSupabase();
+  const supabase = createClientComponentClient();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [criticalError, setCriticalError] = useState<string | null>(null);
@@ -138,10 +138,7 @@ export default function ClienteDashboard() {
   const [pendingRequests, setPendingRequests] = useState<ServiceRequest[]>([]);
   const [isVehicleDialogOpen, setIsVehicleDialogOpen] = useState(false);
   const [isMechanicDialogOpen, setIsMechanicDialogOpen] = useState(false);
-  // const [isSidebarOpen, setIsSidebarOpen] = useState(false);
- 
 
- 
   const [mechanicRequest, setMechanicRequest] = useState({
     vehicleId: "",
     description: "",
@@ -163,7 +160,7 @@ export default function ClienteDashboard() {
     user_id: "",
     marca: "",
     modelo: "",
-    ano:"",
+    ano: "",
     placa: "",
   });
   const [isEditVehicleDialogOpen, setIsEditVehicleDialogOpen] = useState(false);
@@ -191,7 +188,7 @@ export default function ClienteDashboard() {
   const handleAddVehicle = async () => {
     if (!isSupabaseInitialized(supabase) || !user?.id) return;
 
-    if (!newVehicle.marca || !newVehicle.modelo || !newVehicle.placa || newVehicle.ano <= 0) {
+    if (!newVehicle.marca || !newVehicle.modelo || !newVehicle.placa || !newVehicle.ano || parseInt(newVehicle.ano) <= 0) {
       toast.error("Por favor, preencha todos os campos obrigatórios do veículo", {
         style: { backgroundColor: "#EF4444", color: "#ffffff" },
       });
@@ -208,7 +205,7 @@ export default function ClienteDashboard() {
       });
     } else if (data) {
       setVehicles([...vehicles, data[0]]);
-      setNewVehicle({ id: "", user_id: "", marca: "", modelo: "", ano:" ", placa: "" });
+      setNewVehicle({ id: "", user_id: "", marca: "", modelo: "", ano: "", placa: "" });
       setIsVehicleDialogOpen(false);
       toast.success("Veículo adicionado com sucesso!", {
         style: { backgroundColor: "#4ADE80", color: "#ffffff" },
@@ -220,7 +217,7 @@ export default function ClienteDashboard() {
   const handleEditVehicle = async () => {
     if (!isSupabaseInitialized(supabase) || !editVehicle.id) return;
 
-    if (!editVehicle.marca || !editVehicle.modelo || !editVehicle.placa || editVehicle.ano ) {
+    if (!editVehicle.marca || !editVehicle.modelo || !editVehicle.placa || !editVehicle.ano) {
       toast.error("Por favor, preencha todos os campos obrigatórios do veículo", {
         style: { backgroundColor: "#EF4444", color: "#ffffff" },
       });
@@ -268,7 +265,6 @@ export default function ClienteDashboard() {
         status: "pendente",
       });
     if (error) {
-      
       toast.error("Erro ao solicitar mecânico: " + error.message, {
         style: { backgroundColor: "#EF4444", color: "#ffffff" },
       });
@@ -282,7 +278,7 @@ export default function ClienteDashboard() {
     }
   };
 
-  // // Check user logged in
+  // Check user logged in
   const checkUserLoggedIn = useCallback(async () => {
     if (!isSupabaseInitialized(supabase)) throw new Error("Cliente não está logado");
     const { data, error } = await supabase.auth.getSession();
@@ -328,7 +324,7 @@ export default function ClienteDashboard() {
       });
     }
     if (towData.error) {
-        toast.warning("Erro ao obter solicitações de guincho: " + towData.error.message, {
+      toast.warning("Erro ao obter solicitações de guincho: " + towData.error.message, {
         style: { backgroundColor: "#FBBF24", color: "#ffffff" },
       });
     }
@@ -339,7 +335,7 @@ export default function ClienteDashboard() {
       vehicle_id: req.vehicle_id,
       problem_description: req.description,
       status: req.status,
-     conta:"mecanico",
+      type: "mechanic",
       created_at: req.created_at || new Date().toISOString(),
       location: req.location,
       category_type: req.category_type,
@@ -363,28 +359,27 @@ export default function ClienteDashboard() {
     let isMounted = true;
 
     const fetchData = async () => {
-  try {
-    await checkUserLoggedIn();
-    if (!isMounted) return;
+      try {
+        await checkUserLoggedIn();
+        if (!isMounted) return;
 
-    // Add a timeout of 10 seconds for the Promise.all
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("Tempo limite excedido ao buscar dados")), 10000);
-    });
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Tempo limite excedido ao buscar dados")), 10000);
+        });
 
-    await Promise.race([
-      Promise.all([getVehicles(), fetchPendingRequests()]),
-      timeoutPromise,
-    ]);
-    if (!isMounted) return;
-  } catch (error) {
-    if (!isMounted) return;
-    console.error("Critical error:", error);
-    setCriticalError(error instanceof Error ? error.message : "An error occurred");
-  } finally {
-    if (isMounted) setLoading(false);
-  }
-};
+        await Promise.race([
+          Promise.all([getVehicles(), fetchPendingRequests()]),
+          timeoutPromise,
+        ]);
+        if (!isMounted) return;
+      } catch (error) {
+        if (!isMounted) return;
+        console.error("Critical error:", error);
+        setCriticalError(error instanceof Error ? error.message : "An error occurred");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
 
     fetchData();
     return () => {
@@ -396,10 +391,7 @@ export default function ClienteDashboard() {
 
   return (
     <div className="flex gap-[2%] flex-wrap content-start">
-     <Sidebar />
-
-      {/* Sidebar overlay logic removed because isSidebarOpen is unused */}
-
+      <Sidebar />
       <div className="flex-1 p-4 md:p-6 w-full container mx-auto">
         <header className="bg-white shadow-md p-4 mb-6 rounded-lg flex justify-between items-center">
           <div className="flex items-center space-x-4">
@@ -407,8 +399,7 @@ export default function ClienteDashboard() {
           </div>
           <div className="flex items-center space-x-4 md:space-x-6">
             <Avatar>
-              {/* Alterar para a foto de perfil */}
-              <AvatarImage src="https://github.com/shadcn.png" alt="User Avatar" /> 
+              <AvatarImage src="https://github.com/shadcn.png" alt="User Avatar" />
               <AvatarFallback>{profiles?.nome?.charAt(0).toUpperCase() || "US"}</AvatarFallback>
             </Avatar>
             <Button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white">
@@ -557,12 +548,12 @@ export default function ClienteDashboard() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {vehicles.map((vehicles) => (
-                            <TableRow key={vehicles.id} className="hover:bg-gray-50">
-                              <TableCell className="text-gray-800 hidden sm:table-cell">{vehicles.marca}</TableCell>
-                              <TableCell className="text-gray-800">{vehicles.modelo}</TableCell>
-                              <TableCell className="text-gray-800 hidden sm:table-cell">{vehicles.placa}</TableCell>
-                              <TableCell className="text-gray-800 hidden sm:table-cell">{vehicles.ano}</TableCell>
+                          {vehicles.map((vehicle) => (
+                            <TableRow key={vehicle.id} className="hover:bg-gray-50">
+                              <TableCell className="text-gray-800 hidden sm:table-cell">{vehicle.marca}</TableCell>
+                              <TableCell className="text-gray-800">{vehicle.modelo}</TableCell>
+                              <TableCell className="text-gray-800 hidden sm:table-cell">{vehicle.placa}</TableCell>
+                              <TableCell className="text-gray-800 hidden sm:table-cell">{vehicle.ano}</TableCell>
                               <TableCell>
                                 <Dialog
                                   open={isEditVehicleDialogOpen}
@@ -575,7 +566,7 @@ export default function ClienteDashboard() {
                                       className="border-black-600 text-black-600 hover:bg-black-50 mr-2"
                                       onClick={() =>
                                         setEditVehicle({
-                                          ...vehicles,
+                                          ...vehicle,
                                         })
                                       }
                                       disabled={!isSupabaseInitialized(supabase)}
@@ -636,7 +627,7 @@ export default function ClienteDashboard() {
                                           onChange={(e) =>
                                             setEditVehicle({
                                               ...editVehicle,
-                                              ano:(e.target.value) ,
+                                              ano: e.target.value,
                                             })
                                           }
                                           className="col-span-3"
@@ -692,13 +683,13 @@ export default function ClienteDashboard() {
                                     const { error } = await supabase
                                       .from("vehicles")
                                       .delete()
-                                      .eq("id", vehicles.id);
+                                      .eq("id", vehicle.id);
                                     if (error) {
                                       toast.error("Erro ao remover veículo: " + error.message, {
                                         style: { backgroundColor: "#EF4444", color: "#ffffff" },
                                       });
                                     } else {
-                                      setVehicles(vehicles.filter((vehicles) => vehicles.id !== vehicles.id));
+                                      setVehicles((prevVehicles: Vehicle[]) => prevVehicles.filter((v: Vehicle) => v.id !== vehicle.id));
                                       toast.success("Veículo removido com sucesso!", {
                                         style: { backgroundColor: "#4ADE80", color: "#ffffff" },
                                       });
@@ -776,11 +767,11 @@ export default function ClienteDashboard() {
                 <Input
                   id="ano"
                   type="number"
-                  value={newVehicle.ano ? "" : newVehicle.ano}
+                  value={newVehicle.ano}
                   onChange={(e) =>
                     setNewVehicle({
                       ...newVehicle,
-                      ano: (e.target.value) ,
+                      ano: e.target.value,
                     })
                   }
                   className="col-span-3"
