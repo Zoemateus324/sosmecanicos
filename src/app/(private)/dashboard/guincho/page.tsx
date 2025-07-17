@@ -255,3 +255,6 @@
 //     </div>
 //   );
 // }
+export default function Guincho(){
+    
+}
