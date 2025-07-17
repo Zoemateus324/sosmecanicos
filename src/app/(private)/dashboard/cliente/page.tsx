@@ -53,7 +53,7 @@ interface Vehicle {
   user_id: string;
   marca: string;
   modelo: string;
-  ano: number;
+  ano: string,
   placa: string;
 }
 
@@ -129,7 +129,7 @@ const getStatusInfo = (status: string): StatusInfo => {
 };
 
 export default function ClienteDashboard() {
-  const { user, profile } = useAuth();
+  const { user, profiles } = useAuth();
   const supabase = useSupabase();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -154,7 +154,7 @@ export default function ClienteDashboard() {
     user_id: "",
     marca: "",
     modelo: "",
-    ano: 0,
+    ano: "",
     placa: "",
   });
 
@@ -163,7 +163,7 @@ export default function ClienteDashboard() {
     user_id: "",
     marca: "",
     modelo: "",
-    ano: 0,
+    ano:"",
     placa: "",
   });
   const [isEditVehicleDialogOpen, setIsEditVehicleDialogOpen] = useState(false);
@@ -199,7 +199,7 @@ export default function ClienteDashboard() {
     }
 
     const { data, error } = await supabase
-      .from("veiculos")
+      .from("vehicles")
       .insert([{ ...newVehicle, user_id: user.id }])
       .select();
     if (error) {
@@ -208,7 +208,7 @@ export default function ClienteDashboard() {
       });
     } else if (data) {
       setVehicles([...vehicles, data[0]]);
-      setNewVehicle({ id: "", user_id: "", marca: "", modelo: "", ano: 0, placa: "" });
+      setNewVehicle({ id: "", user_id: "", marca: "", modelo: "", ano:" ", placa: "" });
       setIsVehicleDialogOpen(false);
       toast.success("Veículo adicionado com sucesso!", {
         style: { backgroundColor: "#4ADE80", color: "#ffffff" },
@@ -220,7 +220,7 @@ export default function ClienteDashboard() {
   const handleEditVehicle = async () => {
     if (!isSupabaseInitialized(supabase) || !editVehicle.id) return;
 
-    if (!editVehicle.marca || !editVehicle.modelo || !editVehicle.placa || editVehicle.ano <= 0) {
+    if (!editVehicle.marca || !editVehicle.modelo || !editVehicle.placa || editVehicle.ano ) {
       toast.error("Por favor, preencha todos os campos obrigatórios do veículo", {
         style: { backgroundColor: "#EF4444", color: "#ffffff" },
       });
@@ -228,7 +228,7 @@ export default function ClienteDashboard() {
     }
 
     const { error } = await supabase
-      .from("veiculos")
+      .from("vehicles")
       .update({ marca: editVehicle.marca, modelo: editVehicle.modelo, ano: editVehicle.ano, placa: editVehicle.placa })
       .eq("id", editVehicle.id);
     if (error) {
@@ -237,7 +237,7 @@ export default function ClienteDashboard() {
       });
     } else {
       setVehicles(vehicles.map((v) => (v.id === editVehicle.id ? editVehicle : v)));
-      setEditVehicle({ id: "", user_id: "", marca: "", modelo: "", ano: 0, placa: "" });
+      setEditVehicle({ id: "", user_id: "", marca: "", modelo: "", ano: "", placa: "" });
       setIsEditVehicleDialogOpen(false);
       toast.success("Veículo editado com sucesso!", {
         style: { backgroundColor: "#4ADE80", color: "#ffffff" },
@@ -257,7 +257,7 @@ export default function ClienteDashboard() {
     }
 
     const { error } = await supabase
-      .from("mechanic_requests")
+      .from("solicitacoes")
       .insert({
         user_id: user.id,
         cliente_id: user.id,
@@ -293,7 +293,7 @@ export default function ClienteDashboard() {
   // Get vehicles
   const getVehicles = useCallback(async () => {
     if (!isSupabaseInitialized(supabase) || !user?.id) return;
-    const { data, error } = await supabase.from("veiculos").select("*").eq("user_id", user.id);
+    const { data, error } = await supabase.from("vehicles").select("*").eq("user_id", user.id);
     if (error) {
       console.error("Error fetching vehicles:", error.message);
       toast.warning("Erro ao obter veículos: " + error.message, {
@@ -310,7 +310,7 @@ export default function ClienteDashboard() {
     if (!isSupabaseInitialized(supabase) || !user?.id) return;
     const [mechanicData, towData] = await Promise.all([
       supabase
-        .from("mechanic_requests")
+        .from("solicitacoes")
         .select("id, user_id, vehicle_id, description, location, category_type, status, created_at")
         .eq("user_id", user.id)
         .in("status", ["pendente", "aceito", "recusado"]),
@@ -339,7 +339,7 @@ export default function ClienteDashboard() {
       vehicle_id: req.vehicle_id,
       problem_description: req.description,
       status: req.status,
-      type: "mechanic",
+     conta:"mecanico",
       created_at: req.created_at || new Date().toISOString(),
       location: req.location,
       category_type: req.category_type,
@@ -407,8 +407,9 @@ export default function ClienteDashboard() {
           </div>
           <div className="flex items-center space-x-4 md:space-x-6">
             <Avatar>
-              <AvatarImage src="https://github.com/shadcn.png" alt="User Avatar" />
-              <AvatarFallback>{profile?.full_name?.charAt(0).toUpperCase() || "US"}</AvatarFallback>
+              {/* Alterar para a foto de perfil */}
+              <AvatarImage src="https://github.com/shadcn.png" alt="User Avatar" /> 
+              <AvatarFallback>{profiles?.nome?.charAt(0).toUpperCase() || "US"}</AvatarFallback>
             </Avatar>
             <Button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white">
               Logout
@@ -422,7 +423,7 @@ export default function ClienteDashboard() {
           transition={{ duration: 0.5 }}
           className="text-2xl font-semibold text-black-700 mb-4"
         >
-          Bem-vindo(a), {profile?.full_name || "Carregando..."}!
+          Bem-vindo(a), {profiles?.nome || "Carregando..."}!
         </motion.h2>
 
         {loading ? (
@@ -556,12 +557,12 @@ export default function ClienteDashboard() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {vehicles.map((veiculo) => (
-                            <TableRow key={veiculo.id} className="hover:bg-gray-50">
-                              <TableCell className="text-gray-800 hidden sm:table-cell">{veiculo.marca}</TableCell>
-                              <TableCell className="text-gray-800">{veiculo.modelo}</TableCell>
-                              <TableCell className="text-gray-800 hidden sm:table-cell">{veiculo.placa}</TableCell>
-                              <TableCell className="text-gray-800 hidden sm:table-cell">{veiculo.ano}</TableCell>
+                          {vehicles.map((vehicles) => (
+                            <TableRow key={vehicles.id} className="hover:bg-gray-50">
+                              <TableCell className="text-gray-800 hidden sm:table-cell">{vehicles.marca}</TableCell>
+                              <TableCell className="text-gray-800">{vehicles.modelo}</TableCell>
+                              <TableCell className="text-gray-800 hidden sm:table-cell">{vehicles.placa}</TableCell>
+                              <TableCell className="text-gray-800 hidden sm:table-cell">{vehicles.ano}</TableCell>
                               <TableCell>
                                 <Dialog
                                   open={isEditVehicleDialogOpen}
@@ -574,7 +575,7 @@ export default function ClienteDashboard() {
                                       className="border-black-600 text-black-600 hover:bg-black-50 mr-2"
                                       onClick={() =>
                                         setEditVehicle({
-                                          ...veiculo,
+                                          ...vehicles,
                                         })
                                       }
                                       disabled={!isSupabaseInitialized(supabase)}
@@ -635,7 +636,7 @@ export default function ClienteDashboard() {
                                           onChange={(e) =>
                                             setEditVehicle({
                                               ...editVehicle,
-                                              ano: parseInt(e.target.value) || 0,
+                                              ano:(e.target.value) ,
                                             })
                                           }
                                           className="col-span-3"
@@ -689,15 +690,15 @@ export default function ClienteDashboard() {
                                       return;
                                     }
                                     const { error } = await supabase
-                                      .from("veiculos")
+                                      .from("vehicles")
                                       .delete()
-                                      .eq("id", veiculo.id);
+                                      .eq("id", vehicles.id);
                                     if (error) {
                                       toast.error("Erro ao remover veículo: " + error.message, {
                                         style: { backgroundColor: "#EF4444", color: "#ffffff" },
                                       });
                                     } else {
-                                      setVehicles(vehicles.filter((v) => v.id !== veiculo.id));
+                                      setVehicles(vehicles.filter((vehicles) => vehicles.id !== vehicles.id));
                                       toast.success("Veículo removido com sucesso!", {
                                         style: { backgroundColor: "#4ADE80", color: "#ffffff" },
                                       });
@@ -775,11 +776,11 @@ export default function ClienteDashboard() {
                 <Input
                   id="ano"
                   type="number"
-                  value={newVehicle.ano === 0 ? "" : newVehicle.ano}
+                  value={newVehicle.ano ? "" : newVehicle.ano}
                   onChange={(e) =>
                     setNewVehicle({
                       ...newVehicle,
-                      ano: parseInt(e.target.value) || 0,
+                      ano: (e.target.value) ,
                     })
                   }
                   className="col-span-3"

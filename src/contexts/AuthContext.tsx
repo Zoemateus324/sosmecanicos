@@ -5,17 +5,17 @@ import { useSupabase } from "@/components/SupabaseProvider";
 import { toast } from "sonner";
 import { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 
-interface Profile {
+interface Profiles {
   id: string;
-  full_name: string;
+  nome: string;
   email: string;
-  user_type: string;
+  conta: string;
   telefone: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  profile: Profile | null;
+  profiles: Profiles | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, fullName: string, userType: string, phone: string) => Promise<void>;
@@ -28,7 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = useSupabase();
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profiles, setProfile] = useState<Profiles | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = useCallback(
@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data, error } = await supabase
           .from("profiles")
-          .select("id, full_name, email, user_type, telefone")
+          .select("id, nome, email, conta, telefone")
           .eq("id", userId)
           .single();
 
@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return null;
         }
 
-        return data as Profile;
+        return data as Profiles;
       } catch (err) {
         toast.error("Erro inesperado ao carregar perfil.");
         console.error(err);
@@ -158,9 +158,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error: profileError } = await supabase.from("profiles").insert([
         {
           id: newUser.id,
-          full_name: fullName,
+          nome,
+          sobrenome,
           email,
-          user_type: userType,
           telefone: phone,
         },
       ]);
@@ -201,7 +201,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
-        profile,
+        profiles,
         loading,
         signIn,
         signUp,

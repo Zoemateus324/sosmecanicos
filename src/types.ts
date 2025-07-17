@@ -14,3 +14,17 @@ export interface Mechanic {
     ano: number;
     placa: string;
   }
+
+
+  export interface Profiles{
+    id:string;
+    nome:string;
+    sobrenome:string;
+    email:string;
+    telefone:string;
+    cep:string;
+    cidade:string;
+    estado:string;
+    endereco:string;
+    
+  }
