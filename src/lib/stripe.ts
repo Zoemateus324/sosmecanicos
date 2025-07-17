@@ -1,8 +1,8 @@
 // lib/stripe.ts
 import Stripe from 'stripe';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-04-10',
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY! || 'api_key_placeholder,', {
+  
 });
 
 // Cria um Payment Intent
@@ -17,18 +17,18 @@ export const createPaymentIntent = async (amount: number) => {
 };
 
 // Cria uma transferência para o provedor conectado
-export const createTransfer = async (
-  amount: number,
-  connectedAccountId: string,
-  paymentIntentId: string
-) => {
-  return await stripe.transfers.create({
-    amount,
-    currency: 'brl',
-    destination: connectedAccountId,
-    transfer_group: 'ORDER_1234',
-  });
-};
+// export const createTransfer = async (
+//   amount: number,
+//   connectedAccountId: string,
+ 
+// ) => {
+//   return await stripe.transfers.create({
+//     amount,
+//     currency: 'brl',
+//     destination: connectedAccountId,
+//     transfer_group: 'ORDER_1234',
+//   });
+// };
 
 // Calcula a taxa da plataforma (exemplo: 10%)
 export const calculatePlatformFee = (amount: number) => {
