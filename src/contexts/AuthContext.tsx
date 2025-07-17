@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClientComponentClient } from "@/lib/supabaseClient";
+
 import { toast } from "sonner";
 import { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 
@@ -155,7 +156,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (newUser) {
-      const { error: profileError } = await supabase.from("profiles").insert([
+      const { error: profileError } = await supabase.from("profiles")
+      .insert([
         {
           id: newUser.id,
           nome: fullName,
