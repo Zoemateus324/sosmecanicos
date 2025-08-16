@@ -23,7 +23,7 @@
     "@radix-ui/themes": "^3.2.1",
     "@react-leaflet/core": "^3.0.0",
     "@stripe/react-stripe-js": "^3.7.0",
-    "@stripe/stripe-js": "^7.5.0",
+    "@stripe/stripe-js": "^7.6.1",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.52.0",
     "@tailwindcss/postcss": "^4.1.6",
